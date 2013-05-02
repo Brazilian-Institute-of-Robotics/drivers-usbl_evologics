@@ -34,7 +34,11 @@ namespace usbl_evologics
         std::vector<struct InstantMessage*> instantMessages;
     };
     struct InstantMessage {
+        int destination;
+        bool delivery_report;
         enum DeliveryStatus deliveryStatus;
+        size_t len;
+        uint8_t *buffer;
     };
     class Driver : public iodrivers_base::Driver
     {
