@@ -5,12 +5,13 @@ using namespace usbl_evologics;
 Driver::Driver()
     : iodrivers_base::Driver(1000000)
 {
-    //std::cout << "You successfully compiled and executed DummyProject. Welcome!" << std::endl;
     mParser = new UsblParser(&mInterfaceStatus);
 }
 void Driver::open(std::string const& uri){
     buffer.resize(10000000);
     openURI(uri);
+    mInterfaceStatus.interfaceMode = BURST_MODE;
+    setInterfaceToConfigMode();
 }
 void Driver::read(){
     int packet_size = readPacket(&buffer[0], buffer.size());

@@ -16,7 +16,7 @@ namespace usbl_evologics
         ERROR,
         NO_PENDING
     };
-    enum DelivertyStatus {
+    enum DeliveryStatus {
         PENDING,
         DELIVERED,
         FAILED
@@ -34,7 +34,7 @@ namespace usbl_evologics
         std::vector<struct InstantMessage*> instantMessages;
     };
     struct InstantMessage {
-        enum DelivertyStatus delivertyStatus;
+        enum DeliveryStatus deliveryStatus;
     };
     class Driver : public iodrivers_base::Driver
     {
