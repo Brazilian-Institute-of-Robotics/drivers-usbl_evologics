@@ -10,10 +10,11 @@ Driver::Driver()
 void Driver::open(std::string const& uri){
     buffer.resize(10000000);
     openURI(uri);
-    mInterfaceStatus.interfaceMode = BURST_MODE;
-    setInterfaceToConfigMode();
+    mInterfaceStatus.interfaceMode = CONFIG_MODE;
+    //setInterfaceToConfigMode();
 }
 void Driver::read(){
+    std::cout << "READ" << std::endl;
     int packet_size = readPacket(&buffer[0], buffer.size());
     if (packet_size){
         if (mInterfaceStatus.interfaceMode != BURST_MODE){
@@ -39,7 +40,6 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
         return buffer_size;
     }
 }
-
 void Driver::sendInstantMessage(struct InstantMessage *instantMessage){
     setInterfaceToConfigMode();
     //TODO instantMessage senden

@@ -11,7 +11,7 @@ namespace usbl_evologics
             UsblParser(struct InterfaceStatus* interfaceStatus);
             void parseCommand(uint8_t const* data, size_t size);
             void parsePosition(std::string s);
-
+            void parseDeliveryReport(std::string s);
     };
 }
 #endif

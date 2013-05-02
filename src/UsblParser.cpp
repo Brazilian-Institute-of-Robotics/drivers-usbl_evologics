@@ -7,9 +7,14 @@ UsblParser::UsblParser(InterfaceStatus* interfaceStatus){
     mInterfaceStatus = interfaceStatus;
 }
 void UsblParser::parseCommand(uint8_t const* data, size_t size){
-    //std::cout << "PARSE LINE: " << data << std::endl; 
+    std::cout << "PARSE LINE: "  << std::endl; 
     char const* buffer_as_string = reinterpret_cast<char const*>(data);
     std::string s = std::string(buffer_as_string, size);
+    if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
+        parseDeliveryReport(s);
+        return;
+    } 
+    //Wenn wir auf ein OK warten
     if (mInterfaceStatus->pending == PENDING_OK){
 
         if (s.find("OK") != std::string::npos){
@@ -41,3 +46,27 @@ void UsblParser::parsePosition(std::string s){
         mInterfaceStatus->pending = ERROR;
     }
 }
+void UsblParser::parseDeliveryReport(std::string s){
+    std::vector<std::string> splitted;
+    boost::split( splitted, s, boost::algorithm::is_any_of( "," ) );
+    if (splitted.size() != 2){
+        std::cout << "raise Error"<< std::endl;
+        return;
+    }
+    int remote = atoi(splitted.at(1).c_str());
+    std::cout <<  "DELIVERY REPORT FROM HOST" << remote <<std::endl;
+    enum DeliveryStatus temp;
+    if (splitted.at(0).find("DELIVEREDIM") != std::string::npos) {
+        temp = DELIVERED;
+    } else if (splitted.at(0).find("FAILEDIM") != std::string::npos){
+        temp = FAILED;
+    }
+    for (unsigned i = 0; i < mInterfaceStatus->instantMessages.size(); i++){
+        if (remote == mInterfaceStatus->instantMessages.at(i)->destination &&
+                mInterfaceStatus->instantMessages.at(i)->delivery_report){
+            mInterfaceStatus->instantMessages.at(i)->deliveryStatus = temp;
+            mInterfaceStatus->instantMessages.erase(mInterfaceStatus->instantMessages.begin()+i);
+        }
+
+    }
+} 
