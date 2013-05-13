@@ -1,15 +1,30 @@
 #include "UsblParser.hpp"
-#include "Driver.hpp"
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 using namespace usbl_evologics;
 UsblParser::UsblParser(InterfaceStatus* interfaceStatus){
+    mCallbacks = NULL;
     mInterfaceStatus = interfaceStatus;
 }
+void UsblParser::setCallbacks(UsblDriverCallbacks* cb){
+    mCallbacks = cb; 
+}
 void UsblParser::parseCommand(uint8_t const* data, size_t size){
-    std::cout << "PARSE LINE: "  << std::endl; 
     char const* buffer_as_string = reinterpret_cast<char const*>(data);
     std::string s = std::string(buffer_as_string, size);
+    if (mInterfaceStatus->interfaceMode == CONFIG_MODE){
+        std::cout << "PARSE LINE: " << s  << " in CONFIG_MODE" << std::endl;
+        parseConfigCommand(s);
+    } else {
+        std::cout << "Got Burstdata: " << s << std::endl;
+        if (mCallbacks) {
+            mCallbacks->gotBurstData(data, size);
+        } else {
+            std::cout << "Warning unhandles Burstdata, because unsetted callbacks" << std::endl;
+        }
+    }
+} 
+void UsblParser::parseConfigCommand(std::string s){
     if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
         parseDeliveryReport(s);
         return;

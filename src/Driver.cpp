@@ -3,27 +3,27 @@
 
 using namespace usbl_evologics;
 Driver::Driver()
-    : iodrivers_base::Driver(1000000)
+    : iodrivers_base::Driver(50)
 {
     mParser = new UsblParser(&mInterfaceStatus);
+    mCallbacks = NULL;
 }
+
 void Driver::open(std::string const& uri){
-    buffer.resize(10000000);
+    buffer.resize(50);
     openURI(uri);
     mInterfaceStatus.interfaceMode = CONFIG_MODE;
     //setInterfaceToConfigMode();
 }
+
 void Driver::read(){
     std::cout << "READ" << std::endl;
     int packet_size = readPacket(&buffer[0], buffer.size());
     if (packet_size){
-        if (mInterfaceStatus.interfaceMode != BURST_MODE){
-            mParser->parseCommand(&buffer[0], packet_size);
-        } else {
-            //TODO rausrotzen
-        }
+        mParser->parseCommand(&buffer[0], packet_size);
     }
 }
+
 int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 {
     //If we aren't in the burstmode every line comes in as a command
@@ -40,6 +40,7 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
         return buffer_size;
     }
 }
+
 void Driver::sendInstantMessage(struct InstantMessage *instantMessage){
     setInterfaceToConfigMode();
     //TODO instantMessage senden
@@ -48,14 +49,18 @@ void Driver::sendInstantMessage(struct InstantMessage *instantMessage){
     mInterfaceStatus.pending = PENDING_OK;
     waitSynchronousMessage();
 }
+
 void Driver::setInterfaceToBurstMode(){
     if (mInterfaceStatus.interfaceMode != BURST_MODE) {
         //TODO "ATO" senden
         mInterfaceStatus.pending = PENDING_OK;
         waitSynchronousMessage();
+        mInterfaceStatus.interfaceMode = BURST_MODE;
     }
 }
+
 void Driver::waitSynchronousMessage(){
+    std::cout << "Wait for Syncronous Message" << std::endl;
     while (mInterfaceStatus.pending != NO_PENDING){
         //TODO timeout
         read();
@@ -65,20 +70,25 @@ void Driver::waitSynchronousMessage(){
             //TODO raise Exception
         }
     }
+    std::cout << "end waiting" << std::endl;
 
 }
+
 void Driver::setInterfaceToConfigMode(){
     if (mInterfaceStatus.interfaceMode != CONFIG_MODE) {
         //TODO "+++ATC" senden
         mInterfaceStatus.pending = PENDING_OK;
         waitSynchronousMessage();
+        mInterfaceStatus.interfaceMode = CONFIG_MODE;
     }
 }
+
 void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size)
 {
     setInterfaceToBurstMode();
     //TODO just sending
 }
+
 struct Position Driver::requestPosition(bool x){
     setInterfaceToConfigMode();
     if (x){
@@ -90,6 +100,12 @@ struct Position Driver::requestPosition(bool x){
     waitSynchronousMessage();
     return mInterfaceStatus.position;
 }
+
 struct Position Driver::getPosition(){
     return mInterfaceStatus.position;
+}
+
+void Driver::setDriverCallbacks(UsblDriverCallbacks *cb){
+   mCallbacks = cb; 
+   mParser->setCallbacks(cb);
 }

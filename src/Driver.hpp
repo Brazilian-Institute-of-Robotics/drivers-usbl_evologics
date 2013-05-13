@@ -6,6 +6,8 @@
 #include "UsblParser.hpp"
 namespace usbl_evologics
 {
+    class UsblParser;
+    
     enum InterfaceMode {
         BURST_MODE,
         CONFIG_MODE
@@ -40,13 +42,19 @@ namespace usbl_evologics
         size_t len;
         uint8_t *buffer;
     };
+    class UsblDriverCallbacks
+    {
+        public:
+            virtual void gotInstantMessage(struct InstantMesssage *im) = 0;
+            virtual void gotBurstData(uint8_t const *data, size_t data_size) = 0;
+    };
     class Driver : public iodrivers_base::Driver
     {
             int extractPacket (uint8_t const *buffer, size_t buffer_size) const;
             struct InterfaceStatus mInterfaceStatus;
             std::vector<uint8_t> buffer;
             UsblParser* mParser;
-            void setInterfaceToBurstMode();
+            UsblDriverCallbacks *mCallbacks;
             void waitSynchronousMessage();
             void setInterfaceToConfigMode();
         public: 
@@ -57,7 +65,10 @@ namespace usbl_evologics
             void open(std::string const& uri);
             struct Position requestPosition(bool x);
             struct Position getPosition();
+            void setInterfaceToBurstMode();
+            void setDriverCallbacks(UsblDriverCallbacks *cb);
     };
+    
 
 } 
 
