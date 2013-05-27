@@ -112,6 +112,21 @@ struct Position Driver::getPosition(){
     return mInterfaceStatus.position;
 }
 
+int Driver::getSystemTime(){
+    setInterfaceToConfigMode();
+    //TODO send AT?UT
+    mInterfaceStatus.pending = PENDING_TIME;
+    waitSynchronousMessage();
+    return mInterfaceStatus.time;
+}
+void Driver::setSystemTime(int time){
+    setInterfaceToConfigMode();
+    //TODO send AT!UT<time>
+    mInterfaceStatus.pending = PENDING_OK;
+    waitSynchronousMessage();
+    mInterfaceStatus.time = time;
+}
+
 void Driver::setDriverCallbacks(UsblDriverCallbacks *cb){
    mCallbacks = cb; 
    mParser->setCallbacks(cb);

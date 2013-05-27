@@ -43,6 +43,9 @@ void UsblParser::parseConfigCommand(std::string s){
         }
     } else if (mInterfaceStatus->pending == PENDING_POSITION){
         parsePosition(s);
+    } else if (mInterfaceStatus->pending == PENDING_TIME){
+        mInterfaceStatus->time = atoi(s.c_str());
+        mInterfaceStatus->pending = NO_PENDING;
     }
 }
 void UsblParser::parsePosition(std::string s){

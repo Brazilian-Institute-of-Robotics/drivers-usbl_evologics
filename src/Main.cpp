@@ -33,8 +33,9 @@ int main(int argc, char** argv)
         //driver.setInterfaceToBurstMode();
         //driver.read();
         driver.setDriverCallbacks(cb);
-        Position pos = driver.requestPosition(true);
-        std::cout << "X: " << pos.x <<  std::endl;
+        int time = driver.getSystemTime();
+        //Position pos = driver.requestPosition(true);
+        std::cout << "Time: " << time <<  std::endl;
 
         //driver.read();
         std::cout << "END PROGRAM" << std::endl;

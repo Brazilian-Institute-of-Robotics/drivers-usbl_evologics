@@ -32,6 +32,7 @@ namespace usbl_evologics
     enum Pending {
         PENDING_OK,
         PENDING_POSITION,
+        PENDING_TIME,
         ERROR,
         NO_PENDING
     };
@@ -45,6 +46,7 @@ namespace usbl_evologics
     struct InterfaceStatus{
         enum InterfaceMode interfaceMode;
         enum Pending pending;
+        int time;
         struct Position position;
         std::vector<struct SendInstantMessage*> instantMessages;
     };
@@ -74,6 +76,8 @@ namespace usbl_evologics
             struct Position getPosition();
             void setInterfaceToBurstMode();
             void setDriverCallbacks(UsblDriverCallbacks *cb);
+            int getSystemTime();
+            void setSystemTime(int time);
     };
     
 
