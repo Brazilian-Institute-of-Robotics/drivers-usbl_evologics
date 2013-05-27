@@ -29,6 +29,10 @@ void UsblParser::parseConfigCommand(std::string s){
         parseDeliveryReport(s);
         return;
     } 
+    if (s.find("RECVIM") != std::string::npos){
+        parseIncommingIm(s);
+        return;
+    }
     //Wenn wir auf ein OK warten
     if (mInterfaceStatus->pending == PENDING_OK){
 
@@ -85,3 +89,27 @@ void UsblParser::parseDeliveryReport(std::string s){
 
     }
 } 
+void UsblParser::parseIncommingIm(std::string s){
+    std::vector<std::string> splitted;
+    boost::split( splitted, s, boost::algorithm::is_any_of( "," ) );
+    if (splitted.size() != 11){
+        std::cout << "raise Error"<< std::endl;
+        return;
+    }
+    struct ReceiveInstantMessage im;
+    im.len = atoi(splitted.at(1).c_str());
+    im.source = atoi(splitted.at(2).c_str());
+    im.destination = atoi(splitted.at(3).c_str());
+    const char *buffer = splitted.at(10).c_str();
+    /*for (int i = 0; i < im.len; i++){
+        im.buffer[i] = (uint8_t) buffer[i];
+    }*/
+
+    std::cout << "INSTANT MESSAGE FROM HOST" << im.source << std::endl;
+    if (mCallbacks) {
+        mCallbacks->gotInstantMessage(&im);
+    } else {
+        std::cout << "Warning unhandled InstantMessage, because unsetted callbacks" << std::endl;
+    }
+
+}

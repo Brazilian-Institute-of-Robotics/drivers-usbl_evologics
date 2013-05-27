@@ -2,6 +2,13 @@
 #include <iostream>
 
 using namespace usbl_evologics;
+/*void UsblDriverCallbacks::gotInstantMessage(struct ReceiveInstantMessage *im){
+    std::cout << "Default Instant Message Callback" << std::endl;
+}
+
+void UsblDriverCallbacks::gotBurstData(uint8_t const *data, size_t data_size){
+    std::cout << "Default Burst Data Callback" << std::endl;
+}*/
 Driver::Driver()
     : iodrivers_base::Driver(50)
 {
@@ -41,7 +48,7 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
     }
 }
 
-void Driver::sendInstantMessage(struct InstantMessage *instantMessage){
+void Driver::sendInstantMessage(struct SendInstantMessage *instantMessage){
     setInterfaceToConfigMode();
     //TODO instantMessage senden
     std::cout << "Pending Messages" << mInterfaceStatus.instantMessages.size() << std::endl;

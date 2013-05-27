@@ -3,11 +3,28 @@
 
 #include <iodrivers_base/Driver.hpp>
 #include <vector>
-#include "UsblParser.hpp"
+#include <usbl_evologics/UsblParser.hpp>
 namespace usbl_evologics
 {
     class UsblParser;
-    
+    enum DeliveryStatus {
+        PENDING,
+        DELIVERED,
+        FAILED
+    };
+    struct SendInstantMessage {
+        int destination;
+        bool delivery_report;
+        enum DeliveryStatus deliveryStatus;
+        size_t len;
+        uint8_t *buffer;
+    };
+    struct ReceiveInstantMessage {
+        int destination;
+        int source;
+        size_t len;
+        uint8_t *buffer;
+    };
     enum InterfaceMode {
         BURST_MODE,
         CONFIG_MODE
@@ -18,11 +35,7 @@ namespace usbl_evologics
         ERROR,
         NO_PENDING
     };
-    enum DeliveryStatus {
-        PENDING,
-        DELIVERED,
-        FAILED
-    };
+    
     struct Position {
         int time;
         float x;
@@ -33,20 +46,14 @@ namespace usbl_evologics
         enum InterfaceMode interfaceMode;
         enum Pending pending;
         struct Position position;
-        std::vector<struct InstantMessage*> instantMessages;
+        std::vector<struct SendInstantMessage*> instantMessages;
     };
-    struct InstantMessage {
-        int destination;
-        bool delivery_report;
-        enum DeliveryStatus deliveryStatus;
-        size_t len;
-        uint8_t *buffer;
-    };
+    
     class UsblDriverCallbacks
     {
         public:
-            virtual void gotInstantMessage(struct InstantMesssage *im) = 0;
-            virtual void gotBurstData(uint8_t const *data, size_t data_size) = 0;
+            virtual void gotInstantMessage(struct ReceiveInstantMessage *im) =0;
+            virtual void gotBurstData(uint8_t const *data, size_t data_size) =0;
     };
     class Driver : public iodrivers_base::Driver
     {
@@ -60,7 +67,7 @@ namespace usbl_evologics
         public: 
             Driver();
             void read();
-            void sendInstantMessage(struct InstantMessage *instantMessage);
+            void sendInstantMessage(struct usbl_evologics::SendInstantMessage *instantMessage);
             void sendBurstData(uint8_t const *buffer, size_t buffer_size);
             void open(std::string const& uri);
             struct Position requestPosition(bool x);

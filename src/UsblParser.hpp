@@ -16,6 +16,7 @@ namespace usbl_evologics
             void parseCommand(uint8_t const* data, size_t size);
             void parsePosition(std::string s);
             void parseDeliveryReport(std::string s);
+            void parseIncommingIm(std::string s);
             void setCallbacks(UsblDriverCallbacks *cb);
     };
 }
