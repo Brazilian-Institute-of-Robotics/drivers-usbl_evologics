@@ -27,7 +27,7 @@ int main(int argc, char** argv)
         std::cout << "Driver opened" <<std::endl;
         struct usbl_evologics::SendInstantMessage im;
         im.destination = 10;
-        im.delivery_report = true;
+        im.deliveryReport = true;
         im.deliveryStatus = usbl_evologics::PENDING;
         //driver.sendInstantMessage(&im);
         //driver.setInterfaceToBurstMode();

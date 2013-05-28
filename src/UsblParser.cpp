@@ -85,7 +85,7 @@ void UsblParser::parseDeliveryReport(std::string s){
     }
     for (unsigned i = 0; i < mInterfaceStatus->instantMessages.size(); i++){
         if (remote == mInterfaceStatus->instantMessages.at(i)->destination &&
-                mInterfaceStatus->instantMessages.at(i)->delivery_report){
+                mInterfaceStatus->instantMessages.at(i)->deliveryReport){
             mInterfaceStatus->instantMessages.at(i)->deliveryStatus = temp;
             mInterfaceStatus->instantMessages.erase(mInterfaceStatus->instantMessages.begin()+i);
         }

@@ -1,5 +1,6 @@
 #include "Driver.hpp"
 #include <iostream>
+#include <sstream>
 
 using namespace usbl_evologics;
 /*void UsblDriverCallbacks::gotInstantMessage(struct ReceiveInstantMessage *im){
@@ -51,6 +52,16 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 void Driver::sendInstantMessage(struct SendInstantMessage *instantMessage){
     setInterfaceToConfigMode();
     //TODO instantMessage senden
+    std::stringstream ss;
+    ss << "AT*SENDIM," <<instantMessage->len<<","<<instantMessage->destination<<",";
+    if (instantMessage->deliveryReport){
+        ss<<"ack,";
+    } else {
+        ss<<"noack,";
+    }
+    ss<<instantMessage<<instantMessage->buffer;
+    std::string s = ss.str();
+    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
     std::cout << "Pending Messages" << mInterfaceStatus.instantMessages.size() << std::endl;
     mInterfaceStatus.instantMessages.push_back(instantMessage);
     mInterfaceStatus.pending = PENDING_OK;
@@ -59,7 +70,8 @@ void Driver::sendInstantMessage(struct SendInstantMessage *instantMessage){
 
 void Driver::setInterfaceToBurstMode(){
     if (mInterfaceStatus.interfaceMode != BURST_MODE) {
-        //TODO "ATO" senden
+        //"ATO" senden
+        this->writePacket(reinterpret_cast<const uint8_t*>("ATO"), 3);
         mInterfaceStatus.pending = PENDING_OK;
         waitSynchronousMessage();
         mInterfaceStatus.interfaceMode = BURST_MODE;
@@ -83,7 +95,8 @@ void Driver::waitSynchronousMessage(){
 
 void Driver::setInterfaceToConfigMode(){
     if (mInterfaceStatus.interfaceMode != CONFIG_MODE) {
-        //TODO "+++ATC" senden
+        // "+++ATC" senden
+        this->writePacket(reinterpret_cast<const uint8_t*>("+++ATC"), 6);
         mInterfaceStatus.pending = PENDING_OK;
         waitSynchronousMessage();
         mInterfaceStatus.interfaceMode = CONFIG_MODE;
@@ -93,15 +106,18 @@ void Driver::setInterfaceToConfigMode(){
 void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size)
 {
     setInterfaceToBurstMode();
-    //TODO just sending
+    //just sending
+    this->writePacket(buffer, buffer_size);
 }
 
 struct Position Driver::requestPosition(bool x){
     setInterfaceToConfigMode();
     if (x){
-        //TODO send +++UPX
+        this->writePacket(reinterpret_cast<const uint8_t*>("AT?UPX"), 6);
+        //send AT?UPX
     } else {
-        //TODO send +++UP
+        this->writePacket(reinterpret_cast<const uint8_t*>("AT?UP"), 5);
+        //send AT?UP
     }
     mInterfaceStatus.pending = PENDING_POSITION;
     waitSynchronousMessage();
@@ -114,14 +130,19 @@ struct Position Driver::getPosition(){
 
 int Driver::getSystemTime(){
     setInterfaceToConfigMode();
-    //TODO send AT?UT
+    //send AT?UT
+    this->writePacket(reinterpret_cast<const uint8_t*>("AT?UT"), 5);
     mInterfaceStatus.pending = PENDING_TIME;
     waitSynchronousMessage();
     return mInterfaceStatus.time;
 }
 void Driver::setSystemTime(int time){
     setInterfaceToConfigMode();
-    //TODO send AT!UT<time>
+    std::stringstream ss;
+    ss << "AT!UT" << time;
+    std::string s = ss.str();
+    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+    //send AT!UT<time>
     mInterfaceStatus.pending = PENDING_OK;
     waitSynchronousMessage();
     mInterfaceStatus.time = time;

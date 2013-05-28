@@ -14,7 +14,7 @@ namespace usbl_evologics
     };
     struct SendInstantMessage {
         int destination;
-        bool delivery_report;
+        bool deliveryReport;
         enum DeliveryStatus deliveryStatus;
         size_t len;
         uint8_t *buffer;
