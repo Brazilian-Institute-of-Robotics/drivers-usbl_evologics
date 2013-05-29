@@ -1,6 +1,7 @@
 #include <iostream>
 #include <usbl_evologics/Driver.hpp>
 #include "Driver.hpp"
+#include <boost/algorithm/string.hpp>
 using namespace usbl_evologics;
 class CB : public usbl_evologics::UsblDriverCallbacks{
     public:
@@ -19,11 +20,16 @@ void CB::gotBurstData(uint8_t const *data, size_t data_size){
 
 int main(int argc, char** argv)
 {
+    std::string s = "irgendwas: das";
+
+    std::vector<std::string> splitted;
+    boost::split( splitted, s, boost::algorithm::is_any_of( ":" ) );
+    std::cout << s.compare("irgendwas") << std::endl;
         CB *cb = new CB();
         usbl_evologics::ReceiveInstantMessage im2;
         cb->gotInstantMessage(&im2);
 	usbl_evologics::Driver driver;
-        driver.open("file:///home/nikpec/usblinput");
+        //driver.open("file:///home/nikpec/usblinput");
         std::cout << "Driver opened" <<std::endl;
         struct usbl_evologics::SendInstantMessage im;
         im.destination = 10;
@@ -32,13 +38,13 @@ int main(int argc, char** argv)
         //driver.sendInstantMessage(&im);
         //driver.setInterfaceToBurstMode();
         //driver.read();
-        driver.setDriverCallbacks(cb);
+        //driver.setDriverCallbacks(cb);
         int time = driver.getSystemTime();
         //Position pos = driver.requestPosition(true);
-        std::cout << "Time: " << time <<  std::endl;
+        //std::cout << "Time: " << time <<  std::endl;
 
         //driver.read();
-        std::cout << "END PROGRAM" << std::endl;
+        //std::cout << "END PROGRAM" << std::endl;
         /*while(true){
             driver.read();
         }*/

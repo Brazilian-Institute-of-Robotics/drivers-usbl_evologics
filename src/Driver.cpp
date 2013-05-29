@@ -21,6 +21,7 @@ void Driver::open(std::string const& uri){
     buffer.resize(50);
     openURI(uri);
     mInterfaceStatus.interfaceMode = CONFIG_MODE;
+    //Ask the Device for the maximum address
     //setInterfaceToConfigMode();
 }
 
@@ -30,6 +31,20 @@ void Driver::read(){
     if (packet_size){
         mParser->parseCommand(&buffer[0], packet_size);
     }
+}
+void Driver::setSettings(struct DeviceSettings device_settings){
+    setSourceLevel(device_settings.sourceLevel);
+    setSourceLevelControl(device_settings.sourceLevelControl);
+    setLowGain(device_settings.lowGain);
+    setCarrierWaveformId(device_settings.carrierWaveformId);
+    setLocalAddress(device_settings.localAddress);
+    setRemoteAddress(device_settings.remoteAddress);
+    setClusterSize(device_settings.clusterSize);
+    setPacketTime(device_settings.packetTime);
+    setRetryCount(device_settings.retryCount);
+    setIdleTimeout(device_settings.idleTimeout);
+    setSpeedSound(device_settings.speedSound);
+    setImRetry(device_settings.imRetry);
 }
 
 int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
@@ -136,6 +151,13 @@ int Driver::getSystemTime(){
     waitSynchronousMessage();
     return mInterfaceStatus.time;
 }
+struct DeviceSettings Driver::getDeviceSettings(){
+    setInterfaceToConfigMode();
+    this->writePacket(reinterpret_cast<const uint8_t*>("AT&V"), 4);
+    mInterfaceStatus.pending = PENDING_SETTINGS;
+    waitSynchronousMessage();
+    return mInterfaceStatus.deviceSettings;
+}
 void Driver::setSystemTime(int time){
     setInterfaceToConfigMode();
     std::stringstream ss;
@@ -151,4 +173,82 @@ void Driver::setSystemTime(int time){
 void Driver::setDriverCallbacks(UsblDriverCallbacks *cb){
    mCallbacks = cb; 
    mParser->setCallbacks(cb);
+}
+
+void Driver::storeSettings(){
+    setInterfaceToConfigMode();
+    this->writePacket(reinterpret_cast<const uint8_t*>("AT&W"), 4);
+    mInterfaceStatus.pending = PENDING_OK;
+    waitSynchronousMessage();
+}
+void Driver::setSourceLevel(int source_level){
+    validateValue(source_level, 0, 3);
+    setValue("AT!L", source_level);
+}
+void Driver::setSourceLevelControl(bool source_level_control){
+    if (source_level_control){
+        setValue("AT!LC", 1);
+    } else {
+        setValue("AT!LC", 0);
+    }
+}
+void Driver::setLowGain(bool low_gain){
+    if (low_gain){
+        setValue("AT!G", 1);
+    } else {
+        setValue("AT!G", 0);
+    }
+}
+void Driver::setCarrierWaveformId(int id){
+    validateValue(id, 0, 3);
+    setValue("AT!C", id);
+}
+void Driver::setLocalAddress(int address){
+    validateValue(address, 0, 254); //TODO maximum address
+    setValue("AT!AL", address);
+}
+void Driver::setRemoteAddress(int address){
+    validateValue(address, 0, 254); //TODO maximum address
+    setValue("AT!AR", address);
+}
+void Driver::setClusterSize(int size){
+    validateValue(size, 1, 255);
+    setValue("AT!ZC", size);
+}
+void Driver::setPacketTime(int time){
+    validateValue(time, 50, 1000);
+    setValue("AT!ZP", time);
+}
+void Driver::setRetryCount(int count){
+    validateValue(count, 0, 255);
+    setValue("AT!RC", count);
+}
+void Driver::setRetryTimeout(int timeout){
+    validateValue(timeout, 500, 12000);
+    setValue("AT!RT", timeout);
+}
+void Driver::setIdleTimeout(int timeout){
+    validateValue(timeout, 0, 3600);
+    setValue("AT!ZI", timeout);
+}
+void Driver::setSpeedSound(int speed){
+    validateValue(speed, 1300, 1700);
+    setValue("AT!CA", speed);
+}
+void Driver::setImRetry(int retries){
+    validateValue(retries, 0, 255);
+    setValue("AT!RI", retries);
+}
+void Driver::setValue(std::string value_name, int value){
+    std::stringstream ss;
+    ss << value_name <<value;
+    std::string s = ss.str();
+    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+    mInterfaceStatus.pending = PENDING_OK;
+    waitSynchronousMessage();
+}
+void Driver::validateValue(int value, int min, int max){
+    if (! (value >= min && value <= max)){
+        //TODO raise error
+    }
 }

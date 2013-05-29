@@ -46,6 +46,8 @@ void UsblParser::parseConfigCommand(std::string s){
     } else if (mInterfaceStatus->pending == PENDING_TIME){
         mInterfaceStatus->time = atoi(s.c_str());
         mInterfaceStatus->pending = NO_PENDING;
+    } else if (mInterfaceStatus->pending == PENDING_SETTINGS){
+        parseSettingLine(s);
     }
 }
 void UsblParser::parsePosition(std::string s){
@@ -116,3 +118,41 @@ void UsblParser::parseIncommingIm(std::string s){
     }
 
 }
+void UsblParser::parseSettingLine(std::string s){
+    std::vector<std::string> splitted;
+    boost::split( splitted, s, boost::algorithm::is_any_of(":"));
+    if (splitted.size() != 2){
+        std::cout << "Error" << std::endl;
+        return;
+    }
+    //Not the best way, but i have no better idea
+    if (splitted.at(0).compare("Source Level") == 0){
+        mInterfaceStatus->deviceSettings.sourceLevel = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Source Level Control") == 0){
+        mInterfaceStatus->deviceSettings.sourceLevelControl = (atoi(splitted.at(1).c_str())!=0);
+    } else if (splitted.at(0).compare("Gain") == 0){
+        mInterfaceStatus->deviceSettings.lowGain = (atoi(splitted.at(1).c_str())!=0);
+    } else if (splitted.at(0).compare("Carrier Waveform ID") == 0){
+        mInterfaceStatus->deviceSettings.carrierWaveformId = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Local Address") == 0){
+        mInterfaceStatus->deviceSettings.localAddress = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Cluster Size") == 0){
+        mInterfaceStatus->deviceSettings.clusterSize = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Packet Time") == 0){
+        mInterfaceStatus->deviceSettings.packetTime = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Retry Count") == 0){
+        mInterfaceStatus->deviceSettings.retryCount = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Retry Timeout") == 0){
+        mInterfaceStatus->deviceSettings.retryTimeout = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Sound Speed") == 0){
+        mInterfaceStatus->deviceSettings.speedSound = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("IM Rerty Count") == 0){
+        mInterfaceStatus->deviceSettings.imRetry = atoi(splitted.at(1).c_str());
+    } else if (splitted.at(0).compare("Idle Timeout") == 0){
+        mInterfaceStatus->deviceSettings.idleTimeout = atoi(splitted.at(1).c_str());
+        mInterfaceStatus->pending = NO_PENDING;
+    } else {
+        std::cout << "Unknown Setting: " << splitted.at(0) << std::endl;
+    }
+}
+

@@ -18,6 +18,7 @@ namespace usbl_evologics
             void parseDeliveryReport(std::string s);
             void parseIncommingIm(std::string s);
             void setCallbacks(UsblDriverCallbacks *cb);
+            void parseSettingLine(std::string s);
     };
 }
 #endif
