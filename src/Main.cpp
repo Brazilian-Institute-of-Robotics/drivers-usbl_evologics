@@ -15,38 +15,59 @@ void CB::gotInstantMessage(struct usbl_evologics::ReceiveInstantMessage* im){
     std::cout << "Instant Message Callback" << std::endl;
 };
 void CB::gotBurstData(uint8_t const *data, size_t data_size){
-    std::cout << "BURST CALLBACK" << std::endl;
+
+    std::cout << "BURST CALLBACK" << data <<std::endl;
 };
 
 int main(int argc, char** argv)
 {
-    std::string s = "irgendwas: das";
 
-    std::vector<std::string> splitted;
-    boost::split( splitted, s, boost::algorithm::is_any_of( ":" ) );
-    std::cout << s.compare("irgendwas") << std::endl;
-        CB *cb = new CB();
-        usbl_evologics::ReceiveInstantMessage im2;
-        cb->gotInstantMessage(&im2);
-	usbl_evologics::Driver driver;
-        //driver.open("file:///home/nikpec/usblinput");
-        std::cout << "Driver opened" <<std::endl;
-        struct usbl_evologics::SendInstantMessage im;
-        im.destination = 10;
-        im.deliveryReport = true;
-        im.deliveryStatus = usbl_evologics::PENDING;
-        //driver.sendInstantMessage(&im);
-        //driver.setInterfaceToBurstMode();
-        //driver.read();
-        //driver.setDriverCallbacks(cb);
-        int time = driver.getSystemTime();
-        //Position pos = driver.requestPosition(true);
-        //std::cout << "Time: " << time <<  std::endl;
+    CB *cb = new CB();
+    usbl_evologics::ReceiveInstantMessage im2;
+    cb->gotInstantMessage(&im2);
+    usbl_evologics::Driver driver;
+    driver.open("file:///home/nikpec/usblinput");
+//    driver.open("serial:///dev/ttyUSB0:19200");
+//    driver.open("tcp://192.168.0.248:9200");
+//    std::cout << "Driver opened" <<std::endl;
+//    driver.setDriverCallbacks(cb);
+//    usbl_evologics::SendInstantMessage im;
+//    im.destination = 2;
+//    uint8_t *tmp;
+//    im.deliveryReport = true;
+//    im.deliveryStatus = PENDING; 
+//    im.len = 0;
+//    im.buffer = tmp;
+//    driver.sendInstantMessage(&im);
 
-        //driver.read();
-        //std::cout << "END PROGRAM" << std::endl;
-        /*while(true){
+    //std::cout << "Set System Time" << std::endl;
+    //driver.setSystemTime(50);
+    //std::cout << "Ask for Time" << std::endl;
+    //int time = driver.getSystemTime();
+    //std::cout << "Time is " <<time << std::endl;
+//    std::cout << "Ask for current Settings" << std::endl;
+//    struct DeviceSettings ds;
+//    ds = driver.getDeviceSettings();
+    //std::cout << "The current lowGain i.e. is " << ds.lowGain <<std::endl;
+
+//    driver.setSourceLevel(1);
+//    driver.setImRetry(1);
+//    driver.setLowGain(false);
+//    driver.storeSettings();
+    //driver.setSourceLevel(3);
+//    ds = driver.getDeviceSettings();
+//    std::cout << "The current source level i.e. is " << ds.sourceLevel <<std::endl;
+
+    //std::cout << "Sending out hello world" << std::endl;
+    //driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 13);
+//    uint8_t *tmp = "Hello Wordld!";
+    while(true){
+//        driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
+//        std::cout << im.deliveryStatus <<std::endl;
+        if (driver.hasPacket()){
+            std::cout << "Driver Has Packet" <<std::endl;
             driver.read();
-        }*/
-	return 0;
+        }
+    }
+    return 0;
 }

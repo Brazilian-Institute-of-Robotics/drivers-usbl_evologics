@@ -49,6 +49,16 @@ namespace usbl_evologics
         //int poolSize; //TODO add support
         //TODO add Wake-Up-Module specific entries
     };
+    struct DeviceStats {
+        int dropCount;
+        int overflowCount;
+        int localRemoteBitrate;
+        int remoteLocalBitrate;
+        int receivedSignalStrengthIndicator;
+        int signalIntegrityLevel;
+        int propagationTime;
+        int relativeVelocity;
+    };
     struct SendInstantMessage {
         int destination;
         bool deliveryReport;
@@ -66,11 +76,16 @@ namespace usbl_evologics
         BURST_MODE,
         CONFIG_MODE
     };
+    enum InterfaceType {
+        SERIAL,
+        ETHERNET
+    };
     enum Pending {
         PENDING_OK,
         PENDING_POSITION,
         PENDING_TIME,
         PENDING_SETTINGS,
+        PENDING_ONE_STAT,
         ERROR,
         NO_PENDING
     };
@@ -81,6 +96,7 @@ namespace usbl_evologics
         float y;
         float z;
     };
+    //TODO Should refactored to DeviceStatus
     struct InterfaceStatus{
         enum InterfaceMode interfaceMode;
         enum Pending pending;
@@ -88,6 +104,8 @@ namespace usbl_evologics
         struct Position position;
         std::vector<struct SendInstantMessage*> instantMessages;
         struct DeviceSettings deviceSettings;
+        struct DeviceStats deviceStats;
+        enum InterfaceType interfaceType;
     };
     
     class UsblDriverCallbacks
@@ -106,7 +124,9 @@ namespace usbl_evologics
             void waitSynchronousMessage();
             void setInterfaceToConfigMode();
             void setValue(std::string value_name, int value);
+            void getValue(std::string value_name);
             void validateValue(int value, int min, int max);
+            void sendWithLineEnding(std::string line);
         public: 
             Driver();
             void read();
@@ -135,6 +155,16 @@ namespace usbl_evologics
             void setSpeedSound(int speed);
             void setImRetry(int retries);
             void setSettings(struct DeviceSettings device_settings);
+            void resetDropCounter();
+            void resetOverflowCounter();
+            int getDropCounter();
+            int getOverflowCounter();
+            int getLocalRemoteBitrate();
+            int getRemoteLocalBitrate();
+            int getReceivedSignalStrengthIndicator();
+            int getSignalIntegrityLevel();
+            int getPropagationTime();
+            int getRelativeVelocity();
             //TODO see some device stats i.e. Drop counter, Overflow counter
             //reset some device stats i.e. drop counter, over flow counter
     };
