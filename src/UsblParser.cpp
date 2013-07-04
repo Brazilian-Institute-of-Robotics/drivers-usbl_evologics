@@ -6,80 +6,128 @@ UsblParser::UsblParser(InterfaceStatus* interfaceStatus){
     mCallbacks = NULL;
     mInterfaceStatus = interfaceStatus;
 }
-void UsblParser::setCallbacks(UsblDriverCallbacks* cb){
-    mCallbacks = cb; 
-}
-void UsblParser::parseCommand(uint8_t const* data, size_t size){
-    char const* buffer_as_string = reinterpret_cast<char const*>(data);
-    std::string s = std::string(buffer_as_string, size);
-    if (mInterfaceStatus->interfaceMode == CONFIG_MODE){
-        std::cout << "PARSE LINE: " << s  << " in CONFIG_MODE" << std::endl;
-        parseConfigCommand(s);
+
+int UsblParser::isPacket(std::string s){
+    std::size_t escape_sequenz_position = s.find("+++");
+    if (escape_sequenz_position == std::string::npos){
+        //there is definitly no command
+        return -1*s.size();
+    } else if (escape_sequenz_position != 0){
+        //there is maybe a command but isn't starting at position 0
+        return -1*escape_sequenz_position;
     } else {
-        std::cout << "Got Burstdata: " << s << std::endl;
-        if (mCallbacks) {
-            mCallbacks->gotBurstData(data, size);
-        } else {
-            std::cout << "Warning unhandles Burstdata, because unsetted callbacks" << std::endl;
+        //there is a command starting at position 0
+        for (size_t eol = 0; eol < s.size(); eol++){
+            //The Buffer is until the Lineending a Command 
+            if (s.at(eol) == '\n'){
+                //TODO try except
+                validateResponse(s.substr(0, eol+1));
+                return eol+1;
+            }
         }
-    }
-} 
-void UsblParser::parseConfigCommand(std::string s){
+        //TODO gucken obs noch ein command werden kann
+        return 0;
+    } 
+}
+
+bool UsblParser::parseAsynchronousCommand(std::string s){
     if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
         parseDeliveryReport(s);
-        return;
+        return true;
     } 
     if (s.find("RECVIM") != std::string::npos){
         parseIncommingIm(s);
-        return;
+        return true;
     }
-    //Wenn wir auf ein OK warten
-    if (mInterfaceStatus->pending == PENDING_OK){
+    return false;
+}
 
-        if (s.find("OK") != std::string::npos){
-            mInterfaceStatus->pending = NO_PENDING;
-        } else if (s.find("ERROR") != std::string::npos){
-            mInterfaceStatus->pending = ERROR;
-        }
-    } else if (mInterfaceStatus->pending == PENDING_POSITION){
-        parsePosition(s);
-    } else if (mInterfaceStatus->pending == PENDING_TIME){
-        mInterfaceStatus->time = atoi(s.c_str());
-        mInterfaceStatus->pending = NO_PENDING;
-    } else if (mInterfaceStatus->pending == PENDING_SETTINGS){
-        parseSettingLine(s);
-    }
+int UsblParser::parseInt(uint8_t const* data, size_t size){
+    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+    std::string s = std::string(buffer_as_string, size);
+    std::vector<std::string> splitted = validateResponse(s); 
+    return atoi(splitted.at(1).c_str());
 }
-void UsblParser::parsePosition(std::string s){
-    //remove possible prefix
-    if (s.find("+++AT?UP:") != std::string::npos){
-        s = s.substr(9, s.size()-10);
-    } else if (s.find("+++AT?UPX:") != std::string::npos){
-        s = s.substr(10, s.size()-11);
+
+int UsblParser::parseInt(uint8_t const* data, size_t size, std::string command){
+    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+    std::string s = std::string(buffer_as_string, size);
+    std::vector<std::string> splitted = validateResponse(s); 
+    if (splitted.at(0).compare(command) != 0){
+        //TODO raise Error
+        std::cout << "3raise error; expected command: "<< command << "real command: " << splitted.at(0)  << std::endl;
     }
-    //to split
-    std::vector<std::string> splitted;
-    boost::split( splitted, s, boost::algorithm::is_any_of( "," ) );
-    if (splitted.size() == 5){
-        mInterfaceStatus->position.time = atoi(splitted.at(0).c_str());
-        mInterfaceStatus->position.x = atof(splitted.at(2).c_str());
-        mInterfaceStatus->position.y = atof(splitted.at(3).c_str());
-        mInterfaceStatus->position.z = atof(splitted.at(4).c_str());
-        mInterfaceStatus->pending = NO_PENDING;
-    } else {
-        mInterfaceStatus->pending = ERROR;
-    }
+    return atoi(splitted.at(1).c_str());
 }
-void UsblParser::parseDeliveryReport(std::string s){
-    std::vector<std::string> splitted;
-    boost::split( splitted, s, boost::algorithm::is_any_of( "," ) );
-    if (splitted.size() != 2){
-        std::cout << "raise Error"<< std::endl;
+
+void UsblParser::parseOk(uint8_t const* data, size_t size){
+    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+    std::string s = std::string(buffer_as_string, size);
+    std::vector<std::string> splitted = validateResponse(s);
+    if (splitted.at(1).compare("OK") == 0 || splitted.at(1).compare("*OK") == 0){
         return;
+    } else if (s.find("ERROR") != std::string::npos){
+        //TODO raise Error
     }
+    //TODO raise Error
+}
+
+ConnectionStatus UsblParser::parseConnectionStatus(std::string s){
+    if (s.compare("OFFLINE")== 0){
+        return OFFLINE;
+    } else if (s.compare("OFFLINE CONNECTION FAILED")== 0){
+        return OFFLINE_CONNECTION_FAILED;
+    } else if (s.compare("OFFLINE TERMINATED")== 0){
+        return OFFLINE_TERMINATED;
+    } else if (s.compare("OFFLINE ALARM")== 0){
+        return OFFLINE_ALARM;
+    } else if (s.compare("INITIATION LISTEN")== 0){
+        return INITIATION_LISTEN;
+    } else if (s.compare("INITIATION ESTABLISH")== 0){
+        return INITIATION_ESTABLISH;
+    } else if (s.compare("INITIATION DISCONNECT")== 0){
+        return INITIATION_DISCONNECT;
+    } else if (s.compare("ONLINE")== 0){
+        return ONLINE;
+    } else if (s.compare("BACKOFF")== 0){
+        return BACKOFF;
+    } else {
+        //TODO
+        std::cout << "raise error" << std::endl;
+    }
+    return OFFLINE;
+}
+
+Position UsblParser::parsePosition(std::string s){
+    std::vector<std::string> splitted = splitValidate(s, ",", 5);
+    Position pos;
+    pos.time = atoi(splitted.at(0).c_str());
+    pos.x = atof(splitted.at(2).c_str());
+    pos.y = atof(splitted.at(3).c_str());
+    pos.z = atof(splitted.at(4).c_str());
+    return pos;
+}
+
+std::string UsblParser::parseString(uint8_t const* data, size_t size, std::string command){
+    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+    std::string s = std::string(buffer_as_string, size);
+    std::vector<std::string> splitted = validateResponse(s); 
+    if (splitted.at(0).compare(command) != 0){
+        //TODO raise Error
+        std::cout << "3raise error; expected command: "<< command << "real command: " << splitted.at(0)  << std::endl;
+    }
+    return splitted.at(1);
+}
+
+void UsblParser::setCallbacks(UsblDriverCallbacks* cb){
+    mCallbacks = cb; 
+}
+
+//Privats
+void UsblParser::parseDeliveryReport(std::string s){
+    std::vector<std::string> splitted = splitValidate(s, ",", 2);
     int remote = atoi(splitted.at(1).c_str());
-    std::cout <<  "DELIVERY REPORT FROM HOST" << remote <<std::endl;
-    enum DeliveryStatus temp;
+    DeliveryStatus temp;
     if (splitted.at(0).find("DELIVEREDIM") != std::string::npos) {
         temp = DELIVERED;
     } else if (splitted.at(0).find("FAILEDIM") != std::string::npos){
@@ -91,26 +139,16 @@ void UsblParser::parseDeliveryReport(std::string s){
             mInterfaceStatus->instantMessages.at(i)->deliveryStatus = temp;
             mInterfaceStatus->instantMessages.erase(mInterfaceStatus->instantMessages.begin()+i);
         }
-
     }
 } 
+
 void UsblParser::parseIncommingIm(std::string s){
-    std::vector<std::string> splitted;
-    boost::split( splitted, s, boost::algorithm::is_any_of( "," ) );
-    if (splitted.size() != 11){
-        std::cout << "raise Error"<< std::endl;
-        return;
-    }
-    struct ReceiveInstantMessage im;
+    std::vector<std::string> splitted = splitValidate(s, ",", 11);
+    ReceiveInstantMessage im;
     im.len = atoi(splitted.at(1).c_str());
     im.source = atoi(splitted.at(2).c_str());
     im.destination = atoi(splitted.at(3).c_str());
     const char *buffer = splitted.at(10).c_str();
-    /*for (int i = 0; i < im.len; i++){
-        im.buffer[i] = (uint8_t) buffer[i];
-    }*/
-
-    std::cout << "INSTANT MESSAGE FROM HOST" << im.source << std::endl;
     if (mCallbacks) {
         mCallbacks->gotInstantMessage(&im);
     } else {
@@ -118,41 +156,32 @@ void UsblParser::parseIncommingIm(std::string s){
     }
 
 }
-void UsblParser::parseSettingLine(std::string s){
+
+std::vector<std::string> UsblParser::splitValidate(std::string s, const char* symbol, int parts){
     std::vector<std::string> splitted;
-    boost::split( splitted, s, boost::algorithm::is_any_of(":"));
-    if (splitted.size() != 2){
-        std::cout << "Error" << std::endl;
-        return;
+    boost::split( splitted, s, boost::algorithm::is_any_of( symbol ) );
+    if (splitted.size() != parts){
+        std::cout << "2raise Error"<< std::endl;
     }
-    //Not the best way, but i have no better idea
-    if (splitted.at(0).compare("Source Level") == 0){
-        mInterfaceStatus->deviceSettings.sourceLevel = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Source Level Control") == 0){
-        mInterfaceStatus->deviceSettings.sourceLevelControl = (atoi(splitted.at(1).c_str())!=0);
-    } else if (splitted.at(0).compare("Gain") == 0){
-        mInterfaceStatus->deviceSettings.lowGain = (atoi(splitted.at(1).c_str())!=0);
-    } else if (splitted.at(0).compare("Carrier Waveform ID") == 0){
-        mInterfaceStatus->deviceSettings.carrierWaveformId = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Local Address") == 0){
-        mInterfaceStatus->deviceSettings.localAddress = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Cluster Size") == 0){
-        mInterfaceStatus->deviceSettings.clusterSize = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Packet Time") == 0){
-        mInterfaceStatus->deviceSettings.packetTime = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Retry Count") == 0){
-        mInterfaceStatus->deviceSettings.retryCount = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Retry Timeout") == 0){
-        mInterfaceStatus->deviceSettings.retryTimeout = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Sound Speed") == 0){
-        mInterfaceStatus->deviceSettings.speedSound = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("IM Rerty Count") == 0){
-        mInterfaceStatus->deviceSettings.imRetry = atoi(splitted.at(1).c_str());
-    } else if (splitted.at(0).compare("Idle Timeout") == 0){
-        mInterfaceStatus->deviceSettings.idleTimeout = atoi(splitted.at(1).c_str());
-        mInterfaceStatus->pending = NO_PENDING;
-    } else {
-        std::cout << "Unknown Setting: " << splitted.at(0) << std::endl;
-    }
+    return splitted;
 }
 
+std::vector<std::string> UsblParser::validateResponse(std::string s){
+    std::vector<std::string> ret;
+    if (s.find("+++") == 0){
+        std::vector<std::string> splitted = splitValidate(s, ":", 3);
+        boost::algorithm::trim(splitted.at(2));
+        if (splitted.at(2).length() != atoi(splitted.at(1).c_str())){
+            //TODO raise Error
+            std::cout<< "raise format error "<< splitted.at(2) << "     " << atoi(splitted.at(1).c_str())  <<std::endl;
+            return ret;
+        }
+        ret.push_back(splitted.at(0).substr(3, splitted.at(0).size()));
+        ret.push_back(splitted.at(2));
+        return ret;
+    } else {
+        //TODO raise Error
+        std::cout << "1raise Error" << std::endl;
+        return ret;
+    }
+}

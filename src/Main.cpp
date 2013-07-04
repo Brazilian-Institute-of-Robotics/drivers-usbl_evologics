@@ -61,6 +61,10 @@ int main(int argc, char** argv)
     //std::cout << "Sending out hello world" << std::endl;
     //driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 13);
 //    uint8_t *tmp = "Hello Wordld!";
+    //driver.requestPosition(true);
+    struct Position pos = driver.getPosition(true);
+    std::cout << "WERT: " << pos.x<< ","<<pos.y<<","<<pos.z << std::endl;
+    std::cout << "Connection Status: " << driver.getConnectionStatus() << std::endl;
     while(true){
 //        driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
 //        std::cout << im.deliveryStatus <<std::endl;

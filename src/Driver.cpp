@@ -3,13 +3,6 @@
 #include <sstream>
 
 using namespace usbl_evologics;
-/*void UsblDriverCallbacks::gotInstantMessage(struct ReceiveInstantMessage *im){
-    std::cout << "Default Instant Message Callback" << std::endl;
-}
-
-void UsblDriverCallbacks::gotBurstData(uint8_t const *data, size_t data_size){
-    std::cout << "Default Burst Data Callback" << std::endl;
-}*/
 Driver::Driver()
     : iodrivers_base::Driver(50)
 {
@@ -17,45 +10,88 @@ Driver::Driver()
     mCallbacks = NULL;
 }
 
+ConnectionStatus Driver::getConnectionStatus(){
+    sendWithLineEnding("+++AT?S");
+    return (ConnectionStatus) (mParser->parseConnectionStatus(waitSynchronousString("AT?S"))); 
+}
+
+DeviceSettings Driver::getDeviceSettings(){
+    DeviceSettings ds;
+    ds.sourceLevel = getSourceLevel();
+    ds.sourceLevelControl = getSourceLevelControl();
+    ds.lowGain = getLowGain();
+    ds.carrierWaveformId = getCarrierWaveformId();
+    ds.localAddress = getLocalAddress();
+    ds.clusterSize = getClusterSize();
+    ds.packetTime = getPacketTime();
+    ds.retryCount = getRetryCount();
+    ds.retryTimeout = getRetryTimeout();
+    ds.speedSound = getSpeedSound(); 
+    ds.imRetry = getImRetry();
+    ds.idleTimeout = getIdleTimeout();
+}
+
+int Driver::getIntValue(std::string value_name){
+    std::stringstream ss;
+    ss << "+++" << value_name;
+    std::string s = ss.str();
+    sendWithLineEnding(s);
+    return waitSynchronousInt(s.substr(3, s.size()));
+}
+
+Position Driver::getPosition(bool x){
+    std::string position_string;
+    if (x){
+        sendWithLineEnding("+++AT?UPX");
+        position_string = waitSynchronousString("AT?UPX");
+    } else {
+        sendWithLineEnding("+++AT?UP");
+        position_string = waitSynchronousString("AT?UP");
+    }
+    return mParser->parsePosition(position_string);
+}
+
+int Driver::getSystemTime(){
+    sendWithLineEnding("+++AT?UT");
+    return waitSynchronousInt();
+}
 void Driver::open(std::string const& uri){
     buffer.resize(50);
     openURI(uri);
     mInterfaceStatus.interfaceType = ETHERNET;
-    mInterfaceStatus.interfaceMode = BURST_MODE;
-    setInterfaceToConfigMode();
-//    setInterfaceToBurstMode();
-//    std::string tmp = "Hallo welt";
-//    while (true){
-//        sendWithLineEnding(tmp);
-//        sleep(1);
-//    }
-    //Ask the Device for the maximum address
-    //setInterfaceToConfigMode();
 }
 
 void Driver::read(){
-    std::cout << "READ" << std::endl;
-    int packet_size = readPacket(&buffer[0], buffer.size(), 500, 100);
+    std::vector<uint8_t> buffer;
+    buffer.resize(1000);
+    size_t packet_size = readInternal(&buffer[0], buffer.size());
     if (packet_size){
-        //mParser->parseCommand(&buffer[0], packet_size);
-        char const* buffer_as_string = reinterpret_cast<char const*>(&buffer[0]);
-        std::string s = std::string(buffer_as_string, packet_size);
-        std::cout << "PACKET: " << s <<std::endl;
+        if (mCallbacks){
+            mCallbacks->gotBurstData(&buffer[0], packet_size);
+        }
+    }
+}
 
-    }
+void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
+    this->writePacket(buffer, buffer_size);
 }
-void Driver::sendWithLineEnding(std::string line){
+
+void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     std::stringstream ss;
-    std::cout << "Write Line: " << line << std::endl;
-    if (mInterfaceStatus.interfaceType == SERIAL){
-        ss << line << "\r" << std::flush;
+    ss << "+++AT*SENDIM," <<instantMessage->len<<","<<instantMessage->destination<<",";
+    if (instantMessage->deliveryReport){
+        ss<<"ack,";
     } else {
-        ss << line << "\n" << std::flush;
+        ss<<"noack,";
     }
+    ss<<instantMessage->buffer;
     std::string s = ss.str();
-    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+    sendWithLineEnding(s);
+    mInterfaceStatus.instantMessages.push_back(instantMessage);
+    waitSynchronousOk();
 }
-void Driver::setSettings(struct DeviceSettings device_settings){
+
+void Driver::setDeviceSettings(DeviceSettings device_settings){
     setSourceLevel(device_settings.sourceLevel);
     setSourceLevelControl(device_settings.sourceLevelControl);
     setLowGain(device_settings.lowGain);
@@ -69,164 +105,109 @@ void Driver::setSettings(struct DeviceSettings device_settings){
     setSpeedSound(device_settings.speedSound);
     setImRetry(device_settings.imRetry);
 }
-int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
-{
-    //Line endling?
-    int line_ending_position = -1;
-    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
-    std::size_t escape_sequenz_position = buffer_as_string.find("+++");
-    //No Escape sequenz
-    if (escape_sequenz_position == std::string::npos){
-        return buffer_size;
-    } 
-    //Not the start of a command
-    if (escape_sequenz_position != 0){
-        return escape_sequenz_position;
-        
-    }
-    //finished command?
-    for (int eol = 0; eol < buffer_size; eol++){
-        if (buffer_as_string[eol] == '\n'){
-            return eol +1;
-        }
-    }
-    //not finished command
-    return 0;
-
-}
-/*
-int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
-{
-    //std::cout << "extract Packet with bytes "<< buffer_size << std::endl;
-    //If we aren't in the burstmode every line comes in as a command
-    if (mInterfaceStatus.interfaceMode != BURST_MODE){
-        char const* buffer_as_string = reinterpret_cast<char const*>(buffer);
-        for (int eol = 0; eol < buffer_size; eol++){
-            if (buffer_as_string[eol] == '\n'){
-                return eol+1;
-            }
-        }
-    }
-    //If we are in the burstmode everything is just data
-    else {
-        return buffer_size;
-    }
-}*/
-
-void Driver::sendInstantMessage(struct SendInstantMessage *instantMessage){
-    setInterfaceToConfigMode();
-    //TODO instantMessage senden
-    std::stringstream ss;
-    //ss << "AT*SENDIM," <<instantMessage->len<<","<<instantMessage->destination<<",";
-    ss << "AT*SENDIM," <<2<<","<<instantMessage->destination<<",";
-    if (instantMessage->deliveryReport){
-        ss<<"ack,";
-    } else {
-        ss<<"noack,";
-    }
-    ss<<"Hc";
-    std::string s = ss.str();
-    sendWithLineEnding(s);
-    std::cout << "Pending Messages" << mInterfaceStatus.instantMessages.size() << std::endl;
-    mInterfaceStatus.instantMessages.push_back(instantMessage);
-    mInterfaceStatus.pending = PENDING_OK;
-    waitSynchronousMessage();
-}
-
-void Driver::setInterfaceToBurstMode(){
-    if (mInterfaceStatus.interfaceMode != BURST_MODE) {
-        //"ATO" senden
-        sendWithLineEnding("ATO");
-        mInterfaceStatus.interfaceMode = BURST_MODE;
-    }
-}
-
-void Driver::waitSynchronousMessage(){
-    std::cout << "Wait for Syncronous Message" << std::endl;
-    while (mInterfaceStatus.pending != NO_PENDING){
-        //TODO timeout
-        read();
-        if (mInterfaceStatus.pending == ERROR){
-            mInterfaceStatus.pending = NO_PENDING;
-            std::cout << "RAISE ERROR" << std::endl;
-            //TODO raise Exception
-        }
-    }
-    std::cout << "end waiting" << std::endl;
-
-}
-
-void Driver::setInterfaceToConfigMode(){
-    if (mInterfaceStatus.interfaceMode != CONFIG_MODE) {
-        // "+++ATC" senden
-        sendWithLineEnding("+++ATC");
-        mInterfaceStatus.interfaceMode = CONFIG_MODE;
-        mInterfaceStatus.pending = PENDING_OK;
-        waitSynchronousMessage();
-    }
-}
-
-void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size)
-{
-    setInterfaceToBurstMode();
-    //just sending
-    this->writePacket(buffer, buffer_size);
-}
-
-struct Position Driver::requestPosition(bool x){
-    setInterfaceToConfigMode();
-    if (x){
-        sendWithLineEnding("AT?UPX");
-        //send AT?UPX
-    } else {
-        sendWithLineEnding("AT?UP");
-        //send AT?UP
-    }
-    mInterfaceStatus.pending = PENDING_POSITION;
-    waitSynchronousMessage();
-    return mInterfaceStatus.position;
-}
-
-struct Position Driver::getPosition(){
-    return mInterfaceStatus.position;
-}
-
-int Driver::getSystemTime(){
-    setInterfaceToConfigMode();
-    sendWithLineEnding("AT?UT");
-    mInterfaceStatus.pending = PENDING_TIME;
-    waitSynchronousMessage();
-    return mInterfaceStatus.time;
-}
-struct DeviceSettings Driver::getDeviceSettings(){
-    setInterfaceToConfigMode();
-    sendWithLineEnding("AT&V");
-    mInterfaceStatus.pending = PENDING_SETTINGS;
-    waitSynchronousMessage();
-    return mInterfaceStatus.deviceSettings;
-}
-void Driver::setSystemTime(int time){
-    setInterfaceToConfigMode();
-    std::stringstream ss;
-    ss << "AT!UT" << time<< std::flush;
-    std::string s = ss.str();
-    sendWithLineEnding(s);
-    //send AT!UT<time>
-    mInterfaceStatus.pending = PENDING_OK;
-    waitSynchronousMessage();
-    mInterfaceStatus.time = time;
-}
 
 void Driver::setDriverCallbacks(UsblDriverCallbacks *cb){
    mCallbacks = cb; 
    mParser->setCallbacks(cb);
 }
 
+void Driver::setSystemTime(int time){
+    std::stringstream ss;
+    setValue("AT!UT", time);
+    mInterfaceStatus.time = time;
+}
+
 void Driver::storeSettings(){
-    setInterfaceToConfigMode();
-    sendWithLineEnding("AT&W");
-    mInterfaceStatus.pending = PENDING_OK;
-    waitSynchronousMessage();
+    sendWithLineEnding("+++AT&W");
+    waitSynchronousOk();
+}
+
+int Driver::waitSynchronousInt(){
+    std::vector<uint8_t> buffer;
+    buffer.resize(1000);
+    //TODO timeout
+    while (true){
+        if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
+            return mParser->parseInt(&buffer[0], packet_size);
+        }
+    }
+}
+
+int Driver::waitSynchronousInt(std::string command){
+    std::vector<uint8_t> buffer;
+    buffer.resize(1000);
+    while (true){
+        if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
+            return mParser->parseInt(&buffer[0], packet_size, command);
+        }
+    }
+}
+
+void Driver::waitSynchronousOk(){
+    std::vector<uint8_t> buffer;
+    buffer.resize(1000);
+    //TODO timeout
+    while (true){
+        if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
+            mParser->parseOk(&buffer[0], packet_size);
+            return;
+        }
+    } 
+}
+
+std::string Driver::waitSynchronousString(std::string command){
+    std::vector<uint8_t> buffer;
+    buffer.resize(1000);
+    while (true){
+        if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
+            return mParser->parseString(&buffer[0], packet_size, command);
+        }
+    }
+}
+
+//Set Settings
+void Driver::setCarrierWaveformId(int id){
+    validateValue(id, 0, 3);
+    setValue("AT!C", id);
+}
+void Driver::setClusterSize(int size){
+    validateValue(size, 1, 255);
+    setValue("AT!ZC", size);
+}
+void Driver::setIdleTimeout(int timeout){
+    validateValue(timeout, 0, 3600);
+    setValue("AT!ZI", timeout);
+}
+void Driver::setImRetry(int retries){
+    validateValue(retries, 0, 255);
+    setValue("AT!RI", retries);
+}
+void Driver::setLocalAddress(int address){
+    validateValue(address, 0, 254); //TODO maximum address
+    setValue("AT!AL", address);
+}
+void Driver::setLowGain(bool low_gain){
+    if (low_gain){
+        setValue("AT!G", 1);
+    } else {
+        setValue("AT!G", 0);
+    }
+}
+void Driver::setPacketTime(int time){
+    validateValue(time, 50, 1000);
+    setValue("AT!ZP", time);
+}
+void Driver::setRemoteAddress(int address){
+    validateValue(address, 0, 254); //TODO maximum address
+    setValue("AT!AR", address);
+}
+void Driver::setRetryCount(int count){
+    validateValue(count, 0, 255);
+    setValue("AT!RC", count);
+}
+void Driver::setRetryTimeout(int timeout){
+    validateValue(timeout, 500, 12000);
+    setValue("AT!RT", timeout);
 }
 void Driver::setSourceLevel(int source_level){
     validateValue(source_level, 0, 3);
@@ -239,97 +220,143 @@ void Driver::setSourceLevelControl(bool source_level_control){
         setValue("AT!LC", 0);
     }
 }
-void Driver::setLowGain(bool low_gain){
-    if (low_gain){
-        setValue("AT!G", 1);
-    } else {
-        setValue("AT!G", 0);
-    }
-}
-void Driver::setCarrierWaveformId(int id){
-    validateValue(id, 0, 3);
-    setValue("AT!C", id);
-}
-void Driver::setLocalAddress(int address){
-    validateValue(address, 0, 254); //TODO maximum address
-    setValue("AT!AL", address);
-}
-void Driver::setRemoteAddress(int address){
-    validateValue(address, 0, 254); //TODO maximum address
-    setValue("AT!AR", address);
-}
-void Driver::setClusterSize(int size){
-    validateValue(size, 1, 255);
-    setValue("AT!ZC", size);
-}
-void Driver::setPacketTime(int time){
-    validateValue(time, 50, 1000);
-    setValue("AT!ZP", time);
-}
-void Driver::setRetryCount(int count){
-    validateValue(count, 0, 255);
-    setValue("AT!RC", count);
-}
-void Driver::setRetryTimeout(int timeout){
-    validateValue(timeout, 500, 12000);
-    setValue("AT!RT", timeout);
-}
-void Driver::setIdleTimeout(int timeout){
-    validateValue(timeout, 0, 3600);
-    setValue("AT!ZI", timeout);
-}
 void Driver::setSpeedSound(int speed){
     validateValue(speed, 1300, 1700);
     setValue("AT!CA", speed);
 }
-void Driver::setImRetry(int retries){
-    validateValue(retries, 0, 255);
-    setValue("AT!RI", retries);
+
+//Get Settings
+int Driver::getCarrierWaveformId(){
+    return getIntValue("AT?C");
 }
+int Driver::getClusterSize(){
+    return getIntValue("AT?ZC");
+}
+int Driver::getIdleTimeout(){
+    return getIntValue("AT?ZI");
+}
+int Driver::getImRetry(){
+    return getIntValue("AT?RI");
+}
+int Driver::getLocalAddress(){
+    return getIntValue("AT?AL");
+}
+int Driver::getLowGain(){
+    return getIntValue("AT?G");
+}
+int Driver::getPacketTime(){
+    return getIntValue("AT?ZP");
+}
+int Driver::getRemoteAddress(){
+    return getIntValue("AT?AR");
+}
+int Driver::getRetryCount(){
+    return getIntValue("AT?RC");
+}
+int Driver::getRetryTimeout(){
+    return getIntValue("AT?RT");
+}
+int Driver::getSourceLevel(){
+    return getIntValue("AT?L");
+}
+bool Driver::getSourceLevelControl(){
+    return (bool) getIntValue("AT?LC");
+}
+int Driver::getSpeedSound(){
+    return getIntValue("AT?CA");
+}
+
+//Get Stats
+int Driver::getDropCounter(){
+    return getIntValue("AT?ZD");
+}
+int Driver::getLocalRemoteBitrate(){
+    return getIntValue("AT?BL");
+}
+int Driver::getOverflowCounter(){
+    return getIntValue("AT?ZO");
+}
+int Driver::getPropagationTime(){
+    return getIntValue("AT?T");
+}
+int Driver::getReceivedSignalStrengthIndicator(){
+    return getIntValue("AT?E");
+}
+int Driver::getRelativeVelocity(){
+    return getIntValue("AT?V");
+}
+int Driver::getRemoteLocalBitrate(){
+    return getIntValue("AT?BR");
+}
+int Driver::getSignalIntegrityLevel(){
+    return getIntValue("AT?I");
+}
+
+//Privats
+int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
+{
+    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+    std::cout << buffer_as_string << std::endl;
+    buffer_as_string = buffer_as_string.substr(0, buffer_size);
+    int is_packet = mParser->isPacket(buffer_as_string);
+    if (is_packet < 0){
+        std::cout << is_packet <<"   " << (-1*is_packet)<< std::endl;
+        return (-1*is_packet);
+    } else if (is_packet > 0) {
+        return is_packet;
+    } return 0;
+}
+
+size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
+    size_t packet_size = readPacket(buffer, buffer_size);
+    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+    if (packet_size){
+        if (mParser->isPacket(buffer_as_string) > 0){
+            if (!mParser->parseAsynchronousCommand(buffer_as_string)){
+                //The line is no asynchronous message
+                return packet_size;
+            }else {
+                //The line was a asynchronous message and is already handled
+                return 0;
+            }
+        } else {
+            if (mCallbacks){
+                mCallbacks->gotBurstData(buffer, packet_size);
+            }
+            return 0;
+        }
+    }
+    return 0;
+}
+
+void Driver::sendWithLineEnding(std::string line){
+    std::stringstream ss;
+    std::cout << "Write Line: " << line << std::endl;
+    if (mInterfaceStatus.interfaceType == SERIAL){
+        ss << line << "\r" << std::flush;
+    } else {
+        ss << line << "\n" << std::flush;
+    }
+    std::string s = ss.str();
+    //TODO wieder rein nehmen
+    //this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+}
+
 void Driver::setValue(std::string value_name, int value){
     std::stringstream ss;
-    ss << value_name <<value;
+    ss << "+++" << value_name <<value;
     std::string s = ss.str();
     sendWithLineEnding(s);
-    mInterfaceStatus.pending = PENDING_OK;
-    waitSynchronousMessage();
+    waitSynchronousOk();
 }
+
 void Driver::validateValue(int value, int min, int max){
     if (! (value >= min && value <= max)){
         //TODO raise error
     }
 }
-int Driver::getDropCounter(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.dropCount;
-}
-int Driver::getOverflowCounter(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.overflowCount;
-}
-int Driver::getLocalRemoteBitrate(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.localRemoteBitrate;
-}
-int Driver::getRemoteLocalBitrate(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.remoteLocalBitrate;
-}
-int Driver::getReceivedSignalStrengthIndicator(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.receivedSignalStrengthIndicator;
-}
-int Driver::getSignalIntegrityLevel(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.signalIntegrityLevel;
-}
-int Driver::getPropagationTime(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.propagationTime;
-}
-int Driver::getRelativeVelocity(){
-    getValue("");
-    return mInterfaceStatus.deviceStats.relativeVelocity;
-}
-void Driver::getValue(std::string value_name){
-}
+
+
+
+
+
