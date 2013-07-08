@@ -33,18 +33,51 @@ namespace usbl_evologics
             void open(std::string const& uri);
             void read();
             void sendBurstData(uint8_t const *buffer, size_t buffer_size);
-            void sendInstantMessage(usbl_evologics::SendInstantMessage *instantMessage);
+            /*
+             * The functions sends a instantmessage and save a reference in a cue.
+             * When a deliveryreport for this instantmessage comes in the message is
+             * marked as delivered.
+             */
+            void sendInstantMessage(SendInstantMessage *instantMessage);
+            /*
+             * Sets every devicesettings
+             */
             void setDeviceSettings(DeviceSettings device_settings);
+            //TODO remove callbacks and find a other way. For details have a look at type 2:
+            // http://rock-robotics.org/stable/documentation/device_drivers/writing_driver.html
             void setDriverCallbacks(UsblDriverCallbacks *cb);
+            /*
+             * Function sets the Time in the Device.
+             */
             void setSystemTime(int time);
+            /*
+             * Function stores the Devicesettings permanently on the device.
+             * If you not sure about the right settings, be careful with this function
+             */
             void storeSettings();
+            /*
+             * Function waits for a Synchronous Int Value
+             */
             int waitSynchronousInt();
+            /*
+             * Function waits for a Synchronous Int Value as response
+             * to command. The Function validate the response and throws
+             * an error if the response is not a valid response to the command.
+             */
             int waitSynchronousInt(std::string command);
+            /* Function waits for a OK. Throws an error, if the response is an Error.
+             */
             void waitSynchronousOk();
+            /*
+             * Function waits for any Synchronous Message as response to command.
+             * The function validate the response and throws an error, if the response is not valid.
+             */
             std::string waitSynchronousString(std::string command);
 
             //Configuration
-            //Set
+            /*
+             * Functions to set devicesettings
+             */
             void setCarrierWaveformId(int id);
             void setClusterSize(int size);
             void setIdleTimeout(int timeout);
@@ -58,7 +91,9 @@ namespace usbl_evologics
             void setSourceLevel(int source_level);
             void setSourceLevelControl(bool source_level_control);
             void setSpeedSound(int speed);
-            //Get
+            /*
+             * Functions to read the devicesettings
+             */
             int getCarrierWaveformId();
             int getClusterSize();
             int getIdleTimeout();
@@ -73,7 +108,10 @@ namespace usbl_evologics
             bool getSourceLevelControl();
             int getSpeedSound();
 
-            //Stats
+            /*
+             * Functions to read Connectionstats.
+             * Connectionstats are signal quality indicators
+             */
             int getDropCounter();
             int getLocalRemoteBitrate();
             int getOverflowCounter();
