@@ -14,6 +14,7 @@ namespace usbl_evologics
     {
         private:
             int extractPacket (uint8_t const *buffer, size_t buffer_size) const;
+            int getIntValue(std::string value_name);
             size_t readInternal(uint8_t  *buffer, size_t buffer_size);
             void sendWithLineEnding(std::string line);
             void setValue(std::string value_name, int value);
@@ -25,13 +26,36 @@ namespace usbl_evologics
             UsblParser* mParser;
         public: 
             Driver();
+            /*
+             * Function returns the current connection status to the remote device
+             */
             ConnectionStatus getConnectionStatus();
+            /*
+             * Function returns all settings in a struct
+             */
             DeviceSettings getDeviceSettings();
-            int getIntValue(std::string value_name);
+            /*
+             * Function returns the Positon of the remote device
+             * as driver specific position struct.
+             * Attention: The device only refresh the position by communication
+             */
             Position getPosition(bool x);
+            /* Function returns the internal system time.
+             * You can set this time with setSystemTime
+             */ 
             int getSystemTime();
+            /* Open the driver.
+             * Have a look to  documentation to iodriverbase for the meaning of uri
+             */
             void open(std::string const& uri);
+            /* Process the Driver and throws exception if there is an error.
+             * TODO Burst data should be returned here, not via callback
+             */
             void read();
+            /* Function sends out burst data.
+             * Burst data are uncontroled data and is send to 
+             * configured remote adress
+             */
             void sendBurstData(uint8_t const *buffer, size_t buffer_size);
             /*
              * The functions sends a instantmessage and save a reference in a cue.
@@ -47,7 +71,7 @@ namespace usbl_evologics
             // http://rock-robotics.org/stable/documentation/device_drivers/writing_driver.html
             void setDriverCallbacks(UsblDriverCallbacks *cb);
             /*
-             * Function sets the Time in the Device.
+             * Function sets the internal system time in the Device.
              */
             void setSystemTime(int time);
             /*
