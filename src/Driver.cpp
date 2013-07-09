@@ -6,8 +6,7 @@ using namespace usbl_evologics;
 Driver::Driver()
     : iodrivers_base::Driver(50)
 {
-    mParser = new UsblParser(&mInterfaceStatus);
-    mCallbacks = NULL;
+    mParser = new UsblParser();
 }
 
 ConnectionStatus Driver::getConnectionStatus(){
@@ -58,18 +57,11 @@ int Driver::getSystemTime(){
 void Driver::open(std::string const& uri){
     buffer.resize(50);
     openURI(uri);
-    mInterfaceStatus.interfaceType = ETHERNET;
+    interfaceType = ETHERNET;
 }
 
-void Driver::read(){
-    std::vector<uint8_t> buffer;
-    buffer.resize(1000);
-    size_t packet_size = readInternal(&buffer[0], buffer.size());
-    if (packet_size){
-        if (mCallbacks){
-            mCallbacks->gotBurstData(&buffer[0], packet_size);
-        }
-    }
+size_t Driver::read(uint8_t *buffer, size_t size){
+    return readInternal(buffer, size);
 }
 
 void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
@@ -87,7 +79,7 @@ void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     ss<<instantMessage->buffer;
     std::string s = ss.str();
     sendWithLineEnding(s);
-    mInterfaceStatus.instantMessages.push_back(instantMessage);
+    sendInstantMessages.push_back(instantMessage);
     waitSynchronousOk();
 }
 
@@ -106,15 +98,10 @@ void Driver::setDeviceSettings(DeviceSettings device_settings){
     setImRetry(device_settings.imRetry);
 }
 
-void Driver::setDriverCallbacks(UsblDriverCallbacks *cb){
-   mCallbacks = cb; 
-   mParser->setCallbacks(cb);
-}
-
 void Driver::setSystemTime(int time){
     std::stringstream ss;
     setValue("AT!UT", time);
-    mInterfaceStatus.time = time;
+    waitSynchronousOk();
 }
 
 void Driver::storeSettings(){
@@ -307,22 +294,37 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
     } return 0;
 }
 
+void Driver::incommingDeliveryReport(std::string s){
+    //TODO check the fit delivery report and instant message
+    sendInstantMessages.at(0)->deliveryStatus = mParser->parseDeliveryReport(s);
+    sendInstantMessages.erase(sendInstantMessages.begin());
+}
+
+void Driver::incommingInstantMessage(std::string s){
+    ReceiveInstantMessage rim = mParser->parseIncommingIm(s);
+    rim.time = getSystemTime();
+    receivedInstantMessages.push_back(rim);
+}
 size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
     size_t packet_size = readPacket(buffer, buffer_size);
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     if (packet_size){
         if (mParser->isPacket(buffer_as_string) > 0){
-            if (!mParser->parseAsynchronousCommand(buffer_as_string)){
-                //The line is no asynchronous message
-                return packet_size;
-            }else {
-                //The line was a asynchronous message and is already handled
-                return 0;
+            switch (mParser->parseAsynchronousCommand(buffer_as_string)){
+                case NO_ASYNCHRONOUS:
+                    return packet_size;
+                    break;
+                case DELIVERTY_REPORT:
+                    incommingDeliveryReport(buffer_as_string);
+                    return 0;
+                    break;
+                case INSTANT_MESSAGE:
+                    incommingInstantMessage(buffer_as_string);
+                    return 0;
+                    break;
             }
         } else {
-            if (mCallbacks){
-                mCallbacks->gotBurstData(buffer, packet_size);
-            }
+            //Ignoring Burst Data if reading internal 
             return 0;
         }
     }
@@ -332,7 +334,7 @@ size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
 void Driver::sendWithLineEnding(std::string line){
     std::stringstream ss;
     std::cout << "Write Line: " << line << std::endl;
-    if (mInterfaceStatus.interfaceType == SERIAL){
+    if (interfaceType == SERIAL){
         ss << line << "\r" << std::flush;
     } else {
         ss << line << "\n" << std::flush;

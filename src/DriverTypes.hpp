@@ -72,6 +72,7 @@ namespace usbl_evologics
         uint8_t *buffer;
     };
     struct ReceiveInstantMessage {
+        int time;
         int destination;
         int source;
         size_t len;
@@ -81,25 +82,23 @@ namespace usbl_evologics
         SERIAL,
         ETHERNET
     };
+    enum AsynchronousMessages {
+        NO_ASYNCHRONOUS,
+        INSTANT_MESSAGE,
+        DELIVERTY_REPORT
+    };
     struct Position {
         int time;
         float x;
         float y;
         float z;
     };
+    /*
     struct InterfaceStatus{
-        int time;
-        struct Position position;
         std::vector<struct SendInstantMessage*> instantMessages;
-        struct DeviceSettings deviceSettings;
-        struct DeviceStats deviceStats;
+        std::vector<struct ReceiveInstantMessage*> inboxInstantMessages;
         enum InterfaceType interfaceType;
     };
-    class UsblDriverCallbacks
-    {
-        public:
-            virtual void gotInstantMessage(struct ReceiveInstantMessage *im) =0;
-            virtual void gotBurstData(uint8_t const *data, size_t data_size) =0;
-    };
+    */
 }
 #endif

@@ -8,16 +8,12 @@ namespace usbl_evologics
     class UsblParser
     {
         private:
-            void parseDeliveryReport(std::string s);
-            void parseIncommingIm(std::string s);
             std::vector<std::string> splitValidate(std::string s, const char* symbol, int parts);
             std::vector<std::string> validateResponse(std::string s);
 
-            UsblDriverCallbacks *mCallbacks;
-            InterfaceStatus* mInterfaceStatus;
 
         public:
-            UsblParser(InterfaceStatus* interfaceStatus);
+            UsblParser();
             /*
              * The function looks for a command in the string s.
              * The function return different int values:
@@ -32,7 +28,9 @@ namespace usbl_evologics
              * Returns False if there is no asynchronous Message and you have to handle the command
              * anymore.
              */
-            bool parseAsynchronousCommand(std::string s);
+            AsynchronousMessages parseAsynchronousCommand(std::string s);
+            /*TODO comment*/
+            DeliveryStatus parseDeliveryReport(std::string s);
             /*
              * The function interpretes the response as integer.
              */
@@ -52,6 +50,7 @@ namespace usbl_evologics
              * returns a enum with the status.
              */
             ConnectionStatus parseConnectionStatus(std::string s);
+            ReceiveInstantMessage parseIncommingIm(std::string s);
             /*
              * The functions interpretes the string as a position and
              * returns a struct with the position.
@@ -63,10 +62,6 @@ namespace usbl_evologics
              * The function throws an exception, if the response isn't fit to the command.
              */
             std::string parseString(uint8_t const* data, size_t size, std::string command);
-            /*
-             * TODO other way with the callbacks
-             */
-            void setCallbacks(UsblDriverCallbacks *cb);
     };
 }
 #endif

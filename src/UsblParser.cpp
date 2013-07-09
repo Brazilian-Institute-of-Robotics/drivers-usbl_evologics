@@ -2,9 +2,7 @@
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 using namespace usbl_evologics;
-UsblParser::UsblParser(InterfaceStatus* interfaceStatus){
-    mCallbacks = NULL;
-    mInterfaceStatus = interfaceStatus;
+UsblParser::UsblParser(){
 }
 
 int UsblParser::isPacket(std::string s){
@@ -30,16 +28,16 @@ int UsblParser::isPacket(std::string s){
     } 
 }
 
-bool UsblParser::parseAsynchronousCommand(std::string s){
+AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string s){
     if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
         parseDeliveryReport(s);
-        return true;
+        return DELIVERTY_REPORT;
     } 
     if (s.find("RECVIM") != std::string::npos){
         parseIncommingIm(s);
-        return true;
+        return INSTANT_MESSAGE;
     }
-    return false;
+    return NO_ASYNCHRONOUS;
 }
 
 int UsblParser::parseInt(uint8_t const* data, size_t size){
@@ -119,41 +117,27 @@ std::string UsblParser::parseString(uint8_t const* data, size_t size, std::strin
     return splitted.at(1);
 }
 
-void UsblParser::setCallbacks(UsblDriverCallbacks* cb){
-    mCallbacks = cb; 
-}
-
 //Privats
-void UsblParser::parseDeliveryReport(std::string s){
+DeliveryStatus UsblParser::parseDeliveryReport(std::string s){
     std::vector<std::string> splitted = splitValidate(s, ",", 2);
-    int remote = atoi(splitted.at(1).c_str());
     DeliveryStatus temp;
     if (splitted.at(0).find("DELIVEREDIM") != std::string::npos) {
-        temp = DELIVERED;
+        return DELIVERED;
     } else if (splitted.at(0).find("FAILEDIM") != std::string::npos){
-        temp = FAILED;
+        return FAILED;
     }
-    for (unsigned i = 0; i < mInterfaceStatus->instantMessages.size(); i++){
-        if (remote == mInterfaceStatus->instantMessages.at(i)->destination &&
-                mInterfaceStatus->instantMessages.at(i)->deliveryReport){
-            mInterfaceStatus->instantMessages.at(i)->deliveryStatus = temp;
-            mInterfaceStatus->instantMessages.erase(mInterfaceStatus->instantMessages.begin()+i);
-        }
-    }
+    
 } 
 
-void UsblParser::parseIncommingIm(std::string s){
+ReceiveInstantMessage UsblParser::parseIncommingIm(std::string s){
     std::vector<std::string> splitted = splitValidate(s, ",", 11);
     ReceiveInstantMessage im;
     im.len = atoi(splitted.at(1).c_str());
     im.source = atoi(splitted.at(2).c_str());
     im.destination = atoi(splitted.at(3).c_str());
     const char *buffer = splitted.at(10).c_str();
-    if (mCallbacks) {
-        mCallbacks->gotInstantMessage(&im);
-    } else {
-        std::cout << "Warning unhandled InstantMessage, because unsetted callbacks" << std::endl;
-    }
+    //TODO copy buffer
+    return im; 
 
 }
 

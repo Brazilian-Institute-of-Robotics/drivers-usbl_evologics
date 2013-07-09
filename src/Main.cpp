@@ -3,28 +3,10 @@
 #include "Driver.hpp"
 #include <boost/algorithm/string.hpp>
 using namespace usbl_evologics;
-class CB : public usbl_evologics::UsblDriverCallbacks{
-    public:
-        CB();
-        void gotInstantMessage(struct usbl_evologics::ReceiveInstantMessage* im);
-        void gotBurstData(uint8_t const *data, size_t data_size);
-};
-CB::CB():usbl_evologics::UsblDriverCallbacks(){
-}
-void CB::gotInstantMessage(struct usbl_evologics::ReceiveInstantMessage* im){
-    std::cout << "Instant Message Callback" << std::endl;
-};
-void CB::gotBurstData(uint8_t const *data, size_t data_size){
-
-    std::cout << "BURST CALLBACK" << data <<std::endl;
-};
-
 int main(int argc, char** argv)
 {
 
-    CB *cb = new CB();
     usbl_evologics::ReceiveInstantMessage im2;
-    cb->gotInstantMessage(&im2);
     usbl_evologics::Driver driver;
     driver.open("file:///home/nikpec/usblinput");
 //    driver.open("serial:///dev/ttyUSB0:19200");
@@ -65,12 +47,14 @@ int main(int argc, char** argv)
     struct Position pos = driver.getPosition(true);
     std::cout << "WERT: " << pos.x<< ","<<pos.y<<","<<pos.z << std::endl;
     std::cout << "Connection Status: " << driver.getConnectionStatus() << std::endl;
+
     while(true){
+        uint8_t buffer[1000];
 //        driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
 //        std::cout << im.deliveryStatus <<std::endl;
         if (driver.hasPacket()){
             std::cout << "Driver Has Packet" <<std::endl;
-            driver.read();
+            driver.read(buffer, 1000);
         }
     }
     return 0;

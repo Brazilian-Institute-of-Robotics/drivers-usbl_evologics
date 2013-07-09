@@ -16,13 +16,16 @@ namespace usbl_evologics
             int extractPacket (uint8_t const *buffer, size_t buffer_size) const;
             int getIntValue(std::string value_name);
             size_t readInternal(uint8_t  *buffer, size_t buffer_size);
+            void incommingDeliveryReport(std::string s);
+            void incommingInstantMessage(std::string s);
             void sendWithLineEnding(std::string line);
             void setValue(std::string value_name, int value);
             void validateValue(int value, int min, int max);
 
             std::vector<uint8_t> buffer;
-            UsblDriverCallbacks *mCallbacks;
-            InterfaceStatus mInterfaceStatus;
+            std::vector<SendInstantMessage*> sendInstantMessages;
+            std::vector<ReceiveInstantMessage> receivedInstantMessages;
+            enum InterfaceType interfaceType;
             UsblParser* mParser;
         public: 
             Driver();
@@ -51,7 +54,7 @@ namespace usbl_evologics
             /* Process the Driver and throws exception if there is an error.
              * TODO Burst data should be returned here, not via callback
              */
-            void read();
+            size_t read(uint8_t *buffer, size_t size);
             /* Function sends out burst data.
              * Burst data are uncontroled data and is send to 
              * configured remote adress
@@ -67,9 +70,6 @@ namespace usbl_evologics
              * Sets every devicesettings
              */
             void setDeviceSettings(DeviceSettings device_settings);
-            //TODO remove callbacks and find a other way. For details have a look at type 2:
-            // http://rock-robotics.org/stable/documentation/device_drivers/writing_driver.html
-            void setDriverCallbacks(UsblDriverCallbacks *cb);
             /*
              * Function sets the internal system time in the Device.
              */
