@@ -1,17 +1,16 @@
 #include "Driver.hpp"
 #include <iostream>
 #include <sstream>
-
+#include "Exceptions.hpp"
 using namespace usbl_evologics;
 Driver::Driver()
-    : iodrivers_base::Driver(50)
+    : iodrivers_base::Driver(500)
 {
-    mParser = new UsblParser();
 }
 
 ConnectionStatus Driver::getConnectionStatus(){
     sendWithLineEnding("+++AT?S");
-    return (ConnectionStatus) (mParser->parseConnectionStatus(waitSynchronousString("AT?S"))); 
+    return (ConnectionStatus) (UsblParser::parseConnectionStatus(waitSynchronousString("AT?S"))); 
 }
 
 DeviceSettings Driver::getDeviceSettings(){
@@ -28,6 +27,7 @@ DeviceSettings Driver::getDeviceSettings(){
     ds.speedSound = getSpeedSound(); 
     ds.imRetry = getImRetry();
     ds.idleTimeout = getIdleTimeout();
+    return ds;
 }
 
 int Driver::getIntValue(std::string value_name){
@@ -47,7 +47,7 @@ Position Driver::getPosition(bool x){
         sendWithLineEnding("+++AT?UP");
         position_string = waitSynchronousString("AT?UP");
     }
-    return mParser->parsePosition(position_string);
+    return UsblParser::parsePosition(position_string);
 }
 
 int Driver::getSystemTime(){
@@ -82,7 +82,14 @@ void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     sendInstantMessages.push_back(instantMessage);
     waitSynchronousOk();
 }
-
+size_t Driver::getInboxSize(){
+    return receivedInstantMessages.size();
+}
+ReceiveInstantMessage Driver::dropInstantMessage(){
+    ReceiveInstantMessage im = receivedInstantMessages.at(0);
+    receivedInstantMessages.erase(receivedInstantMessages.begin());
+    return im;
+}
 void Driver::setDeviceSettings(DeviceSettings device_settings){
     setSourceLevel(device_settings.sourceLevel);
     setSourceLevelControl(device_settings.sourceLevelControl);
@@ -115,7 +122,7 @@ int Driver::waitSynchronousInt(){
     //TODO timeout
     while (true){
         if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
-            return mParser->parseInt(&buffer[0], packet_size);
+            return UsblParser::parseInt(&buffer[0], packet_size);
         }
     }
 }
@@ -125,7 +132,7 @@ int Driver::waitSynchronousInt(std::string command){
     buffer.resize(1000);
     while (true){
         if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
-            return mParser->parseInt(&buffer[0], packet_size, command);
+            return UsblParser::parseInt(&buffer[0], packet_size, command);
         }
     }
 }
@@ -136,7 +143,7 @@ void Driver::waitSynchronousOk(){
     //TODO timeout
     while (true){
         if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
-            mParser->parseOk(&buffer[0], packet_size);
+            UsblParser::parseOk(&buffer[0], packet_size);
             return;
         }
     } 
@@ -147,7 +154,7 @@ std::string Driver::waitSynchronousString(std::string command){
     buffer.resize(1000);
     while (true){
         if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
-            return mParser->parseString(&buffer[0], packet_size, command);
+            return UsblParser::parseString(&buffer[0], packet_size, command);
         }
     }
 }
@@ -170,7 +177,7 @@ void Driver::setImRetry(int retries){
     setValue("AT!RI", retries);
 }
 void Driver::setLocalAddress(int address){
-    validateValue(address, 0, 254); //TODO maximum address
+    validateValue(address, 0, 254); 
     setValue("AT!AL", address);
 }
 void Driver::setLowGain(bool low_gain){
@@ -185,7 +192,7 @@ void Driver::setPacketTime(int time){
     setValue("AT!ZP", time);
 }
 void Driver::setRemoteAddress(int address){
-    validateValue(address, 0, 254); //TODO maximum address
+    validateValue(address, 0, 254);
     setValue("AT!AR", address);
 }
 void Driver::setRetryCount(int count){
@@ -283,11 +290,9 @@ int Driver::getSignalIntegrityLevel(){
 int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 {
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
-    std::cout << buffer_as_string << std::endl;
     buffer_as_string = buffer_as_string.substr(0, buffer_size);
-    int is_packet = mParser->isPacket(buffer_as_string);
+    int is_packet = UsblParser::isPacket(buffer_as_string);
     if (is_packet < 0){
-        std::cout << is_packet <<"   " << (-1*is_packet)<< std::endl;
         return (-1*is_packet);
     } else if (is_packet > 0) {
         return is_packet;
@@ -295,35 +300,40 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 }
 
 void Driver::incommingDeliveryReport(std::string s){
-    //TODO check the fit delivery report and instant message
-    sendInstantMessages.at(0)->deliveryStatus = mParser->parseDeliveryReport(s);
+    sendInstantMessages.at(0)->deliveryStatus = UsblParser::parseDeliveryReport(s);
     sendInstantMessages.erase(sendInstantMessages.begin());
 }
 
 void Driver::incommingInstantMessage(std::string s){
-    ReceiveInstantMessage rim = mParser->parseIncommingIm(s);
+    ReceiveInstantMessage rim = UsblParser::parseIncommingIm(s);
     rim.time = getSystemTime();
     receivedInstantMessages.push_back(rim);
 }
 size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
     size_t packet_size = readPacket(buffer, buffer_size);
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+    std::cout << " READ INTERNAL " << buffer_as_string << std::endl;
     if (packet_size){
-        if (mParser->isPacket(buffer_as_string) > 0){
-            switch (mParser->parseAsynchronousCommand(buffer_as_string)){
+        std::cout << " BUFFER IS PACKET" << std::endl;
+        if (UsblParser::isPacket(buffer_as_string) > 0){
+            switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
                 case NO_ASYNCHRONOUS:
+                    std::cout << "KEINE ASYNCHRONE NACHRICHT" << std::endl;
                     return packet_size;
                     break;
                 case DELIVERTY_REPORT:
+                    std::cout << "DELIVERY REPORT" << std::endl;
                     incommingDeliveryReport(buffer_as_string);
                     return 0;
                     break;
                 case INSTANT_MESSAGE:
+                    std::cout << "INSTANT MESSAGE" << std::endl;
                     incommingInstantMessage(buffer_as_string);
                     return 0;
                     break;
             }
         } else {
+            std::cout << " BUFFER IS BURST DATA" << std::endl;
             //Ignoring Burst Data if reading internal 
             return 0;
         }
@@ -354,7 +364,9 @@ void Driver::setValue(std::string value_name, int value){
 
 void Driver::validateValue(int value, int min, int max){
     if (! (value >= min && value <= max)){
-        //TODO raise error
+        std::stringstream error_string;
+        error_string << "Expected value in a range from " << min << " to " << max << " but got " << value << std::flush;
+        throw WrongInputValue(error_string.str());
     }
 }
 

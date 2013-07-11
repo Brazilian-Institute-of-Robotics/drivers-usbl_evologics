@@ -69,14 +69,14 @@ namespace usbl_evologics
         bool deliveryReport;
         enum DeliveryStatus deliveryStatus;
         size_t len;
-        uint8_t *buffer;
+        uint8_t buffer[100];
     };
     struct ReceiveInstantMessage {
         int time;
         int destination;
         int source;
         size_t len;
-        uint8_t *buffer;
+        uint8_t buffer[100];
     };
     enum InterfaceType {
         SERIAL,

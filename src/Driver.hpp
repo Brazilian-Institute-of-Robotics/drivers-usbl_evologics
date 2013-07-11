@@ -26,7 +26,7 @@ namespace usbl_evologics
             std::vector<SendInstantMessage*> sendInstantMessages;
             std::vector<ReceiveInstantMessage> receivedInstantMessages;
             enum InterfaceType interfaceType;
-            UsblParser* mParser;
+            UsblParser mParser;
         public: 
             Driver();
             /*
@@ -66,6 +66,8 @@ namespace usbl_evologics
              * marked as delivered.
              */
             void sendInstantMessage(SendInstantMessage *instantMessage);
+            size_t getInboxSize();
+            ReceiveInstantMessage dropInstantMessage();
             /*
              * Sets every devicesettings
              */

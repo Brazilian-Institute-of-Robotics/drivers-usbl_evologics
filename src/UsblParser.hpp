@@ -8,8 +8,9 @@ namespace usbl_evologics
     class UsblParser
     {
         private:
-            std::vector<std::string> splitValidate(std::string s, const char* symbol, int parts);
-            std::vector<std::string> validateResponse(std::string s);
+            static std::vector<std::string> splitValidate(std::string s, const char* symbol, size_t const parts);
+            static std::vector<std::string> validateResponse(std::string const s);
+            static int getInt(std::string s);
 
 
         public:
@@ -21,47 +22,47 @@ namespace usbl_evologics
              * 0: There is no command, but it should be a command. (incomplete command)
              * positive value: There is a command in front of the string until value.
              */
-            int isPacket(std::string s);
+            static int isPacket(std::string const s);
             /*
              * The functions looks for any asynchronous message in the command.
              * Returns True if the functions handled the command as asynchronous command.
              * Returns False if there is no asynchronous Message and you have to handle the command
              * anymore.
              */
-            AsynchronousMessages parseAsynchronousCommand(std::string s);
+            static AsynchronousMessages parseAsynchronousCommand(std::string const s);
             /*TODO comment*/
-            DeliveryStatus parseDeliveryReport(std::string s);
+            static DeliveryStatus parseDeliveryReport(std::string const s);
             /*
              * The function interpretes the response as integer.
              */
-            int parseInt(uint8_t const* data, size_t size);
+            static int parseInt(uint8_t const* data, size_t const size);
             /*
              * The function interpretes the response as integer.
              * The function also throws an exception, if this response isn't fit to the command
              */
-            int parseInt(uint8_t const* data, size_t size, std::string command);
+            static int parseInt(uint8_t const* data, size_t const size, std::string const command);
             /*
              * The function interpretes the response as OK.
              * If the respnse isn't an OK the function throws an Exception.
              */
-            void parseOk(uint8_t const* data, size_t size);
+            static void parseOk(uint8_t const* data, size_t const size);
             /*
              * The function interpretes the string as a connection status and
              * returns a enum with the status.
              */
-            ConnectionStatus parseConnectionStatus(std::string s);
-            ReceiveInstantMessage parseIncommingIm(std::string s);
+            static ConnectionStatus parseConnectionStatus(std::string const s);
+            static ReceiveInstantMessage parseIncommingIm(std::string const s);
             /*
              * The functions interpretes the string as a position and
              * returns a struct with the position.
              */
-            Position parsePosition(std::string s);
+            static Position parsePosition(std::string const s);
             /*
              * The funcion extracts the string in the response and returns the string.
              * You have to interprete the string anymore.
              * The function throws an exception, if the response isn't fit to the command.
              */
-            std::string parseString(uint8_t const* data, size_t size, std::string command);
+            static std::string parseString(uint8_t const* data, size_t const size, std::string const command);
     };
 }
 #endif

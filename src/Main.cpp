@@ -44,18 +44,26 @@ int main(int argc, char** argv)
     //driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 13);
 //    uint8_t *tmp = "Hello Wordld!";
     //driver.requestPosition(true);
-    struct Position pos = driver.getPosition(true);
-    std::cout << "WERT: " << pos.x<< ","<<pos.y<<","<<pos.z << std::endl;
-    std::cout << "Connection Status: " << driver.getConnectionStatus() << std::endl;
 
     while(true){
         uint8_t buffer[1000];
+        std::cout << "loop" << std::endl;
 //        driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
 //        std::cout << im.deliveryStatus <<std::endl;
+        std::cout << "Source Level: "<< driver.getSourceLevel()<< std::endl;
         if (driver.hasPacket()){
             std::cout << "Driver Has Packet" <<std::endl;
-            driver.read(buffer, 1000);
+            std::cout << "read "<< driver.read(buffer, 1000) << " burst data" << std::endl;
         }
+        
+        std::cout << "In the Inbox are " << driver.getInboxSize() << "instant messages" << std::endl;
+        if (driver.getInboxSize()){
+            ReceiveInstantMessage rim = driver.dropInstantMessage();
+            std::string buffer_as_string = std::string(reinterpret_cast<char const*>(rim.buffer));
+            buffer_as_string = buffer_as_string.substr(0, rim.len);
+            std::cout << "In der Message steht: " << buffer_as_string << std::endl;
+        }
+        std::cout << "AFTER DROP: In the Inbox are " << driver.getInboxSize() << "instant messages" << std::endl;
     }
     return 0;
 }
