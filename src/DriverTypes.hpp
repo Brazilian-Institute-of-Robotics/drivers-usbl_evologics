@@ -85,7 +85,7 @@ namespace usbl_evologics
     enum AsynchronousMessages {
         NO_ASYNCHRONOUS,
         INSTANT_MESSAGE,
-        DELIVERTY_REPORT
+        DELIVERY_REPORT
     };
     struct Position {
         int time;
@@ -93,12 +93,5 @@ namespace usbl_evologics
         float y;
         float z;
     };
-    /*
-    struct InterfaceStatus{
-        std::vector<struct SendInstantMessage*> instantMessages;
-        std::vector<struct ReceiveInstantMessage*> inboxInstantMessages;
-        enum InterfaceType interfaceType;
-    };
-    */
 }
 #endif

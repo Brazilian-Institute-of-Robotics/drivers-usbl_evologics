@@ -62,10 +62,10 @@ int UsblParser::isPacket(std::string const s){
 AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
     if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
         parseDeliveryReport(s);
-        return DELIVERTY_REPORT;
+        return DELIVERY_REPORT;
     } 
     if (s.find("RECVIM") != std::string::npos){
-        parseIncommingIm(s);
+        parseIncomingIm(s);
         return INSTANT_MESSAGE;
     }
     return NO_ASYNCHRONOUS;
@@ -175,7 +175,7 @@ DeliveryStatus UsblParser::parseDeliveryReport(std::string const s){
     
 } 
 
-ReceiveInstantMessage UsblParser::parseIncommingIm(std::string const s){
+ReceiveInstantMessage UsblParser::parseIncomingIm(std::string const s){
     std::vector<std::string> splitted = splitValidate(s, ",", 11);
     ReceiveInstantMessage im;
     im.len = atoi(splitted.at(1).c_str());

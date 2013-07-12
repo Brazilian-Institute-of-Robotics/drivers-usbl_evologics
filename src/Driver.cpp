@@ -292,20 +292,16 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     buffer_as_string = buffer_as_string.substr(0, buffer_size);
     int is_packet = UsblParser::isPacket(buffer_as_string);
-    if (is_packet < 0){
-        return (-1*is_packet);
-    } else if (is_packet > 0) {
-        return is_packet;
-    } return 0;
+    return abs(is_packet);
 }
 
-void Driver::incommingDeliveryReport(std::string s){
+void Driver::incomingDeliveryReport(std::string s){
     sendInstantMessages.at(0)->deliveryStatus = UsblParser::parseDeliveryReport(s);
     sendInstantMessages.erase(sendInstantMessages.begin());
 }
 
-void Driver::incommingInstantMessage(std::string s){
-    ReceiveInstantMessage rim = UsblParser::parseIncommingIm(s);
+void Driver::incomingInstantMessage(std::string s){
+    ReceiveInstantMessage rim = UsblParser::parseIncomingIm(s);
     rim.time = getSystemTime();
     receivedInstantMessages.push_back(rim);
 }
@@ -321,14 +317,14 @@ size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
                     std::cout << "KEINE ASYNCHRONE NACHRICHT" << std::endl;
                     return packet_size;
                     break;
-                case DELIVERTY_REPORT:
+                case DELIVERY_REPORT:
                     std::cout << "DELIVERY REPORT" << std::endl;
-                    incommingDeliveryReport(buffer_as_string);
+                    incomingDeliveryReport(buffer_as_string);
                     return 0;
                     break;
                 case INSTANT_MESSAGE:
                     std::cout << "INSTANT MESSAGE" << std::endl;
-                    incommingInstantMessage(buffer_as_string);
+                    incomingInstantMessage(buffer_as_string);
                     return 0;
                     break;
             }
@@ -350,8 +346,7 @@ void Driver::sendWithLineEnding(std::string line){
         ss << line << "\n" << std::flush;
     }
     std::string s = ss.str();
-    //TODO wieder rein nehmen
-    //this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
 }
 
 void Driver::setValue(std::string value_name, int value){
