@@ -57,7 +57,10 @@ int Driver::getSystemTime(){
 void Driver::open(std::string const& uri){
     buffer.resize(50);
     openURI(uri);
-    interfaceType = ETHERNET;
+    if (uri.find("serial") != std::string::npos)
+        interfaceType = SERIAL;
+    else
+        interfaceType = ETHERNET;
 }
 
 size_t Driver::read(uint8_t *buffer, size_t size){
@@ -306,24 +309,19 @@ void Driver::incomingInstantMessage(std::string s){
     receivedInstantMessages.push_back(rim);
 }
 size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
-    size_t packet_size = readPacket(buffer, buffer_size);
+    size_t packet_size = readPacket(buffer, buffer_size, 100, 100);
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
-    std::cout << " READ INTERNAL " << buffer_as_string << std::endl;
     if (packet_size){
-        std::cout << " BUFFER IS PACKET" << std::endl;
         if (UsblParser::isPacket(buffer_as_string) > 0){
             switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
                 case NO_ASYNCHRONOUS:
-                    std::cout << "KEINE ASYNCHRONE NACHRICHT" << std::endl;
                     return packet_size;
                     break;
                 case DELIVERY_REPORT:
-                    std::cout << "DELIVERY REPORT" << std::endl;
                     incomingDeliveryReport(buffer_as_string);
                     return 0;
                     break;
                 case INSTANT_MESSAGE:
-                    std::cout << "INSTANT MESSAGE" << std::endl;
                     incomingInstantMessage(buffer_as_string);
                     return 0;
                     break;

@@ -8,7 +8,28 @@ UsblParser::UsblParser(){
 }
 
 int UsblParser::isPacket(std::string const s){
-    std::size_t escape_sequenz_position = s.find("+++");
+    std::size_t escape_sequenz_position;
+    switch (s.length()) {
+        case 0:
+            return 0;
+        case 1:
+            escape_sequenz_position = s.find("+");
+            if (escape_sequenz_position != std::string::npos){
+                return 0;
+            }
+            else{
+                return -1;
+            }
+        case 2:
+            escape_sequenz_position = s.find("++");
+            if (escape_sequenz_position != std::string::npos){
+                return 0;
+            }
+            else{
+                return -2;
+            }
+    }
+    escape_sequenz_position = s.find("+++");
     if (escape_sequenz_position == std::string::npos){
         //there is definitly no command
         return -1*s.size();
@@ -33,7 +54,7 @@ int UsblParser::isPacket(std::string const s){
         boost::split( splitted, s, boost::algorithm::is_any_of(":") );
         //Check the first part
         if (splitted.size() >= 1){
-            if (!splitted.at(0).compare("+++") == 0){
+            if (!splitted.at(0).find("+++") == 0){
                 //The first part is more then +++, it's can't be a command
                 return s.size()*-1;
             }
@@ -41,6 +62,9 @@ int UsblParser::isPacket(std::string const s){
         size_t len;
         //Check the second part
         if (splitted.size() >= 2){
+            if (splitted.at(1).length() == 0){
+                return 0;
+            }
             std::stringstream ss(splitted.at(1));
             if (!(ss >> len)){
                 //the second part isn't exact a int
@@ -49,6 +73,7 @@ int UsblParser::isPacket(std::string const s){
         }
         //Check the third part
         if (splitted.size() >= 3){
+            boost::algorithm::trim(splitted.at(2));
             if (len < splitted.at(2).length()){
                 //Last part is too long it's can't be a valid command
                 return s.size()*-1;
@@ -91,7 +116,9 @@ int UsblParser::parseInt(uint8_t const* data, size_t const size, std::string con
 }
 int UsblParser::getInt(std::string const s){
     int value;
-    std::stringstream ss(s);
+    std::string s_tmp = s;
+    boost::algorithm::trim_if(s_tmp, boost::is_any_of("[*]"));
+    std::stringstream ss(s_tmp);
     if (!(ss >> value)){
         std::stringstream error_string;
         error_string << "Expected an integer response, but read " << s << std::flush;
@@ -104,7 +131,7 @@ void UsblParser::parseOk(uint8_t const* data, size_t const size){
     char const* buffer_as_string = reinterpret_cast<char const*>(data);
     std::string s = std::string(buffer_as_string, size);
     std::vector<std::string> splitted = validateResponse(s);
-    if (splitted.at(1).compare("OK") == 0 || splitted.at(1).compare("*OK") == 0){
+    if (splitted.at(1).compare("OK") == 0 || splitted.at(1).compare("[*]OK") == 0){
         return;
     } else if (s.find("ERROR") != std::string::npos){
         throw DeviceError(s);
