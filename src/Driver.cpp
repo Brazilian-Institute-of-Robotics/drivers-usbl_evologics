@@ -64,7 +64,17 @@ void Driver::open(std::string const& uri){
 }
 
 size_t Driver::read(uint8_t *buffer, size_t size){
-    return readInternal(buffer, size);
+    size_t packet_size = readPacket(buffer, size, 3000, 3000);
+    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+    if (packet_size){
+        if (UsblParser::isPacket(buffer_as_string) > 0){
+            if (handleAsynchronousCommand(buffer_as_string)){
+                return 0;
+            }
+        }
+        return packet_size;
+    }
+    return 0;
 }
 
 void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
@@ -79,11 +89,21 @@ void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     } else {
         ss<<"noack,";
     }
-    ss<<instantMessage->buffer;
+    
+    ss<<"Ha";
     std::string s = ss.str();
     sendWithLineEnding(s);
     sendInstantMessages.push_back(instantMessage);
     waitSynchronousOk();
+    //Looking for the stupid CANCELEDIM Message (two syncronous Messages are possible)
+    if (hasPacket()){
+        std::vector<uint8_t> buffer;
+        buffer.resize(1000);
+        readInternal(&buffer[0], buffer.size());
+    }
+    if (sendInstantMessages.back()->deliveryStatus == CANCELED){
+        throw InstantMessagingError("CANCELED IM"); 
+    }
 }
 size_t Driver::getInboxSize(){
     return receivedInstantMessages.size();
@@ -191,7 +211,7 @@ void Driver::setLowGain(bool low_gain){
     }
 }
 void Driver::setPacketTime(int time){
-    validateValue(time, 50, 1000);
+    validateValue(time, 50, 100000);
     setValue("AT!ZP", time);
 }
 void Driver::setRemoteAddress(int address){
@@ -224,7 +244,7 @@ void Driver::setSpeedSound(int speed){
 
 //Get Settings
 int Driver::getCarrierWaveformId(){
-    return getIntValue("AT?C");
+    return getIntValue("AT?ZS");
 }
 int Driver::getClusterSize(){
     return getIntValue("AT?ZC");
@@ -290,6 +310,9 @@ int Driver::getSignalIntegrityLevel(){
 }
 
 //Privats
+void Driver::cancelIm(std::string s){
+    sendInstantMessages.back()->deliveryStatus = CANCELED;
+}
 int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 {
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
@@ -299,40 +322,60 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 }
 
 void Driver::incomingDeliveryReport(std::string s){
-    sendInstantMessages.at(0)->deliveryStatus = UsblParser::parseDeliveryReport(s);
-    sendInstantMessages.erase(sendInstantMessages.begin());
+    try{
+        sendInstantMessages.at(0)->deliveryStatus = UsblParser::parseDeliveryReport(s);
+        sendInstantMessages.erase(sendInstantMessages.begin());
+    } catch (std::out_of_range){
+        std::cout << "There was a Delivery Report, but no Instant Message in Outbox" << std::endl;
+    }
 }
 
 void Driver::incomingInstantMessage(std::string s){
     ReceiveInstantMessage rim = UsblParser::parseIncomingIm(s);
-    rim.time = getSystemTime();
+    //TODO hier kann die uhrzeit nicht abgefragt werden alternative?
+    //rim.time = getSystemTime();
     receivedInstantMessages.push_back(rim);
 }
 size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
-    size_t packet_size = readPacket(buffer, buffer_size, 100, 100);
+    size_t packet_size = readPacket(buffer, buffer_size, 3000, 3000);
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     if (packet_size){
         if (UsblParser::isPacket(buffer_as_string) > 0){
-            switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
-                case NO_ASYNCHRONOUS:
-                    return packet_size;
-                    break;
-                case DELIVERY_REPORT:
-                    incomingDeliveryReport(buffer_as_string);
-                    return 0;
-                    break;
-                case INSTANT_MESSAGE:
-                    incomingInstantMessage(buffer_as_string);
-                    return 0;
-                    break;
+            if (!handleAsynchronousCommand(buffer_as_string)){
+                //The Packet is not handled as asynchronous Command,
+                //so there is a unhandled packet with size packet_size
+                return packet_size;
+            } else {
+                //The packet is handled already as asynchronous Command
+                //so there is no unhandled packet
+                return 0;
             }
+
         } else {
-            std::cout << " BUFFER IS BURST DATA" << std::endl;
+            std::cout << " BUFFER IS BURST DATA" << buffer << std::endl;
             //Ignoring Burst Data if reading internal 
             return 0;
         }
     }
     return 0;
+}
+bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
+    switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
+        case NO_ASYNCHRONOUS:
+            return false;
+        case DELIVERY_REPORT:
+            std::cout << "There was a delivery report" << std::endl;
+            incomingDeliveryReport(buffer_as_string);
+            return true;
+        case INSTANT_MESSAGE:
+            std::cout << "There was a instant message" << std::endl;
+            incomingInstantMessage(buffer_as_string);
+            return true;
+        case CANCELEDIM:
+            std::cout << "There is a CANCLEDIM" << std::endl;
+            cancelIm(buffer_as_string);
+            return true;
+    }
 }
 
 void Driver::sendWithLineEnding(std::string line){

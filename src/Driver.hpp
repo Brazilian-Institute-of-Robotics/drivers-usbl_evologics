@@ -13,6 +13,7 @@ namespace usbl_evologics
     class Driver : public iodrivers_base::Driver
     {
         private:
+            void cancelIm(std::string string_as_buffer);
             int extractPacket (uint8_t const *buffer, size_t buffer_size) const;
             int getIntValue(std::string value_name);
             size_t readInternal(uint8_t  *buffer, size_t buffer_size);
@@ -22,6 +23,7 @@ namespace usbl_evologics
             void setValue(std::string value_name, int value);
             void validateValue(int value, int min, int max);
 
+            bool handleAsynchronousCommand(std::string buffer_as_string);
             std::vector<uint8_t> buffer;
             std::vector<SendInstantMessage*> sendInstantMessages;
             std::vector<ReceiveInstantMessage> receivedInstantMessages;

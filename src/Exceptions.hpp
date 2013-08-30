@@ -24,6 +24,12 @@ struct WrongInputValue : std::runtime_error
     explicit WrongInputValue(std::string const& desc)
         : std::runtime_error(desc) {}
 };
+struct InstantMessagingError : std::runtime_error
+{
+    explicit InstantMessagingError(std::string const& desc)
+        : std::runtime_error(desc) {}
+
+};
 }
 
 #endif

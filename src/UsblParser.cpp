@@ -93,6 +93,9 @@ AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
         parseIncomingIm(s);
         return INSTANT_MESSAGE;
     }
+    if (s.find("CANCELEDIM") != std::string::npos){
+        return CANCELEDIM;
+    }
     return NO_ASYNCHRONOUS;
 }
 
@@ -142,23 +145,32 @@ void UsblParser::parseOk(uint8_t const* data, size_t const size){
 }
 
 ConnectionStatus UsblParser::parseConnectionStatus(std::string const s){
-    if (s.compare("OFFLINE")== 0){
-        return OFFLINE;
-    } else if (s.compare("OFFLINE CONNECTION FAILED")== 0){
-        return OFFLINE_CONNECTION_FAILED;
-    } else if (s.compare("OFFLINE TERMINATED")== 0){
-        return OFFLINE_TERMINATED;
-    } else if (s.compare("OFFLINE ALARM")== 0){
-        return OFFLINE_ALARM;
-    } else if (s.compare("INITIATION LISTEN")== 0){
-        return INITIATION_LISTEN;
-    } else if (s.compare("INITIATION ESTABLISH")== 0){
-        return INITIATION_ESTABLISH;
-    } else if (s.compare("INITIATION DISCONNECT")== 0){
-        return INITIATION_DISCONNECT;
-    } else if (s.compare("ONLINE")== 0){
+    if (s.find("OFFLINE")!= std::string::npos){
+        if (s.find("OFFLINE CONNECTION FAILED") != std::string::npos){
+            return OFFLINE_CONNECTION_FAILED;
+        }
+        else if (s.find("OFFLINE TERMINATED") != std::string::npos){
+            return OFFLINE_TERMINATED;
+        }
+        else if (s.find("OFFLINE ALARM") != std::string::npos){
+            return OFFLINE_ALARM;
+        }
+        else {
+            return OFFLINE;
+        }
+    } else if (s.find("INITIATION") != std::string::npos){
+        if (s.find("INITIATION LISTEN") != std::string::npos){
+            return INITIATION_LISTEN;
+        }
+        else if (s.find("INITIATION ESTABLISH") != std::string::npos){
+            return INITIATION_ESTABLISH;
+        }
+        else if (s.find("INITIATION DISCONNECT") != std::string::npos){
+            return INITIATION_DISCONNECT;
+        }
+    } else if (s.find("ONLINE")!= std::string::npos){
         return ONLINE;
-    } else if (s.compare("BACKOFF")== 0){
+    } else if (s.find("BACKOFF")!= std::string::npos){
         return BACKOFF;
     } else {
         std::stringstream error_string;

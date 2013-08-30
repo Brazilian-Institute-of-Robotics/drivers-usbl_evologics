@@ -6,7 +6,8 @@ namespace usbl_evologics
     enum DeliveryStatus {
         PENDING,
         DELIVERED,
-        FAILED
+        FAILED,
+        CANCELED
     };
     ///The connection status of the acustic connection to the remote device
     enum ConnectionStatus {
@@ -20,6 +21,20 @@ namespace usbl_evologics
         ONLINE,
         BACKOFF
     };
+    static const std::string enumConnectionStatusStrings[] = {
+        "OFFLINE",
+        "OFFLINE_CONNECTION_FAILED",
+        "OFFLINE_TERMINATED",
+        "OFFLINE_ALARM",
+        "INITIATION_LISTEN",
+        "INITIATION_ESTABLISH",
+        "INITIATION_DISCONNECT",
+        "ONLINE",
+        "BACKOFF"
+    };
+    static const std::string getConnectionStatusString(int enumVal){
+        return enumConnectionStatusStrings[enumVal]; 
+    }
     ///All device settings in a struct to set or get them all with one function
     struct DeviceSettings {
         int sourceLevel;
@@ -98,7 +113,8 @@ namespace usbl_evologics
     enum AsynchronousMessages {
         NO_ASYNCHRONOUS,
         INSTANT_MESSAGE,
-        DELIVERY_REPORT
+        DELIVERY_REPORT,
+        CANCELEDIM
     };
     ///Device specific position struct. To be independent
     struct Position {
