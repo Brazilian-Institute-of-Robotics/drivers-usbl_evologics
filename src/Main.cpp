@@ -86,7 +86,7 @@ int main(int argc, char** argv)
                 std::cout << sendIms << " Instant Messages gesendet" << std::endl;*/
             /*} catch (InstantMessagingError){
             }*/
-            //driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
+            driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
         } else {
             if (driver.hasPacket()){
                 std::cout << "DRIVER HAS A PACKET" << std::endl;
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 
             std::cout << "In the inbox are " << driver.getInboxSize() << " Instant Messages" << std::endl;
         }   
-        sleep(10);
+        sleep(1);
 
     }
 //    std::cout << "Driver opened" <<std::endl;

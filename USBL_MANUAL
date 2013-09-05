@@ -1,0 +1,16 @@
+Wichtige Erkenntnisse zum USBL:
+AT?ZP akzeptiert werte zwischen 500 und 1200 (anders als im Manual)
+Die Bevorzugte Senderichtung des USBL ist seitlich weg
+Die besten Ergebnisse im Testbed wurden mit den Einstellungen Source Level: 0 und Low Gain: True erreicht
+Es gibt zwei Sendemodi fuer das USBL:
+- Burst Mode: Dieser Modus ist abhaengig von dem Connection Status. Sendet man erstmals etwas im Burst Mode, so versucht das USBL die Connection aufzubauen.
+Eine erfolgreiche Uebermittlung der Daten kann erst erfolen, wenn beide Geraete im Modus ONLINE NORMAL sind.
+Erfahrungen sprechen dafür, dass diese Verbindungsaufbau nicht sehr robust ist. Der Verbindungsaufbau funktioniert im Glasbecken häufig gar nicht oder dauert sehr lange.
+Dieser Modus scheint für das Glasbecken deshalb ungeeignet. Ob bei größeren Gewässern, dieser Aufbau und damit dieser Modus besser funktioniert muss noch getestet werden.
+- Instant Messages:
+Instant Messages sind kleine Nachrichten, welche man das Modem verschicken lassen kann. Diese Nachrichten werden verschickt unabhängig des Connection Status. Das verschicken einer solchen Nachricht, stößt auch keinen Verbindungsaufbau an. Man kann für jede Nachricht individuell einstellen, ob man einen Empfangsbericht (ACK) bekommen möchte. Instant Message werden versucht gesichert zu übertragen, d.h. es wird erwartet, dass die Nachricht von der Gegenseite bestätigt wird.
+Für die Instant Messages sind zwei Konfiguarionswerte interessant: 1. Retry Count - Dieser Wert gibt an wie oft, das versenden einer Nachricht wiederholt wird, falls keine Bestätigung der Gegenseite erfolgt. 2. Retry Timeout - Dieser Wert gibt an, wie lange auf eine Bestätigung der Gegenseite gewartet werden soll, bis diese Nachricht als Nicht-Zugestellt gewertet wird.
+Es ist möglich das nicht die Nachricht verloren geht, sondern nur der Sendebericht. Dies führt (bei einem Retry Count größer 0) dazu, dass eine Nachricht mehrfach verschickt wird und unter Umständen auch mehrfach bei der Gegenseite ankommt. Das Gerät kann nicht unterscheiden, ob dies eine neue Nachricht oder ein neuer Versuch war. Das abschicken einer einzigen Nachricht kann somit bei einem Retry Count größer 0 dazu, dass das Abschicken einer Nachricht zu mehreren empfangenen Nachrichten auf der Gegenseite führt.
+
+
+
