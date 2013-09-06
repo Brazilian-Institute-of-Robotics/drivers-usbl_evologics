@@ -102,8 +102,9 @@ void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     } else {
         ss<<"noack,";
     }
-    
-    ss<<"Ha";
+    char const* buffer_as_c_string = reinterpret_cast<char const*>(instantMessage->buffer);
+    std::string buffer_as_string = std::string(buffer_as_c_string, instantMessage->len);
+    ss << buffer_as_string;
     std::string s = ss.str();
     sendWithLineEnding(s);
     sendInstantMessages.push_back(instantMessage);
