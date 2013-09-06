@@ -30,6 +30,19 @@ DeviceSettings Driver::getDeviceSettings(){
     return ds;
 }
 
+DeviceStats Driver::getDeviceStatus(){
+    DeviceStats  device_stats;
+    device_stats.dropCount = getDropCounter();
+    device_stats.overflowCount = getOverflowCounter();
+    device_stats.localRemoteBitrate = getLocalRemoteBitrate();
+    device_stats.remoteLocalBitrate = getRemoteLocalBitrate();
+    device_stats.receivedSignalStrengthIndicator = getReceivedSignalStrengthIndicator();
+    device_stats.signalIntegrityLevel = getSignalIntegrityLevel();
+    device_stats.propagationTime = getPropagationTime();
+    device_stats.relativeVelocity = getRelativeVelocity();
+    return device_stats;
+}
+
 int Driver::getIntValue(std::string value_name){
     std::stringstream ss;
     ss << "+++" << value_name;

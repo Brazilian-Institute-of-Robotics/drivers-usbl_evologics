@@ -42,6 +42,7 @@ namespace usbl_evologics
              * @return A struct with all device settings
              */
             DeviceSettings getDeviceSettings();
+            DeviceStats getDeviceStatus();
             /*
              * Function returns the Positon of the remote device
              * as driver specific position struct.

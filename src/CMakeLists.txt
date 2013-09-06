@@ -1,6 +1,6 @@
 rock_library(usbl_evologics
     SOURCES Driver.cpp UsblParser.cpp
-    HEADERS Driver.hpp UsblParser.hpp
+    HEADERS Driver.hpp UsblParser.hpp DriverTypes.hpp Exceptions.hpp
     DEPS_PKGCONFIG base-types iodrivers_base)
 
 

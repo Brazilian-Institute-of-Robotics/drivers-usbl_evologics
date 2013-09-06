@@ -1,5 +1,7 @@
 #ifndef _DUMMYPROJECT_DRIVER_TYPES_HPP_
 #define _DUMMYPROJECT_DRIVER_TYPES_HPP_
+#include <string>
+#include <stdint.h>
 namespace usbl_evologics
 {
     ///The delivery status of an instant message
