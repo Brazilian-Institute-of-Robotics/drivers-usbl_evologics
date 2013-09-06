@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     //driver.storeSettings();
     int sendIms = 0;
     while (true){
-        std::cout << "WHILE" << std::endl;
+        /*std::cout << "WHILE" << std::endl;
         std::cout << "The Connection Status is " << getConnectionStatusString(driver.getConnectionStatus()) << std::endl;
         std::cout << "The drop Counter is " << driver.getDropCounter() << std::endl;
         std::cout << "Local Remote Bitrate " << driver.getLocalRemoteBitrate() << std::endl;
@@ -79,14 +79,14 @@ int main(int argc, char** argv)
             im.deliveryStatus = PENDING; 
             im.buffer[0] = 'h';
             im.buffer[1] = 'a';
-            im.len = 2;
+            im.len = 2;*/
             //try {
                 /*driver.sendInstantMessage(&im);
                 sendIms++;
                 std::cout << sendIms << " Instant Messages gesendet" << std::endl;*/
             /*} catch (InstantMessagingError){
             }*/
-            driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
+            /*driver.sendBurstData(reinterpret_cast<const uint8_t*>("Hello Wordld!"), 7);
         } else {
             if (driver.hasPacket()){
                 std::cout << "DRIVER HAS A PACKET" << std::endl;
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
             }
 
             std::cout << "In the inbox are " << driver.getInboxSize() << " Instant Messages" << std::endl;
-        }   
+            }*/
         sleep(1);
 
     }
