@@ -250,7 +250,7 @@ std::vector<std::string> UsblParser::validateResponse(std::string const s){
     if (s.find("+++") == 0){
         std::vector<std::string> splitted = splitValidate(s, ":", 3);
         boost::algorithm::trim(splitted.at(2));
-        if (splitted.at(2).length() != getInt(splitted.at(1))){
+        if ((int)splitted.at(2).length() != getInt(splitted.at(1))){
             throw ValidationError("Length of the data part is incorrect");
         }
         ret.push_back(splitted.at(0).substr(3, splitted.at(0).size()));

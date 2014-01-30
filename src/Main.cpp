@@ -37,19 +37,31 @@ void readSettings(usbl_evologics::Driver *driver){
     std::cout << "slc" << driver->getSourceLevelControl()<< std::endl;
     std::cout << "ss" << driver->getSpeedSound()<< std::endl;
 }
+std::string enumConnectionStatusStrings[] = {
+    "OFFLINE",
+    "OFFLINE_CONNECTION_FAILED",
+    "OFFLINE_TERMINATED",
+    "OFFLINE_ALARM",
+    "INITIATION_LISTEN",
+    "INITIATION_ESTABLISH",
+    "INITIATION_DISCONNECT",
+    "ONLINE",
+    "BACKOFF"
+};
+std::string getConnectionStatusString(int enumVal){
+    return enumConnectionStatusStrings[enumVal]; 
+}
+
 int main(int argc, char** argv)
 {
     usbl_evologics::Driver driver;
     //Open Driver
     //driver.open("file:///home/nikpec/usblinput");
-    bool ethernet = false;
     if (argc == 2){
-        ethernet = true;
         std::cout << "ETHERNET" << std::endl;
         driver.open("tcp://192.168.0.248:9200");
     }
     else {
-        ethernet = false;
         std::cout << "SERIAL" <<  argc <<std::endl;
         driver.open("serial:///dev/ttyUSB0:19200");
     }
@@ -60,7 +72,6 @@ int main(int argc, char** argv)
     //driver.setSourceLevel(0);
     //driver.setSourceLevelControl(false);
     //driver.storeSettings();
-    int sendIms = 0;
     while (true){
         /*std::cout << "WHILE" << std::endl;
         std::cout << "The Connection Status is " << getConnectionStatusString(driver.getConnectionStatus()) << std::endl;

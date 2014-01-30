@@ -390,6 +390,7 @@ bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
             cancelIm(buffer_as_string);
             return true;
     }
+    return false;
 }
 
 void Driver::sendWithLineEnding(std::string line){
