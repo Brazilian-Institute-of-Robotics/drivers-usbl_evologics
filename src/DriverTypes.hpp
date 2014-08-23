@@ -102,14 +102,21 @@ namespace usbl_evologics
         NO_ASYNCHRONOUS,
         INSTANT_MESSAGE,
         DELIVERY_REPORT,
-        CANCELEDIM
+        CANCELEDIM,
+        USBLLONG,
+        USBLANGLE
     };
     ///Device specific position struct. To be independent
     struct Position {
-        int time;
-        float x;
-        float y;
-        float z;
+        double time;
+        double measure_time;
+        double x;
+        double y;
+        double z;
+        double propagation_time;
+        int rssi;
+        int integrity;
+        double accouracy;
     };
 }
 #endif

@@ -8,6 +8,7 @@ UsblParser::UsblParser(){
 }
 
 int UsblParser::isPacket(std::string const s){
+//    std::cout << "Is Packet " << s << std::endl;
     std::size_t escape_sequenz_position;
     switch (s.length()) {
         case 0:
@@ -96,6 +97,12 @@ AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
     if (s.find("CANCELEDIM") != std::string::npos){
         return CANCELEDIM;
     }
+    if (s.find("USBLLONG") != std::string::npos){
+        return USBLLONG;
+    }
+    if (s.find("USBLANGLE") != std::string::npos){
+        return USBLLONG;
+    }
     return NO_ASYNCHRONOUS;
 }
 
@@ -112,7 +119,7 @@ int UsblParser::parseInt(uint8_t const* data, size_t const size, std::string con
     std::vector<std::string> splitted = validateResponse(s); 
     if (splitted.at(0).compare(command) != 0){
         std::stringstream error_string;
-        error_string << "Expected a response to "<< command << " but read " << splitted.at(0) << std::flush;
+        error_string << "Expected a response to "<< command << " but read " << command << std::flush;
         throw ParseError(error_string.str());
     }
     return getInt(splitted.at(1));

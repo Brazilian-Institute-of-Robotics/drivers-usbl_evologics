@@ -4,7 +4,7 @@
 #include "Exceptions.hpp"
 using namespace usbl_evologics;
 Driver::Driver()
-    : iodrivers_base::Driver(500)
+    : iodrivers_base::Driver(1000)
 {
 }
 
@@ -80,6 +80,7 @@ size_t Driver::read(uint8_t *buffer, size_t size){
     size_t packet_size = readPacket(buffer, size, 3000, 3000);
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     if (packet_size){
+        std::cout << packet_size << std::endl;
         if (UsblParser::isPacket(buffer_as_string) > 0){
             if (handleAsynchronousCommand(buffer_as_string)){
                 return 0;
@@ -329,7 +330,7 @@ void Driver::cancelIm(std::string s){
 }
 int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 {
-    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer), buffer_size);
     buffer_as_string = buffer_as_string.substr(0, buffer_size);
     int is_packet = UsblParser::isPacket(buffer_as_string);
     return abs(is_packet);
@@ -388,6 +389,11 @@ bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
         case CANCELEDIM:
             std::cout << "There is a CANCLEDIM" << std::endl;
             cancelIm(buffer_as_string);
+            return true;
+        case USBLLONG:
+        case USBLANGLE:
+            std::cout << "There is a USBL Asynch Message" << std::endl;
+            //TODO Handle this, when possible (unknown protocol)
             return true;
     }
     return false;
