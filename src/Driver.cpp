@@ -97,14 +97,15 @@ void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
 
 void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     std::stringstream ss;
-    ss << "+++AT*SENDIM," <<instantMessage->len<<","<<instantMessage->destination<<",";
+    ss << "+++AT*SENDIM," <<instantMessage->buffer.size()<<","<<instantMessage->destination<<",";
     if (instantMessage->deliveryReport){
         ss<<"ack,";
     } else {
         ss<<"noack,";
     }
-    char const* buffer_as_c_string = reinterpret_cast<char const*>(instantMessage->buffer);
-    std::string buffer_as_string = std::string(buffer_as_c_string, instantMessage->len);
+    //char const* buffer_as_c_string = reinterpret_cast<char const*>(instantMessage->buffer);
+    //std::string buffer_as_string = std::string(buffer_as_c_string, instantMessage->len);
+    std::string buffer_as_string = std::string( instantMessage->buffer.begin(), instantMessage->buffer.end());
     ss << buffer_as_string;
     std::string s = ss.str();
     sendWithLineEnding(s);

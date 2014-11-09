@@ -224,19 +224,23 @@ DeliveryStatus UsblParser::parseDeliveryReport(std::string const s){
 ReceiveInstantMessage UsblParser::parseIncomingIm(std::string const s){
     std::vector<std::string> splitted = splitValidate(s, ",", 11);
     ReceiveInstantMessage im;
-    im.len = atoi(splitted.at(1).c_str());
+    //im.len = atoi(splitted.at(1).c_str());
+    im.buffer.resize(atoi(splitted.at(1).c_str()));
     im.source = atoi(splitted.at(2).c_str());
     im.destination = atoi(splitted.at(3).c_str());
     const char *buffer = splitted.at(10).c_str();
 
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
-    buffer_as_string = buffer_as_string.substr(0, im.len);
-    for (size_t i = 0; i < im.len; i++){
+    buffer_as_string = buffer_as_string.substr(0, im.buffer.size());
+    for (size_t i = 0; i < im.buffer.size(); i++){
         im.buffer[i] = (uint8_t) buffer[i];
     }
-    buffer_as_string = std::string(reinterpret_cast<char const*>(im.buffer));
-    buffer_as_string = buffer_as_string.substr(0, im.len);
 
+    //buffer_as_string = std::string(reinterpret_cast<char const*>(im.buffer));
+    //buffer_as_string = buffer_as_string.substr(0, im.len);
+
+    buffer_as_string = std::string(im.buffer.begin(), im.buffer.end());
+    //buffer_as_string = buffer_as_string.substr(0, im.buf);
     return im; 
 
 }

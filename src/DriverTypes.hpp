@@ -2,6 +2,7 @@
 #define _DUMMYPROJECT_DRIVER_TYPES_HPP_
 #include <string>
 #include <stdint.h>
+#include <vector>
 namespace usbl_evologics
 {
     ///The delivery status of an instant message
@@ -81,16 +82,14 @@ namespace usbl_evologics
         int destination;
         bool deliveryReport;
         enum DeliveryStatus deliveryStatus;
-        size_t len;
-        uint8_t buffer[100];
+        std::vector<uint8_t> buffer;
     };
     ///Received instant message
     struct ReceiveInstantMessage {
         int time;
         int destination;
         int source;
-        size_t len;
-        uint8_t buffer[100];
+        std::vector<uint8_t> buffer;
     };
     ///The type of the interface to the local device
     enum InterfaceType {
