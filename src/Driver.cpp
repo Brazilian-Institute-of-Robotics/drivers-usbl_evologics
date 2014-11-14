@@ -6,6 +6,7 @@ using namespace usbl_evologics;
 Driver::Driver()
     : iodrivers_base::Driver(1000)
 {
+    resetDevice(SEND_BUFFER);
 }
 
 ConnectionStatus Driver::getConnectionStatus(){
