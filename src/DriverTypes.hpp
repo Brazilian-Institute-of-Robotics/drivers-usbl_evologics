@@ -5,6 +5,12 @@
 #include <vector>
 namespace usbl_evologics
 {
+    enum ResetType {
+        DEVICE=0,
+        ACOUSTIC_CONNECTION=1,
+        INSTANT_MESSAGES=3,
+        SEND_BUFFER=4
+    };
     ///The delivery status of an instant message
     enum DeliveryStatus {
         PENDING,

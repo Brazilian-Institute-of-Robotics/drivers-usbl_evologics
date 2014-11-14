@@ -28,6 +28,8 @@ namespace usbl_evologics
             std::vector<SendInstantMessage*> sendInstantMessages;
             std::vector<ReceiveInstantMessage> receivedInstantMessages;
             enum InterfaceType interfaceType;
+            //Time of last soft reset
+            base::Time last_reset;
         public: 
             Driver();
             /*
@@ -98,6 +100,8 @@ namespace usbl_evologics
              * @return The first instant message in the inbox
              */
             ReceiveInstantMessage dropInstantMessage();
+
+            void resetDevice(ResetType type);
             /*
              * Sets every devicesettings
              *

@@ -145,9 +145,7 @@ void Driver::setDeviceSettings(DeviceSettings device_settings){
 }
 
 void Driver::setSystemTime(int time){
-    std::stringstream ss;
     setValue("AT!UT", time);
-    waitSynchronousOk();
 }
 
 void Driver::storeSettings(){
@@ -426,6 +424,10 @@ void Driver::validateValue(int value, int min, int max){
         error_string << "Expected value in a range from " << min << " to " << max << " but got " << value << std::flush;
         throw WrongInputValue(error_string.str());
     }
+}
+void Driver::resetDevice(ResetType reset){
+    last_reset = base::Time::now();
+    setValue("ATZ", (int) reset);
 }
 
 
