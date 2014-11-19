@@ -13,6 +13,7 @@ namespace usbl_evologics
     };
     ///The delivery status of an instant message
     enum DeliveryStatus {
+        WAIT_FOR_SEND,
         PENDING,
         DELIVERED,
         FAILED,
@@ -29,6 +30,11 @@ namespace usbl_evologics
         INITIATION_DISCONNECT,
         ONLINE,
         BACKOFF
+    };
+    struct VersionNumbers {
+        std::string firmwareVersion;
+        std::string accousticVersion;
+        std::string apiVersion;
     };
    ///All device settings in a struct to set or get them all with one function
     struct DeviceSettings {

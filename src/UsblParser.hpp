@@ -100,6 +100,9 @@ namespace usbl_evologics
              * @return The extracted string
              */
             static std::string parseString(uint8_t const* data, size_t const size, std::string const command);
+
+            static std::string parsePhyNumber(std::string const s);
+            static std::string parseMacNumber(std::string const s);
     };
 }
 #endif

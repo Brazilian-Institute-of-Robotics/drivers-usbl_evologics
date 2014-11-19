@@ -16,9 +16,11 @@ namespace usbl_evologics
             void cancelIm(std::string string_as_buffer);
             int extractPacket (uint8_t const *buffer, size_t buffer_size) const;
             int getIntValue(std::string value_name);
+            SendInstantMessage* getPendingInstantMessage(bool erase);
             size_t readInternal(uint8_t  *buffer, size_t buffer_size);
             void incomingDeliveryReport(std::string s);
             void incomingInstantMessage(std::string s);
+            void sendInstantMessageInternal(SendInstantMessage* im);
             void sendWithLineEnding(std::string line);
             void setValue(std::string value_name, int value);
             void validateValue(int value, int min, int max);
@@ -28,8 +30,10 @@ namespace usbl_evologics
             std::vector<SendInstantMessage*> sendInstantMessages;
             std::vector<ReceiveInstantMessage> receivedInstantMessages;
             enum InterfaceType interfaceType;
+            VersionNumbers versionNumbers;
             //Time of last soft reset
             base::Time last_reset;
+            void requestVersionNumbers();
         public: 
             Driver();
             /*
@@ -59,6 +63,7 @@ namespace usbl_evologics
              * 
              * @return The time in seconds as unix time. 
              */ 
+            VersionNumbers getVersionNumbers();
             int getSystemTime();
             /* Open the driver.
              *

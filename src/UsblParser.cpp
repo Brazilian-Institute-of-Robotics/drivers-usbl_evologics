@@ -45,6 +45,7 @@ int UsblParser::isPacket(std::string const s){
                 try{
                     validateResponse(s.substr(0, eol+1));
                 } catch (ValidationError& error){
+                    std::cout << "Validation Error!!" << std::endl;
                     //It's not a valid command, so just data
                     return (eol+1)*-1;
                 }
@@ -73,10 +74,12 @@ int UsblParser::isPacket(std::string const s){
             }
         }
         //Check the third part
+        //TODO this check doesn't work correct with ":" in the data part.
+        //It's important to check the size of every part of the splitted vector. (with a index 2 or bigger)
         if (splitted.size() >= 3){
             boost::algorithm::trim(splitted.at(2));
             if (len < splitted.at(2).length()){
-                //Last part is too long it's can't be a valid command
+                //Data Part is too long it's can't be a valid command
                 return s.size()*-1;
             }
         }
@@ -259,10 +262,30 @@ std::vector<std::string> UsblParser::splitValidate(std::string const s, const ch
 std::vector<std::string> UsblParser::validateResponse(std::string const s){
     std::vector<std::string> ret;
     if (s.find("+++") == 0){
-        std::vector<std::string> splitted = splitValidate(s, ":", 3);
+        //old: Now there are ":" in Messages there can be more than three parts by splitting by ":"
+        //std::vector<std::string> splitted = splitValidate(s, ":", 3);
+        std::vector<std::string> splitted;
+        boost::split( splitted, s, boost::algorithm::is_any_of( ":" ) );
+        if (splitted.size() < 3){
+            std::stringstream error_string;
+            error_string << "Tried to split the string \""<<s<<"\" at \""<< ":" <<" in " << "3" << " parts or more, but get " << splitted.size() << " parts" << std::flush;
+            std::cout << error_string << std::endl;
+            throw ValidationError(error_string.str());
+        } else if (splitted.size() > 3) {
+            //This is the special case that the char ":" is in the data
+            for (int i=3; i<splitted.size(); i++){
+                splitted[2] = splitted[2] + ":" +  splitted[i];
+            }
+            splitted.resize(3);
+        }
+        //After this block the size of splitted is exactly 3
         boost::algorithm::trim(splitted.at(2));
         if ((int)splitted.at(2).length() != getInt(splitted.at(1))){
-            throw ValidationError("Length of the data part is incorrect");
+            std::stringstream error_string;
+            error_string << "Length of the data part is incorrect." << std::endl <<
+                "    The Data Part of the Message is: \"" << splitted.at(2) << "\" and has the length " << (int) splitted.at(2).length() << std::endl <<
+                "    The expected length is " << getInt(splitted.at(1)) << std::endl;
+            throw ValidationError(error_string.str());
         }
         ret.push_back(splitted.at(0).substr(3, splitted.at(0).size()));
         ret.push_back(splitted.at(2));
@@ -270,4 +293,17 @@ std::vector<std::string> UsblParser::validateResponse(std::string const s){
     } else {
         throw ValidationError("No Escape Sequence");
     }
+}
+
+std::string UsblParser::parsePhyNumber(std::string const s){
+    std::string phy = splitValidate(s, ",", 2)[0];
+    phy = splitValidate(phy, ":", 2)[1];
+    return phy;
+}
+
+std::string UsblParser::parseMacNumber(std::string const s){
+    std::string mac = splitValidate(s, ",", 2)[1];
+    //TODO validate the part
+    mac = splitValidate(mac, ":", 2)[1];
+    return mac;
 }

@@ -6,7 +6,6 @@ using namespace usbl_evologics;
 Driver::Driver()
     : iodrivers_base::Driver(1000)
 {
-    resetDevice(SEND_BUFFER);
 }
 
 ConnectionStatus Driver::getConnectionStatus(){
@@ -75,6 +74,8 @@ void Driver::open(std::string const& uri){
         interfaceType = SERIAL;
     else
         interfaceType = ETHERNET;
+    resetDevice(SEND_BUFFER);
+    requestVersionNumbers();
 }
 
 size_t Driver::read(uint8_t *buffer, size_t size){
@@ -96,7 +97,7 @@ void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
     this->writePacket(buffer, buffer_size);
 }
 
-void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
+void Driver::sendInstantMessageInternal(SendInstantMessage *instantMessage){
     std::stringstream ss;
     ss << "+++AT*SENDIM," <<instantMessage->buffer.size()<<","<<instantMessage->destination<<",";
     if (instantMessage->deliveryReport){
@@ -104,23 +105,40 @@ void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
     } else {
         ss<<"noack,";
     }
-    //char const* buffer_as_c_string = reinterpret_cast<char const*>(instantMessage->buffer);
-    //std::string buffer_as_string = std::string(buffer_as_c_string, instantMessage->len);
+    std::cout << "first part. buffer site "<< instantMessage->buffer.size() <<std::endl;
     std::string buffer_as_string = std::string( instantMessage->buffer.begin(), instantMessage->buffer.end());
+    std::cout << "buffer" << std::endl;
     ss << buffer_as_string;
     std::string s = ss.str();
     sendWithLineEnding(s);
-    sendInstantMessages.push_back(instantMessage);
+    std::cout << "gesendet und warte ..." << std::endl;
     waitSynchronousOk();
-    //Looking for the stupid CANCELEDIM Message (two syncronous Messages are possible)
+    std::cout << "Ok" << std::endl;
+    instantMessage->deliveryStatus = PENDING;
+}
+
+void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
+    std::cout << "Wrote a Instant Message in Buffer" << std::endl;
+    sendInstantMessages.push_back(instantMessage);
+    std::cout << "size:" << sendInstantMessages.size() << std::endl;
+    //Only one Message should be PENDING
+    if (! (sendInstantMessages.size() > 1)){
+        std::cout << "Not Instant Message is already Pending. So this Message can be send." << std::endl;
+        std::cout << "INSTANT MESSAGE BUFFER SIZE" << instantMessage->buffer.size() << std::endl;
+        sendInstantMessageInternal(instantMessage);
+    }
+    std::cout << "ENDE" << std::endl;
+    /* It's not necessarry any more
+     * //Looking for the stupid CANCELEDIM Message (two syncronous Messages are possible)
     if (hasPacket()){
         std::vector<uint8_t> buffer;
         buffer.resize(1000);
         readInternal(&buffer[0], buffer.size());
     }
     if (sendInstantMessages.back()->deliveryStatus == CANCELED){
-        throw InstantMessagingError("CANCELED IM"); 
-    }
+        sendInstantMessages.erase(sendInstantMessages.end());
+        //throw InstantMessagingError("CANCELED IM"); 
+    }*/
 }
 size_t Driver::getInboxSize(){
     return receivedInstantMessages.size();
@@ -325,6 +343,27 @@ int Driver::getSignalIntegrityLevel(){
 }
 
 //Privats
+SendInstantMessage* Driver::getPendingInstantMessage(bool erase = false){
+    bool found = true;
+    SendInstantMessage* pending_message;
+    for (std::vector<SendInstantMessage*>::iterator it = sendInstantMessages.begin(); it != sendInstantMessages.end(); it++){
+        if ((*it)->deliveryStatus == PENDING) {
+            if (!found) {
+                found = true;
+                pending_message = *it;
+                if (erase){
+                    sendInstantMessages.erase(it);
+                }
+            } else {
+                throw InstantMessagingError("There are two pending Instant Messages. This is bug in the driver.");
+            }
+        }
+    }
+    if (found){
+        return pending_message;
+    }
+    throw std::out_of_range("There is no pending instant message");
+}
 void Driver::cancelIm(std::string s){
     sendInstantMessages.back()->deliveryStatus = CANCELED;
 }
@@ -337,11 +376,14 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 }
 
 void Driver::incomingDeliveryReport(std::string s){
-    try{
-        sendInstantMessages.at(0)->deliveryStatus = UsblParser::parseDeliveryReport(s);
-        sendInstantMessages.erase(sendInstantMessages.begin());
-    } catch (std::out_of_range){
-        std::cout << "There was a Delivery Report, but no Instant Message in Outbox" << std::endl;
+    try {
+        getPendingInstantMessage(true)->deliveryStatus = UsblParser::parseDeliveryReport(s);
+    } catch (std::out_of_range e){
+        std::cout << "warn: There is Delivery Report, but no pending instant message" << std::endl;
+    }
+    if (sendInstantMessages.size()){
+        std::cout << "There was a Delivery Report, it's possible to send the next Message" << std::endl;
+        sendInstantMessageInternal(*(sendInstantMessages.begin()));
     }
 }
 
@@ -367,8 +409,7 @@ size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
             }
 
         } else {
-            std::cout << " BUFFER IS BURST DATA" << buffer << std::endl;
-            //Ignoring Burst Data if reading internal 
+            std::cout << " Buffer is burst data. Ignoring burst data when reading internal." << buffer << std::endl;
             return 0;
         }
     }
@@ -430,8 +471,14 @@ void Driver::resetDevice(ResetType reset){
     last_reset = base::Time::now();
     setValue("ATZ", (int) reset);
 }
-
-
-
-
-
+void Driver::requestVersionNumbers(){
+    sendWithLineEnding("+++ATI0");
+    versionNumbers.firmwareVersion = waitSynchronousString("ATI");
+    sendWithLineEnding("+++ATI1");
+    std::string phy_mac = waitSynchronousString("ATI");
+    versionNumbers.accousticVersion = UsblParser::parsePhyNumber(phy_mac);
+    versionNumbers.apiVersion = UsblParser::parseMacNumber(phy_mac);
+}
+VersionNumbers Driver::getVersionNumbers(){
+    return versionNumbers;
+}
