@@ -50,6 +50,9 @@ int Driver::getIntValue(std::string value_name){
     sendWithLineEnding(s);
     return waitSynchronousInt(s.substr(3, s.size()));
 }
+DeliveryStatus Driver::getInstantMessageDeliveryStatus(){
+    return currentInstantMessage.deliveryStatus;
+}
 
 Position Driver::getPosition(bool x){
     std::string position_string;
@@ -97,16 +100,16 @@ void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
     this->writePacket(buffer, buffer_size);
 }
 
-void Driver::sendInstantMessageInternal(SendInstantMessage *instantMessage){
+void Driver::sendInstantMessageInternal(SendInstantMessage &instantMessage){
     std::stringstream ss;
-    ss << "+++AT*SENDIM," <<instantMessage->buffer.size()<<","<<instantMessage->destination<<",";
-    if (instantMessage->deliveryReport){
+    ss << "+++AT*SENDIM," <<instantMessage.buffer.size()<<","<<instantMessage.destination<<",";
+    if (instantMessage.deliveryReport){
         ss<<"ack,";
     } else {
         ss<<"noack,";
     }
-    std::cout << "first part. buffer site "<< instantMessage->buffer.size() <<std::endl;
-    std::string buffer_as_string = std::string( instantMessage->buffer.begin(), instantMessage->buffer.end());
+    std::cout << "first part. buffer site "<< instantMessage.buffer.size() <<std::endl;
+    std::string buffer_as_string = std::string( instantMessage.buffer.begin(), instantMessage.buffer.end());
     std::cout << "buffer" << std::endl;
     ss << buffer_as_string;
     std::string s = ss.str();
@@ -114,31 +117,28 @@ void Driver::sendInstantMessageInternal(SendInstantMessage *instantMessage){
     std::cout << "gesendet und warte ..." << std::endl;
     waitSynchronousOk();
     std::cout << "Ok" << std::endl;
-    instantMessage->deliveryStatus = PENDING;
+    instantMessage.deliveryStatus = PENDING;
 }
 
-void Driver::sendInstantMessage(SendInstantMessage *instantMessage){
-    std::cout << "Wrote a Instant Message in Buffer" << std::endl;
-    sendInstantMessages.push_back(instantMessage);
-    std::cout << "size:" << sendInstantMessages.size() << std::endl;
-    //Only one Message should be PENDING
-    if (! (sendInstantMessages.size() > 1)){
-        std::cout << "Not Instant Message is already Pending. So this Message can be send." << std::endl;
-        std::cout << "INSTANT MESSAGE BUFFER SIZE" << instantMessage->buffer.size() << std::endl;
-        sendInstantMessageInternal(instantMessage);
+void Driver::sendInstantMessage(SendInstantMessage instantMessage){
+    if (currentInstantMessage.deliveryStatus == PENDING) {
+        throw InstantMessagingError("Sending Instant Message while sending another.");
     }
+    std::cout << "Wrote a Instant Message in Buffer" << std::endl;
+    currentInstantMessage = instantMessage;
+    sendInstantMessageInternal(currentInstantMessage);
     std::cout << "ENDE" << std::endl;
-    /* It's not necessarry any more
-     * //Looking for the stupid CANCELEDIM Message (two syncronous Messages are possible)
+    //Looking for the stupid CANCELEDIM Message (two syncronous Messages are possible)
+    //This shouldn't happen if you send only one message at time. But Maybe the Device was not fully resetted. 
     if (hasPacket()){
         std::vector<uint8_t> buffer;
         buffer.resize(1000);
         readInternal(&buffer[0], buffer.size());
     }
-    if (sendInstantMessages.back()->deliveryStatus == CANCELED){
-        sendInstantMessages.erase(sendInstantMessages.end());
-        //throw InstantMessagingError("CANCELED IM"); 
-    }*/
+    if (currentInstantMessage.deliveryStatus == CANCELED){
+        throw InstantMessagingError("CANCELED IM"); 
+        //Make it sence to reset the device in this case?
+    }
 }
 size_t Driver::getInboxSize(){
     return receivedInstantMessages.size();
@@ -343,29 +343,8 @@ int Driver::getSignalIntegrityLevel(){
 }
 
 //Privats
-SendInstantMessage* Driver::getPendingInstantMessage(bool erase = false){
-    bool found = true;
-    SendInstantMessage* pending_message;
-    for (std::vector<SendInstantMessage*>::iterator it = sendInstantMessages.begin(); it != sendInstantMessages.end(); it++){
-        if ((*it)->deliveryStatus == PENDING) {
-            if (!found) {
-                found = true;
-                pending_message = *it;
-                if (erase){
-                    sendInstantMessages.erase(it);
-                }
-            } else {
-                throw InstantMessagingError("There are two pending Instant Messages. This is bug in the driver.");
-            }
-        }
-    }
-    if (found){
-        return pending_message;
-    }
-    throw std::out_of_range("There is no pending instant message");
-}
 void Driver::cancelIm(std::string s){
-    sendInstantMessages.back()->deliveryStatus = CANCELED;
+    currentInstantMessage.deliveryStatus = CANCELED;
 }
 int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 {
@@ -376,15 +355,15 @@ int Driver::extractPacket(uint8_t const *buffer, size_t buffer_size) const
 }
 
 void Driver::incomingDeliveryReport(std::string s){
-    try {
-        getPendingInstantMessage(true)->deliveryStatus = UsblParser::parseDeliveryReport(s);
-    } catch (std::out_of_range e){
-        std::cout << "warn: There is Delivery Report, but no pending instant message" << std::endl;
+    if (currentInstantMessage.deliveryStatus != PENDING){
+        std::cout << "warn: Get a Delivery Report, but has no pending Instant Message. Maybe the device was not fully resseted" << std::endl;
     }
-    if (sendInstantMessages.size()){
-        std::cout << "There was a Delivery Report, it's possible to send the next Message" << std::endl;
-        sendInstantMessageInternal(*(sendInstantMessages.begin()));
-    }
+    currentInstantMessage.deliveryStatus = UsblParser::parseDeliveryReport(s);
+}
+
+void Driver::incomingPosition(std::string s){
+    //TODO initialize
+    current_position = UsblParser::parseUsbllong(s);
 }
 
 void Driver::incomingInstantMessage(std::string s){
@@ -432,6 +411,7 @@ bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
             cancelIm(buffer_as_string);
             return true;
         case USBLLONG:
+            incomingPosition(buffer_as_string);
         case USBLANGLE:
             std::cout << "There is a USBL Asynch Message" << std::endl;
             //TODO Handle this, when possible (unknown protocol)

@@ -34,6 +34,13 @@ namespace usbl_evologics
              */
             static AsynchronousMessages parseAsynchronousCommand(std::string const command);
             /*
+             * The function parses a asynchronous Position Message USBLLONG
+             *
+             * @param[in] the position to anlysing
+             * @return A complete positon
+             * */
+            static Position parseUsbllong(std::string const positionstring);
+            /*
              * The function parses a Delivery Report.
              *
              * @param[in] report The report to analysing

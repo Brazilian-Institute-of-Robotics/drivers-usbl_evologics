@@ -193,10 +193,40 @@ ConnectionStatus UsblParser::parseConnectionStatus(std::string const s){
 Position UsblParser::parsePosition(std::string const s){
     std::vector<std::string> splitted = splitValidate(s, ",", 5);
     Position pos;
-    pos.time = atoi(splitted.at(0).c_str());
+    pos.measure_time = atoi(splitted.at(0).c_str());
     pos.x = atof(splitted.at(2).c_str());
     pos.y = atof(splitted.at(3).c_str());
     pos.z = atof(splitted.at(4).c_str());
+    return pos;
+}
+Position UsblParser::parseUsbllong(std::string const s){
+    std::vector<std::string> splitted = splitValidate(s, ",", 17);
+    Position pos;
+    //0 USBLLONG
+    //1 Device time (not important)
+    //2 Measurement Time (just in seconds)
+    pos.measure_time = atoi(splitted.at(2).c_str());
+    //3 Remoteadress (not important because we habe just one another usbl in this setup)
+    //4 X
+    pos.x = atof(splitted.at(4).c_str());
+    //5 Y
+    pos.y = atof(splitted.at(5).c_str());
+    //6 Z
+    pos.z = atof(splitted.at(6).c_str());
+    //TODO evaluate this motion compensated values
+    //7 E 
+    //8 N
+    //9 U
+    //Our device has no magnetsensor
+    //10 Roll
+    //11 Pitch
+    //12 Yaw
+    //13 Propagation Time
+    pos.propagation_time = atof(splitted.at(13).c_str());
+    //14 RSSI
+    pos.rssi = atoi(splitted.at(14).c_str());
+    pos.integrity = atoi(splitted.at(15).c_str());
+    pos.accouracy = atof(splitted.at(16).c_str()); 
     return pos;
 }
 

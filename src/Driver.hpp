@@ -16,24 +16,25 @@ namespace usbl_evologics
             void cancelIm(std::string string_as_buffer);
             int extractPacket (uint8_t const *buffer, size_t buffer_size) const;
             int getIntValue(std::string value_name);
-            SendInstantMessage* getPendingInstantMessage(bool erase);
             size_t readInternal(uint8_t  *buffer, size_t buffer_size);
             void incomingDeliveryReport(std::string s);
             void incomingInstantMessage(std::string s);
-            void sendInstantMessageInternal(SendInstantMessage* im);
+            void incomingPosition(std::string s);
+            void sendInstantMessageInternal(SendInstantMessage& im);
             void sendWithLineEnding(std::string line);
             void setValue(std::string value_name, int value);
             void validateValue(int value, int min, int max);
 
             bool handleAsynchronousCommand(std::string buffer_as_string);
             std::vector<uint8_t> buffer;
-            std::vector<SendInstantMessage*> sendInstantMessages;
+            SendInstantMessage currentInstantMessage;
             std::vector<ReceiveInstantMessage> receivedInstantMessages;
             enum InterfaceType interfaceType;
             VersionNumbers versionNumbers;
             //Time of last soft reset
             base::Time last_reset;
             void requestVersionNumbers();
+            Position current_position;
         public: 
             Driver();
             /*
@@ -49,6 +50,7 @@ namespace usbl_evologics
              */
             DeviceSettings getDeviceSettings();
             DeviceStats getDeviceStatus();
+            DeliveryStatus getInstantMessageDeliveryStatus();
             /*
              * Function returns the Positon of the remote device
              * as driver specific position struct.
@@ -92,7 +94,7 @@ namespace usbl_evologics
              *
              * @param[in, out] A pointer to instant message to send
              */
-            void sendInstantMessage(SendInstantMessage *instantMessage);
+            void sendInstantMessage(SendInstantMessage instantMessage);
             /*
              * Returns the count of instant messages in the inbox
              *
