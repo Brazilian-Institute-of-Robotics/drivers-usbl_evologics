@@ -104,7 +104,7 @@ AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
         return USBLLONG;
     }
     if (s.find("USBLANGLE") != std::string::npos){
-        return USBLLONG;
+        return USBLANGLE;
     }
     return NO_ASYNCHRONOUS;
 }
@@ -227,6 +227,11 @@ Position UsblParser::parseUsbllong(std::string const s){
     pos.rssi = atoi(splitted.at(14).c_str());
     pos.integrity = atoi(splitted.at(15).c_str());
     pos.accouracy = atof(splitted.at(16).c_str()); 
+    std::cout << "Parsed a USBL LONG" << std::endl;
+    std::cout << "The message was: " << s << std::endl;
+    std::cout << "X: " << pos.x << std::endl;
+    std::cout << "Y: " << pos.y << std::endl;
+    std::cout << "Z: " << pos.z << std::endl;
     return pos;
 }
 
@@ -336,4 +341,12 @@ std::string UsblParser::parseMacNumber(std::string const s){
     //TODO validate the part
     mac = splitValidate(mac, ":", 2)[1];
     return mac;
+}
+
+Position UsblParser::parseRemotePosition(std::string const s){
+    if (s[0] != '#'){
+        throw ParseError("This is not a remote position");
+    }
+    std::vector<std::string> splitted = splitValidate(s, ",", 8);
+
 }

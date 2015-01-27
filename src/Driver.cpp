@@ -55,6 +55,9 @@ DeliveryStatus Driver::getInstantMessageDeliveryStatus(){
 }
 
 Position Driver::getPosition(bool x){
+    //TODO maybe make both variants possible polling and asynch messages 
+    //important a
+    /*
     std::string position_string;
     if (x){
         sendWithLineEnding("+++AT?UPX");
@@ -64,13 +67,17 @@ Position Driver::getPosition(bool x){
         position_string = waitSynchronousString("AT?UP");
     }
     return UsblParser::parsePosition(position_string);
+    */
+    
+    return current_position;
 }
 
 int Driver::getSystemTime(){
     sendWithLineEnding("+++AT?UT");
     return waitSynchronousInt();
 }
-void Driver::open(std::string const& uri){
+void Driver::open(std::string const& uri, ReverseMode rm){
+    reverse_mode = rm;
     buffer.resize(50);
     openURI(uri);
     if (uri.find("serial") != std::string::npos)
@@ -79,21 +86,41 @@ void Driver::open(std::string const& uri){
         interfaceType = ETHERNET;
     resetDevice(SEND_BUFFER);
     requestVersionNumbers();
+
 }
 
 size_t Driver::read(uint8_t *buffer, size_t size){
+
     size_t packet_size = readPacket(buffer, size, 3000, 3000);
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     if (packet_size){
         std::cout << packet_size << std::endl;
         if (UsblParser::isPacket(buffer_as_string) > 0){
             if (handleAsynchronousCommand(buffer_as_string)){
-                return 0;
+                packet_size = 0;
             }
         }
-        return packet_size;
     }
-    return 0;
+    //TODO is that the right place to do this. I know no other.
+    //TODO maybe i have to reduce the sendfrequency manually. To give user IMs a chance.
+    if (reverse_mode = REVERSE_POSITION_SENDER){
+        if (last_position_sending != current_position.time && currentInstantMessage.deliveryStatus != PENDING){
+            std::stringstream ss;
+            ss << "#USBLREVERSE," << current_position.x << "," << current_position.y << "," << current_position.z << "," << current_position.propagation_time << "," << current_position.rssi << "," << current_position.integrity << "," << current_position.accouracy;
+            SendInstantMessage im;
+            //TODO make it configurable
+            im.destination = 2;
+            im.deliveryReport = true;
+            im.deliveryStatus = PENDING;
+            im.buffer.resize(ss.str().size());
+            for (int i=0; i < ss.str().size(); i++){
+                im.buffer[i] = ss.str()[i];
+            }
+            sendInstantMessageInternal(im);
+            last_position_sending = current_position.time;
+        }
+    } 
+    return packet_size;
 }
 
 void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
@@ -101,6 +128,7 @@ void Driver::sendBurstData(uint8_t const *buffer, size_t buffer_size){
 }
 
 void Driver::sendInstantMessageInternal(SendInstantMessage &instantMessage){
+    currentInstantMessage = instantMessage;
     std::stringstream ss;
     ss << "+++AT*SENDIM," <<instantMessage.buffer.size()<<","<<instantMessage.destination<<",";
     if (instantMessage.deliveryReport){
@@ -118,16 +146,6 @@ void Driver::sendInstantMessageInternal(SendInstantMessage &instantMessage){
     waitSynchronousOk();
     std::cout << "Ok" << std::endl;
     instantMessage.deliveryStatus = PENDING;
-}
-
-void Driver::sendInstantMessage(SendInstantMessage instantMessage){
-    if (currentInstantMessage.deliveryStatus == PENDING) {
-        throw InstantMessagingError("Sending Instant Message while sending another.");
-    }
-    std::cout << "Wrote a Instant Message in Buffer" << std::endl;
-    currentInstantMessage = instantMessage;
-    sendInstantMessageInternal(currentInstantMessage);
-    std::cout << "ENDE" << std::endl;
     //Looking for the stupid CANCELEDIM Message (two syncronous Messages are possible)
     //This shouldn't happen if you send only one message at time. But Maybe the Device was not fully resetted. 
     if (hasPacket()){
@@ -139,6 +157,14 @@ void Driver::sendInstantMessage(SendInstantMessage instantMessage){
         throw InstantMessagingError("CANCELED IM"); 
         //Make it sence to reset the device in this case?
     }
+}
+
+void Driver::sendInstantMessage(SendInstantMessage instantMessage){
+    if (currentInstantMessage.deliveryStatus == PENDING) {
+        throw InstantMessagingError("Sending Instant Message while sending another.");
+    }
+    //TODO Escaping '#' to garantee datatrasparency
+    sendInstantMessageInternal(instantMessage);
 }
 size_t Driver::getInboxSize(){
     return receivedInstantMessages.size();
@@ -364,13 +390,29 @@ void Driver::incomingDeliveryReport(std::string s){
 void Driver::incomingPosition(std::string s){
     //TODO initialize
     current_position = UsblParser::parseUsbllong(s);
+    current_position.time = base::Time::now();
+    std::cout << "Save the usbllong positon" << std::endl;
+    std::cout << "X: " << current_position.x << std::endl;
+    std::cout << "Y: " << current_position.x << std::endl;
+    std::cout << "Z: " << current_position.x << std::endl;
 }
 
 void Driver::incomingInstantMessage(std::string s){
     ReceiveInstantMessage rim = UsblParser::parseIncomingIm(s);
+    //TODO maybe there is a better solution as try and error
+    if (reverse_mode == REVERSE_POSITION_RECEIVER){
+        try { 
+            //TODO
+            //UsblParser::parseRemotePosition(rim.buffer);
+        } catch (ParseError e){
+            //If its can't be parsed as remote Position it's a User IM.
+            receivedInstantMessages.push_back(rim);
+        }
+    } else {
+        receivedInstantMessages.push_back(rim);
+    }
     //TODO hier kann die uhrzeit nicht abgefragt werden alternative?
     //rim.time = getSystemTime();
-    receivedInstantMessages.push_back(rim);
 }
 size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
     size_t packet_size = readPacket(buffer, buffer_size, 3000, 3000);

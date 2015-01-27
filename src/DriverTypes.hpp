@@ -3,8 +3,14 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
+#include <base/time.h>
 namespace usbl_evologics
 {
+    enum ReverseMode {
+        NO_REVERSE,
+        REVERSE_POSITION_SENDER,
+        REVERSE_POSITION_RECEIVER
+    };
     enum ResetType {
         DEVICE=0,
         ACOUSTIC_CONNECTION=1,
@@ -119,7 +125,7 @@ namespace usbl_evologics
     };
     ///Device specific position struct. To be independent
     struct Position {
-        double time;
+        base::Time time;
         double measure_time;
         double x;
         double y;
@@ -128,6 +134,7 @@ namespace usbl_evologics
         int rssi;
         int integrity;
         double accouracy;
+        bool reverse_position;
     };
 }
 #endif

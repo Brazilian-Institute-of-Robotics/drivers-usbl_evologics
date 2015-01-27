@@ -59,11 +59,11 @@ int main(int argc, char** argv)
     //driver.open("file:///home/nikpec/usblinput");
     if (argc == 2){
         std::cout << "ETHERNET" << std::endl;
-        driver.open("tcp://192.168.0.253:9200");
+        //driver.open("tcp://192.168.0.253:9200");
     }
     else {
         std::cout << "SERIAL" <<  argc <<std::endl;
-        driver.open("serial:///dev/ttyUSB0:19200");
+        //driver.open("serial:///dev/ttyUSB0:19200");
     }
     readSettings(&driver);    
     //driver.setImRetry(1);

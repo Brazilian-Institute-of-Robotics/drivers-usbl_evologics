@@ -35,6 +35,8 @@ namespace usbl_evologics
             base::Time last_reset;
             void requestVersionNumbers();
             Position current_position;
+            ReverseMode reverse_mode;
+            base::Time last_position_sending;
         public: 
             Driver();
             /*
@@ -71,7 +73,7 @@ namespace usbl_evologics
              *
              * @param[in] uri Uri to the interface to communicate withe the device. Have a look to  documentation to iodriverbase for the meaning of uri
              */
-            void open(std::string const& uri);
+            void open(std::string const& uri, ReverseMode reverse_mode = NO_REVERSE);
             /* Process the Driver and throws exception if there is an error.
              * 
              * @param[out] buffer Pointer to a uint_8 array as buffer

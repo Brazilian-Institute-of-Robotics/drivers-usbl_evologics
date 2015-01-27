@@ -96,6 +96,7 @@ namespace usbl_evologics
              * @return The position in a struct
              */
             static Position parsePosition(std::string const command);
+            static Position parseRemotePosition(std::string const s);
             /*
              * The funcion extracts the string in the response and returns the string.
              * You have to interprete the string anymore.
