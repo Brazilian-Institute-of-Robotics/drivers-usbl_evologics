@@ -57,7 +57,7 @@ DeliveryStatus Driver::getInstantMessageDeliveryStatus(){
 Position Driver::getPosition(bool x){
     //TODO maybe make both variants possible polling and asynch messages 
     //important a
-    /*
+
     std::string position_string;
     if (x){
         sendWithLineEnding("+++AT?UPX");
@@ -67,9 +67,8 @@ Position Driver::getPosition(bool x){
         position_string = waitSynchronousString("AT?UP");
     }
     return UsblParser::parsePosition(position_string);
-    */
-    
-    return current_position;
+
+//    return current_position;
 }
 
 int Driver::getSystemTime(){
@@ -78,6 +77,7 @@ int Driver::getSystemTime(){
 }
 void Driver::open(std::string const& uri, ReverseMode rm){
     reverse_mode = rm;
+    std::cout << "reverse mode set to " << rm << " (where rm = " << REVERSE_POSITION_SENDER << " enables sending)\n";
     buffer.resize(50);
     openURI(uri);
     if (uri.find("serial") != std::string::npos)
@@ -91,7 +91,12 @@ void Driver::open(std::string const& uri, ReverseMode rm){
 
 size_t Driver::read(uint8_t *buffer, size_t size){
 
+	std::cout << "beginning of usbl Driver::read(...)" << std::endl;
+
+	std::cout << "size = " << size << std::endl;
+
     size_t packet_size = readPacket(buffer, size, 3000, 3000);
+
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     if (packet_size){
         std::cout << packet_size << std::endl;
@@ -101,9 +106,13 @@ size_t Driver::read(uint8_t *buffer, size_t size){
             }
         }
     }
+
+/* CG moved this part to the incomingPosition method 20150530:
+
     //TODO is that the right place to do this. I know no other.
     //TODO maybe i have to reduce the sendfrequency manually. To give user IMs a chance.
     if (reverse_mode = REVERSE_POSITION_SENDER){
+	std::cout << "I am a reverse pos sender!" << std::endl;
         if (last_position_sending != current_position.time && currentInstantMessage.deliveryStatus != PENDING){
             std::stringstream ss;
             ss << "#USBLREVERSE," << current_position.x << "," << current_position.y << "," << current_position.z << "," << current_position.propagation_time << "," << current_position.rssi << "," << current_position.integrity << "," << current_position.accouracy;
@@ -120,6 +129,7 @@ size_t Driver::read(uint8_t *buffer, size_t size){
             last_position_sending = current_position.time;
         }
     } 
+*/
     return packet_size;
 }
 
@@ -136,7 +146,7 @@ void Driver::sendInstantMessageInternal(SendInstantMessage &instantMessage){
     } else {
         ss<<"noack,";
     }
-    std::cout << "first part. buffer site "<< instantMessage.buffer.size() <<std::endl;
+    std::cout << "first part. buffer size "<< instantMessage.buffer.size() <<std::endl;
     std::string buffer_as_string = std::string( instantMessage.buffer.begin(), instantMessage.buffer.end());
     std::cout << "buffer" << std::endl;
     ss << buffer_as_string;
@@ -393,18 +403,66 @@ void Driver::incomingPosition(std::string s){
     current_position.time = base::Time::now();
     std::cout << "Save the usbllong positon" << std::endl;
     std::cout << "X: " << current_position.x << std::endl;
-    std::cout << "Y: " << current_position.x << std::endl;
-    std::cout << "Z: " << current_position.x << std::endl;
+    std::cout << "Y: " << current_position.y << std::endl;
+    std::cout << "Z: " << current_position.z << std::endl;
+
+    new_position_available = true;
+}
+
+bool Driver::newPositionAvailable(){
+
+    return new_position_available;
+}
+
+void Driver::sendPositionToAUV(){
+
+    if (reverse_mode = REVERSE_POSITION_SENDER){
+	std::cout << "I am a reverse pos sender!" << std::endl;
+        if (last_position_sending != current_position.time && currentInstantMessage.deliveryStatus != PENDING){
+            std::stringstream ss;
+            ss << "#USBLREVERSE;" << current_position.x << ";" << current_position.y << ";" << current_position.z << ";" << current_position.propagation_time << ";" << current_position.rssi << ";" << current_position.integrity << ";" << current_position.accouracy;
+            SendInstantMessage im;
+            //TODO make it configurable
+            im.destination = 1;
+            im.deliveryReport = true;
+            im.deliveryStatus = PENDING;
+            im.buffer.resize(ss.str().size());
+            for (int i=0; i < ss.str().size(); i++){
+                im.buffer[i] = ss.str()[i];
+            }
+            sendInstantMessageInternal(im);
+            last_position_sending = current_position.time;
+        }
+    }
+
+    new_position_available = false;
+
+    std::cout << "ABC begins\n";
+
+    std::string rs = "+++AT:93:RECVIM,53,2,1,ack,745623,-52,187,0.0458,#USBLREVERSE;6.8163;-4.0938;0.7917;5327;-51;179;1.501";
+
+    incomingInstantMessage(rs);
+
+    std::cout << "ABC ends\n";
+
 }
 
 void Driver::incomingInstantMessage(std::string s){
+    std::cout << "Driver::incomingIM\n";
     ReceiveInstantMessage rim = UsblParser::parseIncomingIm(s);
     //TODO maybe there is a better solution as try and error
-    if (reverse_mode == REVERSE_POSITION_RECEIVER){
+    if (true /*reverse_mode == REVERSE_POSITION_RECEIVER*/){
         try { 
             //TODO
-            //UsblParser::parseRemotePosition(rim.buffer);
+	        std::cout << "trying buffer to string\n";
+
+	    std::string buffer_as_string = std::string(rim.buffer.begin(), rim.buffer.end());
+	        std::cout << "trying parse remote\n";
+
+            UsblParser::parseRemotePosition(buffer_as_string);
         } catch (ParseError e){
+	    	        std::cout << "there was a parse error, handling IM as normal IM\n";
+
             //If its can't be parsed as remote Position it's a User IM.
             receivedInstantMessages.push_back(rim);
         }

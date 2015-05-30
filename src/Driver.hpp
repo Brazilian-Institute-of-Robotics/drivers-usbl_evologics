@@ -37,6 +37,8 @@ namespace usbl_evologics
             Position current_position;
             ReverseMode reverse_mode;
             base::Time last_position_sending;
+	    bool new_position_available;
+
         public: 
             Driver();
             /*
@@ -62,6 +64,13 @@ namespace usbl_evologics
              * @return The position of the remote device in a driver specific struct
              */
             Position getPosition(bool x);
+
+
+	    bool newPositionAvailable();
+
+	    void sendPositionToAUV();
+
+
             /* Function returns the internal system time in seconds.
              * You can set this time with setSystemTime.
              * 
