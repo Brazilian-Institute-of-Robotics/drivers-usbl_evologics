@@ -260,13 +260,13 @@ DeliveryStatus UsblParser::parseDeliveryReport(std::string const s){
 } 
 
 ReceiveInstantMessage UsblParser::parseIncomingIm(std::string const s){
-    std::vector<std::string> splitted = splitValidate(s, ",", 11);
+    std::vector<std::string> splitted = splitValidate(s, ",", 10); //CG: was 11, but FlatFish only receives 10 parts separated by comma
     ReceiveInstantMessage im;
     //im.len = atoi(splitted.at(1).c_str());
     im.buffer.resize(atoi(splitted.at(1).c_str()));
     im.source = atoi(splitted.at(2).c_str());
     im.destination = atoi(splitted.at(3).c_str());
-    const char *buffer = splitted.at(10).c_str();
+    const char *buffer = splitted.at(9).c_str(); //CG: was at(10)=part11 but FF only has 10 parts
 
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     buffer_as_string = buffer_as_string.substr(0, im.buffer.size());
@@ -344,9 +344,52 @@ std::string UsblParser::parseMacNumber(std::string const s){
 }
 
 Position UsblParser::parseRemotePosition(std::string const s){
+
+	std::cout << "parseRemotePosition\n";
+
+
     if (s[0] != '#'){
+	std::cout << "s[0]=" << s[0] << " !=# , throwing ParseError\n";
+	std::cout << "( s= " << s << " )\n";
+
         throw ParseError("This is not a remote position");
     }
-    std::vector<std::string> splitted = splitValidate(s, ",", 8);
+    std::vector<std::string> splitted = splitValidate(s, ";", 8);
 
+    for(int i=0; i< splitted.size(); i++)
+	std::cout << "splitted.at " << i << ":" << splitted.at(i) << std::endl;
+
+    Position pos;
+    //0 USBLLONG
+    //1 Device time (not important)
+    //2 Measurement Time (just in seconds)
+  //  pos.measure_time = atoi(splitted.at(2).c_str());
+    //3 Remoteadress (not important because we habe just one another usbl in this setup)
+    //4 X
+    pos.x = atof(splitted.at(1).c_str());
+    //5 Y
+    pos.y = atof(splitted.at(2).c_str());
+    //6 Z
+    pos.z = atof(splitted.at(3).c_str());
+    //TODO evaluate this motion compensated values
+    //7 E 
+    //8 N
+    //9 U
+    //Our device has no magnetsensor
+    //10 Roll
+    //11 Pitch
+    //12 Yaw
+    //13 Propagation Time
+    pos.propagation_time = atof(splitted.at(4).c_str());
+    //14 RSSI
+    pos.rssi = atoi(splitted.at(5).c_str());
+    pos.integrity = atoi(splitted.at(6).c_str());
+    pos.accouracy = atof(splitted.at(7).c_str()); 
+  //  std::cout << "Parsed a USBL LONG" << std::endl;
+    std::cout << "The USBLREVERSE message was: " << s << std::endl;
+    std::cout << "X: " << pos.x << std::endl;
+    std::cout << "Y: " << pos.y << std::endl;
+    std::cout << "Z: " << pos.z << std::endl;
+    return pos;
 }
+
