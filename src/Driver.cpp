@@ -436,7 +436,7 @@ void Driver::sendPositionToAUV(){
     }
 
     new_position_available = false;
-
+/*
     std::cout << "ABC begins\n";
 
     std::string rs = "+++AT:93:RECVIM,53,2,1,ack,745623,-52,187,0.0458,#USBLREVERSE;6.8163;-4.0938;0.7917;5327;-51;179;1.501";
@@ -444,7 +444,7 @@ void Driver::sendPositionToAUV(){
     incomingInstantMessage(rs);
 
     std::cout << "ABC ends\n";
-
+*/
 }
 
 void Driver::incomingInstantMessage(std::string s){
