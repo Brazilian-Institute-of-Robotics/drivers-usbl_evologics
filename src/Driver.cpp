@@ -194,6 +194,8 @@ void Driver::setDeviceSettings(DeviceSettings device_settings){
     setClusterSize(device_settings.clusterSize);
     setPacketTime(device_settings.packetTime);
     setRetryCount(device_settings.retryCount);
+    setKeepOnline(device_settings.keepOnline);
+    setPositionEnable(device_settings.positionEnable);
     setIdleTimeout(device_settings.idleTimeout);
     setSpeedSound(device_settings.speedSound);
     setImRetry(device_settings.imRetry);
@@ -287,13 +289,22 @@ void Driver::setRemoteAddress(int address){
     validateValue(address, 0, 254);
     setValue("AT!AR", address);
 }
-void Driver::setRetryCount(int count){
-    validateValue(count, 0, 255);
-    setValue("AT!RC", count);
+void Driver::setKeepOnline(int timeout){
+    validateValue(timeout, 0, 255);
+    setValue("AT!KO", timeout);
+}
+void Driver::setPositionEnable(int value){
+    validateValue(value, 0, 1);
+    setValue("AT@ZU", value);
 }
 void Driver::setRetryTimeout(int timeout){
     validateValue(timeout, 500, 12000);
     setValue("AT!RT", timeout);
+}
+
+void Driver::setRetryCount(int count){
+    validateValue(count, 0, 255);
+    setValue("AT!RC", count);
 }
 void Driver::setSourceLevel(int source_level){
     validateValue(source_level, 0, 3);

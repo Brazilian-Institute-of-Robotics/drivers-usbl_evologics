@@ -178,6 +178,10 @@ namespace usbl_evologics
             void setPacketTime(int time);
             void setRemoteAddress(int address);
             void setRetryCount(int count);
+
+	    void setKeepOnline(int timeout);
+	    void setPositionEnable(int value);
+
             void setRetryTimeout(int timeout);
             void setSourceLevel(int source_level);
             void setSourceLevelControl(bool source_level_control);

@@ -70,6 +70,10 @@ namespace usbl_evologics
         int packetTime; 
         ///Retry count 0-255
         int retryCount;
+
+        int keepOnline;
+        int positionEnable;
+
         ///Retry timeout 500-12000 ms
         int retryTimeout;
         /*The timeout before closing an idle acustiv connection
