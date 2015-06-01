@@ -58,16 +58,27 @@ Position Driver::getPosition(bool x){
     //TODO maybe make both variants possible polling and asynch messages 
     //important a
 
-    std::string position_string;
-    if (x){
+    if(reverse_mode == REVERSE_POSITION_RECEIVER){
+	std::cout << "usbl driver.cpp is position receiver!\n";
+    std::cout << "now returning X: " << current_position.x << std::endl;
+    std::cout << "now returning Y: " << current_position.y << std::endl;
+    std::cout << "now returning Z: " << current_position.z << std::endl;
+
+	return current_position;
+    }
+    else{
+	std::cout << "usbl driver.cpp is NOT A position receiver!\n";
+
+      std::string position_string;
+      if (x){
         sendWithLineEnding("+++AT?UPX");
         position_string = waitSynchronousString("AT?UPX");
-    } else {
+      } else {
         sendWithLineEnding("+++AT?UP");
         position_string = waitSynchronousString("AT?UP");
+      }
+      return UsblParser::parsePosition(position_string);
     }
-    return UsblParser::parsePosition(position_string);
-
 //    return current_position;
 }
 
@@ -470,7 +481,7 @@ void Driver::incomingInstantMessage(std::string s){
 	    std::string buffer_as_string = std::string(rim.buffer.begin(), rim.buffer.end());
 	        std::cout << "trying parse remote\n";
 
-            UsblParser::parseRemotePosition(buffer_as_string);
+            current_position = UsblParser::parseRemotePosition(buffer_as_string);
         } catch (ParseError e){
 	    	        std::cout << "there was a parse error, handling IM as normal IM\n";
 
