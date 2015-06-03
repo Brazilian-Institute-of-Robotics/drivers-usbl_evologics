@@ -354,7 +354,7 @@ Position UsblParser::parseRemotePosition(std::string const s){
 
         throw ParseError("This is not a remote position");
     }
-    std::vector<std::string> splitted = splitValidate(s, ";", 8);
+    std::vector<std::string> splitted = splitValidate(s, ";", 9);
 
     for(int i=0; i< splitted.size(); i++)
 	std::cout << "splitted.at " << i << ":" << splitted.at(i) << std::endl;
@@ -363,14 +363,15 @@ Position UsblParser::parseRemotePosition(std::string const s){
     //0 USBLLONG
     //1 Device time (not important)
     //2 Measurement Time (just in seconds)
-  //  pos.measure_time = atoi(splitted.at(2).c_str());
+    //pos.measure_time = atoi(splitted.at(2).c_str());
+    pos.time = base::Time::fromString(splitted.at(1));
     //3 Remoteadress (not important because we habe just one another usbl in this setup)
     //4 X
-    pos.x = atof(splitted.at(1).c_str());
+    pos.x = atof(splitted.at(2).c_str());
     //5 Y
-    pos.y = atof(splitted.at(2).c_str());
+    pos.y = atof(splitted.at(3).c_str());
     //6 Z
-    pos.z = atof(splitted.at(3).c_str());
+    pos.z = atof(splitted.at(4).c_str());
     //TODO evaluate this motion compensated values
     //7 E 
     //8 N
@@ -380,11 +381,11 @@ Position UsblParser::parseRemotePosition(std::string const s){
     //11 Pitch
     //12 Yaw
     //13 Propagation Time
-    pos.propagation_time = atof(splitted.at(4).c_str());
+    pos.propagation_time = atof(splitted.at(5).c_str());
     //14 RSSI
-    pos.rssi = atoi(splitted.at(5).c_str());
-    pos.integrity = atoi(splitted.at(6).c_str());
-    pos.accouracy = atof(splitted.at(7).c_str()); 
+    pos.rssi = atoi(splitted.at(6).c_str());
+    pos.integrity = atoi(splitted.at(7).c_str());
+    pos.accouracy = atof(splitted.at(8).c_str()); 
   //  std::cout << "Parsed a USBL LONG" << std::endl;
     std::cout << "The USBLREVERSE message was: " << s << std::endl;
     std::cout << "X: " << pos.x << std::endl;

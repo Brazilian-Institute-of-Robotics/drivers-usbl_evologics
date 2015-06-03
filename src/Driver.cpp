@@ -421,9 +421,8 @@ void Driver::incomingDeliveryReport(std::string s){
 
 void Driver::incomingPosition(std::string s){
     //TODO initialize
-    current_position = UsblParser::parseUsbllong(s);
     current_position.time = base::Time::now();
-    std::cout << "Save the usbllong positon" << std::endl;
+    current_position = UsblParser::parseUsbllong(s);
     std::cout << "X: " << current_position.x << std::endl;
     std::cout << "Y: " << current_position.y << std::endl;
     std::cout << "Z: " << current_position.z << std::endl;
@@ -442,7 +441,7 @@ void Driver::sendPositionToAUV(){
 	std::cout << "I am a reverse pos sender!" << std::endl;
         if (last_position_sending != current_position.time && currentInstantMessage.deliveryStatus != PENDING){
             std::stringstream ss;
-            ss << "#USBLREVERSE;" << current_position.x << ";" << current_position.y << ";" << current_position.z << ";" << current_position.propagation_time << ";" << current_position.rssi << ";" << current_position.integrity << ";" << current_position.accouracy;
+            ss << "#USBLREVERSE;" << current_position.time.toString() << ";" << current_position.x << ";" << current_position.y << ";" << current_position.z << ";" << current_position.propagation_time << ";" << current_position.rssi << ";" << current_position.integrity << ";" << current_position.accouracy;
             SendInstantMessage im;
             //TODO make it configurable
             im.destination = 1;
