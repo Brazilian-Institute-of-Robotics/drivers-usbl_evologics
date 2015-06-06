@@ -2,6 +2,7 @@
 #include "Exceptions.hpp"
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <boost/algorithm/string.hpp>
 using namespace usbl_evologics;
 UsblParser::UsblParser(){
@@ -364,7 +365,7 @@ Position UsblParser::parseRemotePosition(std::string const s){
     //1 Device time (not important)
     //2 Measurement Time (just in seconds)
     //pos.measure_time = atoi(splitted.at(2).c_str());
-    pos.time = base::Time::fromString(splitted.at(1));
+    pos.time = base::Time::fromMilliseconds(std::stoull(splitted.at(1).c_str()));
     //3 Remoteadress (not important because we habe just one another usbl in this setup)
     //4 X
     pos.x = atof(splitted.at(2).c_str());

@@ -64,10 +64,12 @@ Position Driver::getPosition(bool x){
     std::cout << "now returning Y: " << current_position.y << std::endl;
     std::cout << "now returning Z: " << current_position.z << std::endl;
 
+        new_position_available = false;
+
 	return current_position;
     }
     else{
-	std::cout << "usbl driver.cpp is NOT A position receiver!\n";
+	std::cout << "usbl driver.cpp is NOT A position receiver! reverse_mode = " << reverse_mode << " where sender = " << REVERSE_POSITION_SENDER << " and recv = " << REVERSE_POSITION_RECEIVER <<"\n";
 
       std::string position_string;
       if (x){
@@ -437,7 +439,7 @@ bool Driver::newPositionAvailable(){
 
 void Driver::sendPositionToAUV(){
 
-    if (reverse_mode = REVERSE_POSITION_SENDER){
+    if (reverse_mode == REVERSE_POSITION_SENDER){
 	std::cout << "I am a reverse pos sender!" << std::endl;
         if (last_position_sending != current_position.time && currentInstantMessage.deliveryStatus != PENDING){
             std::stringstream ss;
