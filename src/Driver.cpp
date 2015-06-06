@@ -110,7 +110,8 @@ size_t Driver::read(uint8_t *buffer, size_t size){
 
     std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
     if (packet_size){
-        std::cout << packet_size << std::endl;
+        std::cout << "packet_size: " << packet_size << std::endl;
+        std::cout << "buffer_as_string: " << buffer_as_string << std::endl;
         if (UsblParser::isPacket(buffer_as_string) > 0){
             if (handleAsynchronousCommand(buffer_as_string)){
                 packet_size = 0;
@@ -421,8 +422,11 @@ void Driver::incomingDeliveryReport(std::string s){
 
 void Driver::incomingPosition(std::string s){
     //TODO initialize
-    current_position.time = base::Time::now();
     current_position = UsblParser::parseUsbllong(s);
+
+    current_position.time = base::Time::now();
+    std::cout << "driver: incomingPosition set time to " << current_position.time.toString() << std::endl;
+
     std::cout << "X: " << current_position.x << std::endl;
     std::cout << "Y: " << current_position.y << std::endl;
     std::cout << "Z: " << current_position.z << std::endl;
@@ -438,10 +442,15 @@ bool Driver::newPositionAvailable(){
 void Driver::sendPositionToAUV(){
 
     if (reverse_mode = REVERSE_POSITION_SENDER){
-	std::cout << "I am a reverse pos sender!" << std::endl;
+	std::cout << "driver sendpostoauv: I am a reverse pos sender!" << std::endl;
+	std::cout << "last_pos_sending vs current_position.time " << last_position_sending.toString() << " vs " << current_position.time.toString() << std::endl;
+	std::cout << "deliveryStatus vs PENDING : " << currentInstantMessage.deliveryStatus << " vs " << PENDING << std::endl;
+
         if (last_position_sending != current_position.time && currentInstantMessage.deliveryStatus != PENDING){
             std::stringstream ss;
-            ss << "#USBLREVERSE;" << current_position.time.toString() << ";" << current_position.x << ";" << current_position.y << ";" << current_position.z << ";" << current_position.propagation_time << ";" << current_position.rssi << ";" << current_position.integrity << ";" << current_position.accouracy;
+            ss << "#UR;" << current_position.time.toMilliseconds()  << ";" << current_position.x << ";" << current_position.y << ";" << current_position.z << ";" << current_position.propagation_time << ";" << current_position.rssi << ";" << current_position.integrity << ";" << current_position.accouracy;
+	std::cout << "driver.cpp sendPositionToAUV now sending: "<< ss.str() << std::endl;
+
             SendInstantMessage im;
             //TODO make it configurable
             im.destination = 1;
@@ -516,6 +525,7 @@ size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
     return 0;
 }
 bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
+    std::cout << "usbldriver handleAsync\n";
     switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
         case NO_ASYNCHRONOUS:
             return false;
@@ -542,6 +552,7 @@ bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
 }
 
 void Driver::sendWithLineEnding(std::string line){
+    std::cout << "usbldriver sendWithLineEnding\n";
     std::stringstream ss;
     std::cout << "Write Line: " << line << std::endl;
     if (interfaceType == SERIAL){
