@@ -90,6 +90,7 @@ int UsblParser::isPacket(std::string const s){
 }
 
 AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
+    std::cout << "usblparser parseAsync parsing: " << s << std::endl;
     if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
         parseDeliveryReport(s);
         return DELIVERY_REPORT;
@@ -250,6 +251,7 @@ std::string UsblParser::parseString(uint8_t const* data, size_t const size, std:
 
 //Privats
 DeliveryStatus UsblParser::parseDeliveryReport(std::string const s){
+    std::cout << "usblparser.cpp parsedelivreport parsing: " << s << std::endl;
     std::vector<std::string> splitted = splitValidate(s, ",", 2);
     if (splitted.at(0).find("DELIVEREDIM") != std::string::npos) {
         return DELIVERED;
@@ -289,7 +291,7 @@ std::vector<std::string> UsblParser::splitValidate(std::string const s, const ch
     boost::split( splitted, s, boost::algorithm::is_any_of( symbol ) );
     if (splitted.size() != parts){
         std::stringstream error_string;
-        error_string << "Tried to split the string \""<<s<<"\" at \""<< symbol <<" in " << parts << " parts, but get " << splitted.size() << " parts" << std::flush;
+        error_string << "UsblParser.cpp splitValidate: Tried to split the string \""<<s<<"\" at \""<< symbol <<" in " << parts << " parts, but get " << splitted.size() << " parts" << std::flush;
         throw ValidationError(error_string.str());
     }
     return splitted;
