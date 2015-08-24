@@ -8,93 +8,174 @@ using namespace usbl_evologics;
 UsblParser::UsblParser(){
 }
 
-int UsblParser::isPacket(std::string const s){
-//    std::cout << "Is Packet " << s << std::endl;
-    std::size_t escape_sequenz_position;
-    switch (s.length()) {
-        case 0:
-            return 0;
-        case 1:
-            escape_sequenz_position = s.find("+");
-            if (escape_sequenz_position != std::string::npos){
-                return 0;
-            }
-            else{
-                return -1;
-            }
-        case 2:
-            escape_sequenz_position = s.find("++");
-            if (escape_sequenz_position != std::string::npos){
-                return 0;
-            }
-            else{
-                return -2;
-            }
-    }
-    escape_sequenz_position = s.find("+++");
-    if (escape_sequenz_position == std::string::npos){
-        //there is definitly no command
-        return -1*s.size();
-    } else if (escape_sequenz_position != 0){
-        //there is maybe a command but isn't starting at position 0
-        return -1*escape_sequenz_position;
-    } else {
-        //there is a command starting at position 0
-        for (size_t eol = 0; eol < s.size(); eol++){
-            //The Buffer is until the Lineending a Command 
-            if (s.at(eol) == '\n'){
-                try{
-                    validateResponse(s.substr(0, eol+1));
-                } catch (ValidationError& error){
-                    std::cout << "Validation Error!!" << std::endl;
-                    //It's not a valid command, so just data
-                    return (eol+1)*-1;
-                }
-                return eol+1;
-            }
-        }
-        std::vector<std::string> splitted;
-        boost::split( splitted, s, boost::algorithm::is_any_of(":") );
-        //Check the first part
-        if (splitted.size() >= 1){
-            if (!splitted.at(0).find("+++") == 0){
-                //The first part is more then +++, it's can't be a command
-                return s.size()*-1;
-            }
-        }
-        size_t len;
-        //Check the second part
-        if (splitted.size() >= 2){
-            if (splitted.at(1).length() == 0){
-                return 0;
-            }
-            std::stringstream ss(splitted.at(1));
-            if (!(ss >> len)){
-                //the second part isn't exact a int
-                return s.size()*-1;
-            }
-        }
-        //Check the third part
-        //TODO this check doesn't work correct with ":" in the data part.
-        //It's important to check the size of every part of the splitted vector. (with a index 2 or bigger)
-        if (splitted.size() >= 3){
-            boost::algorithm::trim(splitted.at(2));
-            if (len < splitted.at(2).length()){
-                //Data Part is too long it's can't be a valid command
-                return s.size()*-1;
-            }
-        }
-        //It's can be a command waiting for more data
-        return 0;
-    } 
+UsblParser::~UsblParser(){
 }
+
+int UsblParser::isPacket(std::string const s, OperationMode const mode)
+{
+//    std::cout << "Is Packet " << s << std::endl;
+
+	if (mode == COMMAND)
+	{	// end of line
+		std::size_t eol = s.find("\r\n");
+		if(eol != std::string::npos)
+			return eol;
+		else
+			return 0;
+	}
+	else if(mode == DATA)
+	{
+		std::size_t escape;
+		if (s.length()<3)
+			return 0;
+		escape = s.find("+++");
+		if (escape == std::string::npos)
+			//there is definitely no command
+			return -1*s.size();
+		else if (escape != 0)
+			//there is maybe a command but isn't starting at position 0
+			return -1*escape;
+		else
+		{	//there is a command starting at position 0
+			size_t eol = s.find('\n');
+			if(eol != std::string::npos)
+			{
+				try{
+					validateResponse(s.substr(0, eol+1));
+				} catch (ValidationError& error){
+					std::cout << "Validation Error!!" << std::endl;
+					//It's not a valid command, so just data
+					// TODO check what to do with raw data
+					return (eol+1)*-1;
+				}
+				return eol+1;
+			}
+
+//		        std::vector<std::string> splitted;
+//		        boost::split( splitted, s, boost::algorithm::is_any_of(":") );
+//		        //Check the first part
+//		        if (splitted.size() >= 1){
+//		            if (!splitted.at(0).find("+++") == 0){
+//		                //The first part is more then +++, it's can't be a command
+//		                return s.size()*-1;
+//		            }
+//		        }
+//		        size_t len;
+//		        //Check the second part
+//		        if (splitted.size() >= 2){
+//		            if (splitted.at(1).length() == 0){
+//		                return 0;
+//		            }
+//		            std::stringstream ss(splitted.at(1));
+//		            if (!(ss >> len)){
+//		                //the second part isn't exact a int
+//		                return s.size()*-1;
+//		            }
+//		        }
+//		        //Check the third part
+//		        //TODO this check doesn't work correct with ":" in the data part.
+//		        //It's important to check the size of every part of the splitted vector. (with a index 2 or bigger)
+//		        if (splitted.size() >= 3){
+//		            boost::algorithm::trim(splitted.at(2));
+//		            if (len < splitted.at(2).length()){
+//		                //Data Part is too long it's can't be a valid command
+//		                return s.size()*-1;
+//		            }
+//		        }
+//		        //It's can be a command waiting for more data
+//		        return 0;
+		}
+	}
+	return -1;
+}
+
+
+
+//    std::size_t escape_sequenz_position;
+//    switch (s.length()) {
+//        case 0:
+//            return 0;
+//        case 1:
+//            escape_sequenz_position = s.find("+");
+//            if (escape_sequenz_position != std::string::npos){
+//                return 0;
+//            }
+//            else{
+//                return -1;
+//            }
+//        case 2:
+//            escape_sequenz_position = s.find("++");
+//            if (escape_sequenz_position != std::string::npos){
+//                return 0;
+//            }
+//            else{
+//                return -2;
+//            }
+//    }
+//    escape_sequenz_position = s.find("+++");
+//    if (escape_sequenz_position == std::string::npos){
+//        //there is definitly no command
+//        return -1*s.size();
+//    } else if (escape_sequenz_position != 0){
+//        //there is maybe a command but isn't starting at position 0
+//        return -1*escape_sequenz_position;
+//    } else {
+//        //there is a command starting at position 0
+//        for (size_t eol = 0; eol < s.size(); eol++){
+//            //The Buffer is until the Lineending a Command
+//            if (s.at(eol) == '\n'){
+//                try{
+//                    validateResponse(s.substr(0, eol+1));
+//                } catch (ValidationError& error){
+//                    std::cout << "Validation Error!!" << std::endl;
+//                    //It's not a valid command, so just data
+//                    return (eol+1)*-1;
+//                }
+//                return eol+1;
+//            }
+//        }
+//        std::vector<std::string> splitted;
+//        boost::split( splitted, s, boost::algorithm::is_any_of(":") );
+//        //Check the first part
+//        if (splitted.size() >= 1){
+//            if (!splitted.at(0).find("+++") == 0){
+//                //The first part is more then +++, it's can't be a command
+//                return s.size()*-1;
+//            }
+//        }
+//        size_t len;
+//        //Check the second part
+//        if (splitted.size() >= 2){
+//            if (splitted.at(1).length() == 0){
+//                return 0;
+//            }
+//            std::stringstream ss(splitted.at(1));
+//            if (!(ss >> len)){
+//                //the second part isn't exact a int
+//                return s.size()*-1;
+//            }
+//        }
+//        //Check the third part
+//        //TODO this check doesn't work correct with ":" in the data part.
+//        //It's important to check the size of every part of the splitted vector. (with a index 2 or bigger)
+//        if (splitted.size() >= 3){
+//            boost::algorithm::trim(splitted.at(2));
+//            if (len < splitted.at(2).length()){
+//                //Data Part is too long it's can't be a valid command
+//                return s.size()*-1;
+//            }
+//        }
+//        //It's can be a command waiting for more data
+//        return 0;
+//    }
+//}
 
 AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
     std::cout << "usblparser parseAsync parsing: " << s << std::endl;
     if (s.find("DELIVEREDIM") != std::string::npos || s.find("FAILEDIM") != std::string::npos){
         parseDeliveryReport(s);
         return DELIVERY_REPORT;
-    } 
+    }
     if (s.find("RECVIM") != std::string::npos){
         parseIncomingIm(s);
         return INSTANT_MESSAGE;
@@ -111,24 +192,24 @@ AsynchronousMessages UsblParser::parseAsynchronousCommand(std::string const s){
     return NO_ASYNCHRONOUS;
 }
 
-int UsblParser::parseInt(uint8_t const* data, size_t const size){
-    char const* buffer_as_string = reinterpret_cast<char const*>(data);
-    std::string s = std::string(buffer_as_string, size);
-    std::vector<std::string> splitted = validateResponse(s); 
-    return getInt(splitted.at(1)); 
-}
-
-int UsblParser::parseInt(uint8_t const* data, size_t const size, std::string const command){
-    char const* buffer_as_string = reinterpret_cast<char const*>(data);
-    std::string s = std::string(buffer_as_string, size);
-    std::vector<std::string> splitted = validateResponse(s); 
-    if (splitted.at(0).compare(command) != 0){
-        std::stringstream error_string;
-        error_string << "Expected a response to "<< command << " but read " << command << std::flush;
-        throw ParseError(error_string.str());
-    }
-    return getInt(splitted.at(1));
-}
+//int UsblParser::parseInt(uint8_t const* data, size_t const size){
+//    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+//    std::string s = std::string(buffer_as_string, size);
+//    std::vector<std::string> splitted = validateResponse(s);
+//    return getInt(splitted.at(1));
+//}
+//
+//int UsblParser::parseInt(uint8_t const* data, size_t const size, std::string const command){
+//    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+//    std::string s = std::string(buffer_as_string, size);
+//    std::vector<std::string> splitted = validateResponse(s);
+//    if (splitted.at(0).compare(command) != 0){
+//        std::stringstream error_string;
+//        error_string << "Expected a response to "<< command << " but read " << command << std::flush;
+//        throw ParseError(error_string.str());
+//    }
+//    return getInt(splitted.at(1));
+//}
 int UsblParser::getInt(std::string const s){
     int value;
     std::string s_tmp = s;
@@ -141,21 +222,21 @@ int UsblParser::getInt(std::string const s){
     }
     return value;
 }
-
-void UsblParser::parseOk(uint8_t const* data, size_t const size){
-    char const* buffer_as_string = reinterpret_cast<char const*>(data);
-    std::string s = std::string(buffer_as_string, size);
-    std::vector<std::string> splitted = validateResponse(s);
-    if (splitted.at(1).compare("OK") == 0 || splitted.at(1).compare("[*]OK") == 0){
-        return;
-    } else if (s.find("ERROR") != std::string::npos){
-        throw DeviceError(s);
-    }
-    std::stringstream error_string;
-    error_string << "Waiting for a OK, but read " << s << std::flush;
-    throw ParseError(error_string.str());
-}
-
+//
+//void UsblParser::parseOk(uint8_t const* data, size_t const size){
+//    char const* buffer_as_string = reinterpret_cast<char const*>(data);
+//    std::string s = std::string(buffer_as_string, size);
+//    std::vector<std::string> splitted = validateResponse(s);
+//    if (splitted.at(1).compare("OK") == 0 || splitted.at(1).compare("[*]OK") == 0){
+//        return;
+//    } else if (s.find("ERROR") != std::string::npos){
+//        throw DeviceError(s);
+//    }
+//    std::stringstream error_string;
+//    error_string << "Waiting for a OK, but read " << s << std::flush;
+//    throw ParseError(error_string.str());
+//}
+//
 ConnectionStatus UsblParser::parseConnectionStatus(std::string const s){
     if (s.find("OFFLINE")!= std::string::npos){
         if (s.find("OFFLINE CONNECTION FAILED") != std::string::npos){
@@ -168,7 +249,7 @@ ConnectionStatus UsblParser::parseConnectionStatus(std::string const s){
             return OFFLINE_ALARM;
         }
         else {
-            return OFFLINE;
+            return OFFLINE_READY;
         }
     } else if (s.find("INITIATION") != std::string::npos){
         if (s.find("INITIATION LISTEN") != std::string::npos){
@@ -184,63 +265,67 @@ ConnectionStatus UsblParser::parseConnectionStatus(std::string const s){
         return ONLINE;
     } else if (s.find("BACKOFF")!= std::string::npos){
         return BACKOFF;
+    } else if (s.find("NOISE")!= std::string::npos){
+        return NOISE;
+    } else if (s.find("DEAF")!= std::string::npos){
+        return DEAF;
     } else {
         std::stringstream error_string;
         error_string << "Waiting for Connection Status but read " << s<< std::flush;
         throw ParseError(error_string.str());
     }
-    return OFFLINE;
+    return OFFLINE_ALARM;
 }
-
-Position UsblParser::parsePosition(std::string const s){
-    std::vector<std::string> splitted = splitValidate(s, ",", 5);
-    Position pos;
-    pos.measure_time = atoi(splitted.at(0).c_str());
-    pos.x = atof(splitted.at(2).c_str());
-    pos.y = atof(splitted.at(3).c_str());
-    pos.z = atof(splitted.at(4).c_str());
-    return pos;
-}
-Position UsblParser::parseUsbllong(std::string const s){
-    std::vector<std::string> splitted = splitValidate(s, ",", 17);
-    Position pos;
-    //0 USBLLONG
-    //1 Device time (not important)
-    //2 Measurement Time (just in seconds)
-    pos.measure_time = atoi(splitted.at(2).c_str());
-    //3 Remoteadress (not important because we habe just one another usbl in this setup)
-    //4 X
-    pos.x = atof(splitted.at(4).c_str());
-    //5 Y
-    pos.y = atof(splitted.at(5).c_str());
-    //6 Z
-    pos.z = atof(splitted.at(6).c_str());
-    //TODO evaluate this motion compensated values
-    //7 E 
-    //8 N
-    //9 U
-    //Our device has no magnetsensor
-    //10 Roll
-    //11 Pitch
-    //12 Yaw
-    //13 Propagation Time
-    pos.propagation_time = atof(splitted.at(13).c_str());
-    //14 RSSI
-    pos.rssi = atoi(splitted.at(14).c_str());
-    pos.integrity = atoi(splitted.at(15).c_str());
-    pos.accouracy = atof(splitted.at(16).c_str()); 
-    std::cout << "Parsed a USBL LONG" << std::endl;
-    std::cout << "The message was: " << s << std::endl;
-    std::cout << "X: " << pos.x << std::endl;
-    std::cout << "Y: " << pos.y << std::endl;
-    std::cout << "Z: " << pos.z << std::endl;
-    return pos;
-}
-
+//
+//Position UsblParser::parsePosition(std::string const s){
+//    std::vector<std::string> splitted = splitValidate(s, ",", 5);
+//    Position pos;
+//    pos.measure_time = atoi(splitted.at(0).c_str());
+//    pos.x = atof(splitted.at(2).c_str());
+//    pos.y = atof(splitted.at(3).c_str());
+//    pos.z = atof(splitted.at(4).c_str());
+//    return pos;
+//}
+//Position UsblParser::parseUsbllong(std::string const s){
+//    std::vector<std::string> splitted = splitValidate(s, ",", 17);
+//    Position pos;
+//    //0 USBLLONG
+//    //1 Device time (not important)
+//    //2 Measurement Time (just in seconds)
+//    pos.measure_time = atoi(splitted.at(2).c_str());
+//    //3 Remoteadress (not important because we habe just one another usbl in this setup)
+//    //4 X
+//    pos.x = atof(splitted.at(4).c_str());
+//    //5 Y
+//    pos.y = atof(splitted.at(5).c_str());
+//    //6 Z
+//    pos.z = atof(splitted.at(6).c_str());
+//    //TODO evaluate this motion compensated values
+//    //7 E
+//    //8 N
+//    //9 U
+//    //Our device has no magnetsensor
+//    //10 Roll
+//    //11 Pitch
+//    //12 Yaw
+//    //13 Propagation Time
+//    pos.propagation_time = atof(splitted.at(13).c_str());
+//    //14 RSSI
+//    pos.rssi = atoi(splitted.at(14).c_str());
+//    pos.integrity = atoi(splitted.at(15).c_str());
+//    pos.accouracy = atof(splitted.at(16).c_str());
+//    std::cout << "Parsed a USBL LONG" << std::endl;
+//    std::cout << "The message was: " << s << std::endl;
+//    std::cout << "X: " << pos.x << std::endl;
+//    std::cout << "Y: " << pos.y << std::endl;
+//    std::cout << "Z: " << pos.z << std::endl;
+//    return pos;
+//}
+//
 std::string UsblParser::parseString(uint8_t const* data, size_t const size, std::string const command){
     char const* buffer_as_string = reinterpret_cast<char const*>(data);
     std::string s = std::string(buffer_as_string, size);
-    std::vector<std::string> splitted = validateResponse(s); 
+    std::vector<std::string> splitted = validateResponse(s);
     if (splitted.at(0).compare(command) != 0){
         std::stringstream error_string;
         error_string << "Waiting for a response to " << command << " but read " << splitted.at(0)<< std::flush;
@@ -248,44 +333,44 @@ std::string UsblParser::parseString(uint8_t const* data, size_t const size, std:
     }
     return splitted.at(1);
 }
-
-//Privats
-DeliveryStatus UsblParser::parseDeliveryReport(std::string const s){
-    std::cout << "usblparser.cpp parsedelivreport parsing: " << s << std::endl;
-    std::vector<std::string> splitted = splitValidate(s, ",", 2);
-    if (splitted.at(0).find("DELIVEREDIM") != std::string::npos) {
-        return DELIVERED;
-    } else if (splitted.at(0).find("FAILEDIM") != std::string::npos){
-        return FAILED;
-    }
-    return FAILED;
-    
-} 
-
-ReceiveInstantMessage UsblParser::parseIncomingIm(std::string const s){
-    std::vector<std::string> splitted = splitValidate(s, ",", 10); //CG: was 11, but FlatFish only receives 10 parts separated by comma
-    ReceiveInstantMessage im;
-    //im.len = atoi(splitted.at(1).c_str());
-    im.buffer.resize(atoi(splitted.at(1).c_str()));
-    im.source = atoi(splitted.at(2).c_str());
-    im.destination = atoi(splitted.at(3).c_str());
-    const char *buffer = splitted.at(9).c_str(); //CG: was at(10)=part11 but FF only has 10 parts
-
-    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
-    buffer_as_string = buffer_as_string.substr(0, im.buffer.size());
-    for (size_t i = 0; i < im.buffer.size(); i++){
-        im.buffer[i] = (uint8_t) buffer[i];
-    }
-
-    //buffer_as_string = std::string(reinterpret_cast<char const*>(im.buffer));
-    //buffer_as_string = buffer_as_string.substr(0, im.len);
-
-    buffer_as_string = std::string(im.buffer.begin(), im.buffer.end());
-    //buffer_as_string = buffer_as_string.substr(0, im.buf);
-    return im; 
-
-}
-
+//
+////Privats
+//DeliveryStatus UsblParser::parseDeliveryReport(std::string const s){
+//    std::cout << "usblparser.cpp parsedelivreport parsing: " << s << std::endl;
+//    std::vector<std::string> splitted = splitValidate(s, ",", 2);
+//    if (splitted.at(0).find("DELIVEREDIM") != std::string::npos) {
+//        return DELIVERED;
+//    } else if (splitted.at(0).find("FAILEDIM") != std::string::npos){
+//        return FAILED;
+//    }
+//    return FAILED;
+//
+//}
+//
+//ReceiveInstantMessage UsblParser::parseIncomingIm(std::string const s){
+//    std::vector<std::string> splitted = splitValidate(s, ",", 10); //CG: was 11, but FlatFish only receives 10 parts separated by comma
+//    ReceiveInstantMessage im;
+//    //im.len = atoi(splitted.at(1).c_str());
+//    im.buffer.resize(atoi(splitted.at(1).c_str()));
+//    im.source = atoi(splitted.at(2).c_str());
+//    im.destination = atoi(splitted.at(3).c_str());
+//    const char *buffer = splitted.at(9).c_str(); //CG: was at(10)=part11 but FF only has 10 parts
+//
+//    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+//    buffer_as_string = buffer_as_string.substr(0, im.buffer.size());
+//    for (size_t i = 0; i < im.buffer.size(); i++){
+//        im.buffer[i] = (uint8_t) buffer[i];
+//    }
+//
+//    //buffer_as_string = std::string(reinterpret_cast<char const*>(im.buffer));
+//    //buffer_as_string = buffer_as_string.substr(0, im.len);
+//
+//    buffer_as_string = std::string(im.buffer.begin(), im.buffer.end());
+//    //buffer_as_string = buffer_as_string.substr(0, im.buf);
+//    return im;
+//
+//}
+//
 std::vector<std::string> UsblParser::splitValidate(std::string const s, const char* symbol, size_t const parts){
     std::vector<std::string> splitted;
     boost::split( splitted, s, boost::algorithm::is_any_of( symbol ) );
@@ -332,68 +417,68 @@ std::vector<std::string> UsblParser::validateResponse(std::string const s){
         throw ValidationError("No Escape Sequence");
     }
 }
-
-std::string UsblParser::parsePhyNumber(std::string const s){
-    std::string phy = splitValidate(s, ",", 2)[0];
-    phy = splitValidate(phy, ":", 2)[1];
-    return phy;
-}
-
-std::string UsblParser::parseMacNumber(std::string const s){
-    std::string mac = splitValidate(s, ",", 2)[1];
-    //TODO validate the part
-    mac = splitValidate(mac, ":", 2)[1];
-    return mac;
-}
-
-Position UsblParser::parseRemotePosition(std::string const s){
-
-	std::cout << "parseRemotePosition\n";
-
-
-    if (s[0] != '#'){
-	std::cout << "s[0]=" << s[0] << " !=# , throwing ParseError\n";
-	std::cout << "( s= " << s << " )\n";
-
-        throw ParseError("This is not a remote position");
-    }
-    std::vector<std::string> splitted = splitValidate(s, ";", 9);
-
-    for(int i=0; i< splitted.size(); i++)
-	std::cout << "splitted.at " << i << ":" << splitted.at(i) << std::endl;
-
-    Position pos;
-    //0 USBLLONG
-    //1 Device time (not important)
-    //2 Measurement Time (just in seconds)
-    //pos.measure_time = atoi(splitted.at(2).c_str());
-    pos.time = base::Time::fromMilliseconds(std::stoull(splitted.at(1).c_str()));
-    //3 Remoteadress (not important because we habe just one another usbl in this setup)
-    //4 X
-    pos.x = atof(splitted.at(2).c_str());
-    //5 Y
-    pos.y = atof(splitted.at(3).c_str());
-    //6 Z
-    pos.z = atof(splitted.at(4).c_str());
-    //TODO evaluate this motion compensated values
-    //7 E 
-    //8 N
-    //9 U
-    //Our device has no magnetsensor
-    //10 Roll
-    //11 Pitch
-    //12 Yaw
-    //13 Propagation Time
-    pos.propagation_time = atof(splitted.at(5).c_str());
-    //14 RSSI
-    pos.rssi = atoi(splitted.at(6).c_str());
-    pos.integrity = atoi(splitted.at(7).c_str());
-    pos.accouracy = atof(splitted.at(8).c_str()); 
-  //  std::cout << "Parsed a USBL LONG" << std::endl;
-    std::cout << "The USBLREVERSE message was: " << s << std::endl;
-    std::cout << "X: " << pos.x << std::endl;
-    std::cout << "Y: " << pos.y << std::endl;
-    std::cout << "Z: " << pos.z << std::endl;
-    return pos;
-}
-
+//
+//std::string UsblParser::parsePhyNumber(std::string const s){
+//    std::string phy = splitValidate(s, ",", 2)[0];
+//    phy = splitValidate(phy, ":", 2)[1];
+//    return phy;
+//}
+//
+//std::string UsblParser::parseMacNumber(std::string const s){
+//    std::string mac = splitValidate(s, ",", 2)[1];
+//    //TODO validate the part
+//    mac = splitValidate(mac, ":", 2)[1];
+//    return mac;
+//}
+//
+//Position UsblParser::parseRemotePosition(std::string const s){
+//
+//	std::cout << "parseRemotePosition\n";
+//
+//
+//    if (s[0] != '#'){
+//	std::cout << "s[0]=" << s[0] << " !=# , throwing ParseError\n";
+//	std::cout << "( s= " << s << " )\n";
+//
+//        throw ParseError("This is not a remote position");
+//    }
+//    std::vector<std::string> splitted = splitValidate(s, ";", 9);
+//
+//    for(int i=0; i< splitted.size(); i++)
+//	std::cout << "splitted.at " << i << ":" << splitted.at(i) << std::endl;
+//
+//    Position pos;
+//    //0 USBLLONG
+//    //1 Device time (not important)
+//    //2 Measurement Time (just in seconds)
+//    //pos.measure_time = atoi(splitted.at(2).c_str());
+//    pos.time = base::Time::fromMilliseconds(std::stoull(splitted.at(1).c_str()));
+//    //3 Remoteadress (not important because we habe just one another usbl in this setup)
+//    //4 X
+//    pos.x = atof(splitted.at(2).c_str());
+//    //5 Y
+//    pos.y = atof(splitted.at(3).c_str());
+//    //6 Z
+//    pos.z = atof(splitted.at(4).c_str());
+//    //TODO evaluate this motion compensated values
+//    //7 E
+//    //8 N
+//    //9 U
+//    //Our device has no magnetsensor
+//    //10 Roll
+//    //11 Pitch
+//    //12 Yaw
+//    //13 Propagation Time
+//    pos.propagation_time = atof(splitted.at(5).c_str());
+//    //14 RSSI
+//    pos.rssi = atoi(splitted.at(6).c_str());
+//    pos.integrity = atoi(splitted.at(7).c_str());
+//    pos.accouracy = atof(splitted.at(8).c_str());
+//  //  std::cout << "Parsed a USBL LONG" << std::endl;
+//    std::cout << "The USBLREVERSE message was: " << s << std::endl;
+//    std::cout << "X: " << pos.x << std::endl;
+//    std::cout << "Y: " << pos.y << std::endl;
+//    std::cout << "Z: " << pos.z << std::endl;
+//    return pos;
+//}
+//
