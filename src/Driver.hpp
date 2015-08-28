@@ -5,8 +5,10 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <queue>
 #include "UsblParser.hpp"
 #include "DriverTypes.hpp"
+
 namespace usbl_evologics
 {
     
@@ -15,38 +17,113 @@ namespace usbl_evologics
 
     	public:
 
-    		Driver(InterfaceType deviceInterface);
+
+
+    		Driver();
     		~Driver();
 
-            /*
-             * Function waits for any Synchronous Message as response to command.
-             * The function validate the response and throws an error, if the response is not valid.
-             *
-             * @param command A command to fit a response with this command
-             * @return A int value extracted from a synchronous message
-             */
-			std::string waitSynchronousString(std::string command);
+    		void setInterface(InterfaceType	deviceInterface);
+
+    		// send a command to device
+            // check queueCommand and set waitCommand=False
+    		bool sendCommand(bool &send);
+
+    		// return a valid answer, as a response or as a notification.
+    		// resp=true means the unique and necessary response of a command is received.
+    		// queueCommand.pop() and waitCommand=True realized in this case.
+    		bool readAnswer(bool &resp, std::string &error_message);
 
 
-            /*
-             * Function returns the current connection status to the remote device
-             *
-             * @return The Status of the connection in a enum
-             */
-            ConnectionStatus getConnectionStatus();
+    		// List of Commands. They will be pushed to queueCommand
+    		void getConnetionStatus(void);
+    		void getCurrentSetting(void);
+
+
+
+    		// Guard Time Escape Sequence
+    		// Switches to COMMAND mode
+    		void GTES(void);
+
+
+    		InterfaceType getInterface(void);
+
+    		void sendInstantMessage(SendedIM const &im);
+    		void receiveInstantMessage(ReceivedIM &im);
+
+    		int getSizeQueueCommand(void);
+
+//            /*
+//             * Function waits for any Synchronous Message as response to command.
+//             * The function validate the response and throws an error, if the response is not valid.
+//             *
+//             * @param command A command to fit a response with this command
+//             * @return A int value extracted from a synchronous message
+//             */
+//			std::string waitSynchronousString(std::string command);
+//
+//
+//            /*
+//             * Function returns the current connection status to the remote device
+//             *
+//             * @return The Status of the connection in a enum
+//             */
+//            ConnectionStatus getConnectionStatus();
 
         private:
+    		UsblParser	usblParser;
 
-    		OperationMode mode;
-    		InterfaceType interface;
+			OperationMode		mode;
+			InterfaceType		interface;
+			Position			pose;
 
-            size_t readInternal(uint8_t  *buffer, size_t buffer_size);
-            void sendWithLineEnding(std::string line);
-            bool handleAsynchronousCommand(std::string buffer_as_string);
-            void incomingDeliveryReport(std::string s);
-            void incomingInstantMessage(std::string s);
-            void incomingPosition(std::string s);
-            SendInstantMessage currentInstantMessage;
+			ConnectionStatus	connection_state;
+			CommandResponse		response;
+			Notification		notification;
+
+			VersionNumbers device;
+			StatusRequest device_status;
+			DeviceSettings device_settings;
+			DataChannel channel;
+			AcousticChannel acoustic_channel;
+
+			SendedIM currentInstantMessage;
+            ReceivedIM receveidInstantMessage;
+
+            std::queue<std::string> queueCommand;
+          //  std::queue<CommandResponse> queueExpectedResponse;
+            bool waitCommand;
+            static const int max_packet_size = 20000;
+
+
+
+    		// aux function used by readAnswer().
+    		int readInternal(uint8_t  *& buffer);
+    		void resizeBuffer(uint8_t *& buffer, int size);
+
+    		bool isResponse(std::string const &buffer, CommandResponse &response);
+    		bool validResponse(std::string const &buffer);
+
+    		bool isNotification(std::string const &buffer, Notification &notification);
+    		bool validNotification(std::string const &buffer);
+    		bool fullValidation(std::string const &buffer, Notification const &notification, std::string &output_msg);
+
+    		std::string interpretResponse(std::string const &buffer, std::string const &command, CommandResponse const &response);
+    		std::string interpretNotification(std::string const &buffer, Notification const &notification);
+
+            std::string fillCommand(std::string const &command);
+            std::string addEndLine (std::string const &command);
+
+    		void modeManager(std::string const &command);
+    		void modeMsgManager(std::string const &command);
+
+
+          //  size_t readInternal(uint8_t  *buffer, size_t buffer_size);
+//            void sendWithLineEnding(std::string line);
+//            bool handleAsynchronousCommand(std::string buffer_as_string);
+//            void incomingDeliveryReport(std::string s);
+//            void incomingInstantMessage(std::string s);
+//            void incomingPosition(std::string s);
+
 
 //    	void cancelIm(std::string string_as_buffer);
 //            int getIntValue(std::string value_name);

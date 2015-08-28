@@ -50,30 +50,50 @@ namespace usbl_evologics
         DEAF
     };
 
-    // Response to a command by local device
+    // Response to a command by local device. Every command generates a response
 	enum CommandResponse {
-        // Command accepted and will be applied immediately
-		OK,
-		// Command accepted and will be applied in INITIATION_LISTEN or OFFLINE_READY states
-        NEAR_OK,
-        // Response to a request. Current setting value
-        VALUE,
-        // Value deferred and will be applied in INITIATION_LISTEN or OFFLINE_READY states
-        NEAR_VALUE,
+        // Command accepted and will be applied as soon as possible. OK
+		COMMAND_RECEIVED,
+		// Response to a request. Current setting value
+        VALUE_REQUESTED,
         // Error message
         ERROR,
         // Busy message
-        BUSY
+        BUSY,
+        //No response. Only command ATO (switches from COMMAND to DATA mode) doesn't get response
+  //      NO
     };
 
-    ///The delivery status of an instant message
+    // Notification that does'nt require a command to be received.
+	// The number represents the number of fields splitted by comma(,) presents in a Notification
+	// <Notification>,<data1>,<data2>,<data3>,...
+	enum Notification {
+        // Instant Message received
+		RECVIM,
+        // Synchronous Instant Message received
+		RECVIMS,
+        // PiggyBack Message received
+		RECVPBM,
+		// Report of sending a Instant Message. Delivered or Failed
+        DELIVERY_REPORT,
+        // Transmission canceled due the wrong delivery time. Try again
+        CANCELED_IM,
+        // Pose of remote device
+        USBLLONG,
+        // Orientation of remote device, in case the pose was computed
+        USBLANGLE,
+        // Extra notifications. See about Extended notification. Not implemented.
+        EXTRA_NOTIFICATION,
+        // No notification
+   //     NO
+    };
+
+    ///The delivery status of an instant message. Only if required by a specific command.
     enum DeliveryStatus {
         // No messages are been delivered
     	EMPTY,
     	// Message is been delivered
         PENDING,
-        // Instant message delivery was successful
-        DELIVERED,
         // Delivered of an Instant Message was not acknowledged
         FAILED,
         // A synchronous Instant Message has expired
@@ -93,15 +113,17 @@ namespace usbl_evologics
     };
 
     //?????
-	enum ReverseMode {
-        NO_REVERSE,
-        REVERSE_POSITION_SENDER,
-        REVERSE_POSITION_RECEIVER
-    };
+//	enum ReverseMode {
+//        NO_REVERSE,
+//        REVERSE_POSITION_SENDER,
+//        REVERSE_POSITION_RECEIVER
+//    };
 
 
-
-
+	struct Answer {
+		CommandResponse response;
+		Notification notification;
+	};
 
     struct VersionNumbers {
 		// Firmware version number
@@ -123,7 +145,7 @@ namespace usbl_evologics
 
     	// Parameter of command interpreter
     	// protocolID = 0, global device settings can be edited.
-    	// protocolID = 1...7, global device settings cannot be edit. identifier for Instant Message communication
+    	// protocolID = 1...7, global device settings cannot be edit. Identifier for Instant Message communication
     	int protocolID;
 
     	// Physical layer of local device
@@ -276,7 +298,7 @@ namespace usbl_evologics
         // TRUE: generate pose for every Instant Message
         bool poseEnable;
 
-        // TRUE: enables extended notification. Extra set of informations
+        // TRUE: enables extended notification. Extra set of informations. Default FALSE
         bool extendedControl;
 
         base::Time time;
@@ -333,8 +355,8 @@ namespace usbl_evologics
 
     ///Device specific position structure. To be independent
     struct Position {
-        base::Time time;
-        base::Time measureTime;
+        double time;
+        double measurementTime;
         int remoteAddress;
         // Coordinates in local device's reference frame (in m)
         double x;
@@ -388,15 +410,17 @@ namespace usbl_evologics
         int propagationTime;
         int relativeVelocity;
     };
+
+
     ///Instant message to send it
-    struct SendInstantMessage {
+    struct SendedIM {
         int destination;
         bool deliveryReport;
-        enum DeliveryStatus deliveryStatus;
+        //enum DeliveryStatus deliveryStatus;
         std::vector<uint8_t> buffer;
     };
     ///Received instant message
-    struct ReceiveInstantMessage {
+    struct ReceivedIM {
     	base::Time time;
         int destination;
         int source;
@@ -404,15 +428,22 @@ namespace usbl_evologics
     };
 
     ///Type of an asynchronous message from the local device
-    enum AsynchronousMessages {
-        NO_ASYNCHRONOUS,
-        INSTANT_MESSAGE,
-        DELIVERY_REPORT,
-        CANCELEDIM,
-        USBLLONG,
-        USBLANGLE
-    };
+//    enum AsynchronousMessages {
+//        NO_ASYNCHRONOUS,
+//        INSTANT_MESSAGE,
+//        DELIVERY_REPORT,
+//        CANCELEDIM,
+//        USBLLONG,
+//        USBLANGLE
+//    };
 
+
+
+//	enum CommandCases {
+//        REQUEST_CONFIG,
+//        SEND_IM,
+//        REQUEST_STATE
+//    };
 
 
 

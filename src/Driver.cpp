@@ -3,165 +3,496 @@
 #include <sstream>
 //#include "Exceptions.hpp"
 
-namespace usbl_evologics
+using namespace usbl_evologics;
+
+Driver::Driver()
+	: iodrivers_base::Driver(max_packet_size)
 {
-	Driver::Driver(InterfaceType deviceInterface)
-		: iodrivers_base::Driver(100000)
+	mode = DATA;
+}
+
+Driver::~Driver()
+{
+}
+
+bool Driver::sendCommand(bool &mailCommand)
+{
+	if(!queueCommand.empty() && mailCommand)
 	{
-		interface = deviceInterface;
+		std::string command = queueCommand.front();
+
+		std::cout << "Write Line: " << command << std::endl;
+		std::string buffer = fillCommand(command);
+
+		bool result = iodrivers_base::Driver::writePacket(reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.length());
+		if(result)
+		{
+			mailCommand = false;
+			modeManager(command);
+		}
+		return result;
+	}
+	return false;
+}
+
+std::string Driver::fillCommand(std::string const &command)
+{
+	std::stringstream ss;
+	std::string buffer;
+	// Guard Time Escape Sequence (GTES) doesn't require <end-line>
+	// GTES: (1s)<+++>(1s)
+	if(command == "+++")
+	{
+		ss << command << std::flush;
+		if(mode == DATA)
+			sleep(1);
+	}
+	else
+	{
+		if (mode == DATA)
+			// If in DATA, buffer = +++<AT command>
+			ss << "+++" << std::flush;
+		ss << addEndLine(command) << std::flush;
+	}
+	return ss.str();
+}
+
+std::string Driver::addEndLine(std::string const &command)
+{
+	std::stringstream ss;
+	if (interface == SERIAL)
+		ss << command << "\r" << std::flush;
+	else
+		ss << command << "\n" << std::flush;
+	return ss.str();
+}
+
+int Driver::extractPacket(uint8_t const* buffer, size_t buffer_size) const
+{
+	std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer), buffer_size);
+	buffer_as_string = buffer_as_string.substr(0, buffer_size);
+
+	if (mode == DATA)
+	{
+		std::size_t escape;
+		if (buffer_as_string.length()<3)
+			return 0;
+		escape = buffer_as_string.find("+++");
+		if (escape == std::string::npos)
+			//there is definitely no command, but can be RAW DATA. TODO Need implementation
+			return -1*buffer_as_string.size();
+		else if (escape != 0)
+			//there is maybe a command but isn't starting at position 0
+			return -1*escape;
+	}
+	//there is a command starting at position 0
+	// Both COMMAND and DATA mode finish by \r\n. Need implementation for RAW DATA
+	size_t eol = buffer_as_string.find('\r\n');
+	if(eol != std::string::npos)
+		return eol+2;
+	else
+		return 0;
+}
+
+
+bool Driver::readAnswer(bool &resp, std::string &output_message)
+{
+	uint8_t* buffer;
+	Notification notification;
+	CommandResponse response;
+
+	int buffer_size = readInternal(buffer);
+	std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+
+	if(isNotification(buffer_as_string, notification))
+	{
+		if(!fullValidation(buffer_as_string, notification, output_message))
+		{
+			resp = false;
+			return false;
+		}
+		output_message = interpretNotification(buffer_as_string, notification);
+		resp = false;
+		return true;
+	}
+	else if(isResponse(buffer_as_string, response))
+	{
+		std::string command = queueCommand.front();
+		output_message = interpretResponse(buffer_as_string, command, response);
+
+		if(output_message == "OK")
+			queueCommand.pop();
+		else if(output_message == "TRY_AGAIN")
+		{
+			resp = true;
+			return false;
+		}
+		resp = true;
+		return true;
+	}
+	resp = false;
+	return false;
+}
+
+int Driver::readInternal(uint8_t *&buffer)
+{
+	uint8_t* read_buffer = new uint8_t[max_packet_size];
+	int readpacket = iodrivers_base::Driver::readPacket(read_buffer, max_packet_size, 3000, 2000);
+	if (readpacket > 0)
+	{
+		resizeBuffer(buffer, readpacket);
+		memcpy(buffer, read_buffer, readpacket);
+	}
+	delete[] read_buffer;
+	return readpacket;
+}
+
+
+bool Driver::isNotification(std::string const &buffer, Notification &notification)
+{
+	bool ret = false;
+	if(validNotification(buffer))
+		ret = usblParser.findNotification(buffer, notification);
+	return ret;
+}
+
+bool Driver::isResponse(std::string const &buffer, CommandResponse &response)
+{
+	bool ret = false;
+	if(validResponse(buffer))
+		ret = usblParser.findResponse(buffer, response);
+	return ret;
+}
+
+// In DATA mode: +++AT:<length>:<notification><end-of-line>
+// IN COMMAND mode: <notification><end-of-line>
+bool Driver::validNotification(std::string const &buffer)
+{
+	bool ret = true;
+	if(mode == DATA)
+	{
+		ret = usblParser.validateNotification(buffer);
+	}
+	// Not possible to use UsblParser::validateNotification() in COMMAND mode
+	return ret;
+}
+
+// In DATA mode: +++AT:<length>:<notification><end-of-line>
+// IN COMMAND mode: <notification><end-of-line>
+// Analysis of <notification>, independent of COMMAND or DATA mode
+bool Driver::fullValidation(std::string const &buffer, Notification const &notification, std::string &output_msg)
+{
+	return usblParser.splitValidateNotification(buffer, notification, output_msg);
+}
+
+// In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
+// IN COMMAND mode: <response><end-of-line>
+bool Driver::validResponse(std::string const &buffer)
+{
+	bool ret = true;
+	if(mode == DATA)
+	{
+		std::string command = queueCommand.front();
+		ret = usblParser.validateResponse(buffer, command);
+	}
+	// Not possible to use UsblParser::validateResponse() in COMMAND mode
+	return ret;
+}
+
+std::string Driver::interpretNotification(std::string const& buffer, Notification &notification)
+{
+	std::string ret;
+
+	switch (notification) {
+		case USBLLONG:
+			usblParser.parseReceivedPose(buffer, pose);
+			ret = "NEW POSE";
+		break;
+		case USBLANGLE:
+			ret = "NOT POSSIBLE TO GET POSE";
+		break;
+		case RECVIM:
+			//usblParser.parseReceivedIM();
+			ret = "NEW IM";
+		break;
+		case RECVIMS:
+			//usblParser.parseReceivedIMS();
+			ret = "NEW Synchronous IM";
+		break;
+		case RECVPBM:
+			//usblParser.parseReceivedPBM();
+			ret = "NEW PiggyBack M";
+		break;
+		case DELIVERY_REPORT:
+			ret = "IM REPORT";
+		break;
+		case CANCELED_IM:
+			ret = "IM NOT SEND. TRY AGAIN";
+		break;
+		case EXTRA_NOTIFICATION:
+			ret = "Extra Notification. Interpretation to be implemented";
+		break;
+
+	}
+
+	return ret;
+}
+
+std::string Driver::interpretResponse(std::string const& buffer, std::string const& command, CommandResponse const &response)
+{
+	std::string ret;
+	switch (response) {
+		case ERROR:
+			ret = "Usbl's Error";
+		break;
+		case BUSY:
+			ret = "Usbl is busy";
+		break;
+		case COMMAND_RECEIVED:
+			modeMsgManager(command);
+			ret = "OK";
+		break;
+		case VALUE_REQUESTED:
+			ret = "Value back";
+		break;
+	}
+	return ret;
+}
+
+
+void Driver::resizeBuffer(uint8_t *& buffer, int size)
+{
+	if (buffer != NULL)
+		delete buffer;
+	buffer = new uint8_t[size];
+}
+
+void Driver::setInterface(InterfaceType	deviceInterface)
+{
+	interface = deviceInterface;
+}
+
+void Driver::getConnetionStatus(void)
+{
+	queueCommand.push("AT?S");
+//	queueExpectedResponse.push(VALUE_REQUESTED);
+}
+
+void Driver::getCurrentSetting(void)
+{
+	queueCommand.push("AT?V");
+//	queueExpectedResponse.push(VALUE_REQUESTED);
+}
+
+void Driver::GTES(void)
+{
+	queueCommand.push("+++");
+}
+
+void Driver::modeManager(std::string const &command)
+{
+	// Command ATO. Switch from DATA to COMMAND mode doesn't require answer
+	if(command.find("ATO")!=std::string::npos && mode == COMMAND)
+	{
+		// Proceed just after send the command
+		queueCommand.pop();
 		mode = DATA;
 	}
-
-	Driver::~Driver()
+	// Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
+	else if(command.find("+++")!=std::string::npos && mode == DATA )
 	{
+		sleep(1);
+		// switch to COMMAND mode after receive a OK answer
+		//mode = COMMAND;
 	}
-
-	int Driver::extractPacket(uint8_t const* buffer, size_t buffer_size) const
+	// Switch to COMMAND mode. Require OK response.
+	else if(command.find("ATC")!=std::string::npos && mode == DATA)
 	{
-		std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer), buffer_size);
-		buffer_as_string = buffer_as_string.substr(0, buffer_size);
-		int is_packet = UsblParser::isPacket(buffer_as_string, mode);
-		return abs(is_packet);
+		//mode = COMMAND;
 	}
+}
 
-
-	ConnectionStatus Driver::getConnectionStatus()
+void Driver::modeMsgManager(std::string const &command)
+{
+	// Command ATO. Switch from DATA to COMMAND mode doesn't require answer
+	if(command.find("ATO")!=std::string::npos && mode == COMMAND)
 	{
-	    sendWithLineEnding("AT?S");
-	    return (ConnectionStatus) (UsblParser::parseConnectionStatus(waitSynchronousString("AT?S")));
+		// Proceed just after send the command
+		//queueCommand.pop();
+		//mode = DATA;
 	}
-
-	void Driver::sendWithLineEnding(std::string line){
-	    std::cout << "usbldriver sendWithLineEnding\n";
-	    std::stringstream ss;
-	    std::cout << "Write Line: " << line << std::endl;
-	    if (mode == DATA)
-	    	ss << "+++" << line << std::flush;
-	    if (interface == SERIAL){
-	        ss << line << "\r" << std::flush;
-	    } else {
-	        ss << line << "\n" << std::flush;
-	    }
-	    std::string s = ss.str();
-	    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+	// Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
+	else if(command.find("+++")!=std::string::npos && mode == DATA && response == COMMAND_RECEIVED)
+	{
+		mode = COMMAND;
 	}
-
-	std::string Driver::waitSynchronousString(std::string command){
-	    std::vector<uint8_t> buffer;
-	    buffer.resize(1000);
-	    while (true){
-	        if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
-	            return UsblParser::parseString(&buffer[0], packet_size, command);
-	        }
-	    }
+	// Switch to COMMAND mode. Require OK response.
+	else if(command.find("ATC")!=std::string::npos && mode == DATA && response == COMMAND_RECEIVED)
+	{
+		mode = COMMAND;
 	}
-
-	size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
-	    size_t packet_size = readPacket(buffer, buffer_size, 3000, 3000);
-	    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
-	    if (packet_size){
-	        if (UsblParser::isPacket(buffer_as_string) > 0){
-	            if (!handleAsynchronousCommand(buffer_as_string)){
-	                //The Packet is not handled as asynchronous Command,
-	                //so there is a unhandled packet with size packet_size
-	                return packet_size;
-	            } else {
-	                //The packet is handled already as asynchronous Command
-	                //so there is no unhandled packet
-	                return 0;
-	            }
-
-	        } else {
-	            std::cout << " Buffer is burst data. Ignoring burst data when reading internal." << buffer << std::endl;
-	            return 0;
-	        }
-	    }
-	    return 0;
-	}
-
-	bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
-	    std::cout << "usbldriver handleAsync\n";
-	    switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
-	        case NO_ASYNCHRONOUS:
-	            return false;
-	        case DELIVERY_REPORT:
-	            std::cout << "There was a delivery report" << std::endl;
-	            incomingDeliveryReport(buffer_as_string);
-	            return true;
-	        case INSTANT_MESSAGE:
-	            std::cout << "There was a instant message" << std::endl;
-	            incomingInstantMessage(buffer_as_string);
-	            return true;
-	        case CANCELEDIM:
-	            std::cout << "There is a CANCLEDIM" << std::endl;
-	            cancelIm(buffer_as_string);
-	            return true;
-	        case USBLLONG:
-	            incomingPosition(buffer_as_string);
-	        case USBLANGLE:
-	            std::cout << "There is a USBL Asynch Message" << std::endl;
-	            //TODO Handle this, when possible (unknown protocol)
-	            return true;
-	    }
-	    return false;
-	}
-
-	void Driver::incomingDeliveryReport(std::string s){
-	    if (currentInstantMessage.deliveryStatus != PENDING){
-	        std::cout << "warn: Get a Delivery Report, but has no pending Instant Message. Maybe the device was not fully resseted" << std::endl;
-	    }
-	    currentInstantMessage.deliveryStatus = UsblParser::parseDeliveryReport(s);
-	}
-
-	void Driver::incomingInstantMessage(std::string s){
-	    std::cout << "Driver::incomingIM\n";
-	    ReceiveInstantMessage rim = UsblParser::parseIncomingIm(s);
-	    //TODO maybe there is a better solution as try and error
-	    if (true /*reverse_mode == REVERSE_POSITION_RECEIVER*/){
-	        try {
-	            //TODO
-		        std::cout << "trying buffer to string\n";
-
-		    std::string buffer_as_string = std::string(rim.buffer.begin(), rim.buffer.end());
-		        std::cout << "trying parse remote\n";
-
-	            current_position = UsblParser::parseRemotePosition(buffer_as_string);
-	        } catch (ParseError e){
-		    	        std::cout << "there was a parse error, handling IM as normal IM\n";
-
-	            //If its can't be parsed as remote Position it's a User IM.
-	            receivedInstantMessages.push_back(rim);
-	        }
-	    } else {
-	        receivedInstantMessages.push_back(rim);
-	    }
-	    //TODO hier kann die uhrzeit nicht abgefragt werden alternative?
-	    //rim.time = getSystemTime();
-	}
-
-	void Driver::incomingPosition(std::string s){
-	    //TODO initialize
-	    current_position = UsblParser::parseUsbllong(s);
-
-	    current_position.time = base::Time::now();
-	    std::cout << "driver: incomingPosition set time to " << current_position.time.toString() << std::endl;
-
-	    std::cout << "X: " << current_position.x << std::endl;
-	    std::cout << "Y: " << current_position.y << std::endl;
-	    std::cout << "Z: " << current_position.z << std::endl;
-
-	    new_position_available = true;
-	}
+}
 
 
+InterfaceType Driver::getInterface(void)
+{
+	return interface;
+}
 
+void Driver::sendInstantMessage(SendedIM const &im)
+{
+	queueCommand.push(usblParser.parseSendIM(im));
+}
 
-
-	void Driver::cancelIm(std::string s){
-	    currentInstantMessage.deliveryStatus = CANCELED;
-	}
+void Driver::receiveInstantMessage(ReceivedIM &im)
+{
 
 }
+
+int Driver::getSizeQueueCommand(void)
+{
+	return queueCommand.size();
+}
+
+
+//
+//	ConnectionStatus Driver::getConnectionStatus()
+//	{
+//	    sendWithLineEnding("AT?S");
+//	    return (ConnectionStatus) (UsblParser::parseConnectionStatus(waitSynchronousString("AT?S")));
+//	}
+//
+//	void Driver::sendWithLineEnding(std::string line){
+//	    std::cout << "usbldriver sendWithLineEnding\n";
+//	    std::stringstream ss;
+//	    std::cout << "Write Line: " << line << std::endl;
+//	    if (mode == DATA)
+//	    	ss << "+++" << line << std::flush;
+//	    if (interface == SERIAL){
+//	        ss << line << "\r" << std::flush;
+//	    } else {
+//	        ss << line << "\n" << std::flush;
+//	    }
+//	    std::string s = ss.str();
+//	    this->writePacket(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+//	}
+//
+//	std::string Driver::waitSynchronousString(std::string command){
+//	    std::vector<uint8_t> buffer;
+//	    buffer.resize(1000);
+//	    while (true){
+//	        if (size_t packet_size = readInternal(&buffer[0], buffer.size())){
+//	            return UsblParser::parseString(&buffer[0], packet_size, command);
+//	        }
+//	    }
+//	}
+//
+//	size_t Driver::readInternal(uint8_t *buffer, size_t buffer_size){
+//	    size_t packet_size = readPacket(buffer, buffer_size, 3000, 3000);
+//	    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer));
+//	    if (packet_size){
+//	        if (UsblParser::isPacket(buffer_as_string) > 0){
+//	            if (!handleAsynchronousCommand(buffer_as_string)){
+//	                //The Packet is not handled as asynchronous Command,
+//	                //so there is a unhandled packet with size packet_size
+//	                return packet_size;
+//	            } else {
+//	                //The packet is handled already as asynchronous Command
+//	                //so there is no unhandled packet
+//	                return 0;
+//	            }
+//
+//	        } else {
+//	            std::cout << " Buffer is burst data. Ignoring burst data when reading internal." << buffer << std::endl;
+//	            return 0;
+//	        }
+//	    }
+//	    return 0;
+//	}
+//
+//	bool Driver::handleAsynchronousCommand(std::string buffer_as_string){
+//	    std::cout << "usbldriver handleAsync\n";
+//	    switch (UsblParser::parseAsynchronousCommand(buffer_as_string)){
+//	        case NO_ASYNCHRONOUS:
+//	            return false;
+//	        case DELIVERY_REPORT:
+//	            std::cout << "There was a delivery report" << std::endl;
+//	            incomingDeliveryReport(buffer_as_string);
+//	            return true;
+//	        case INSTANT_MESSAGE:
+//	            std::cout << "There was a instant message" << std::endl;
+//	            incomingInstantMessage(buffer_as_string);
+//	            return true;
+//	        case CANCELEDIM:
+//	            std::cout << "There is a CANCLEDIM" << std::endl;
+//	            cancelIm(buffer_as_string);
+//	            return true;
+//	        case USBLLONG:
+//	            incomingPosition(buffer_as_string);
+//	        case USBLANGLE:
+//	            std::cout << "There is a USBL Asynch Message" << std::endl;
+//	            //TODO Handle this, when possible (unknown protocol)
+//	            return true;
+//	    }
+//	    return false;
+//	}
+//
+//	void Driver::incomingDeliveryReport(std::string s){
+//	    if (currentInstantMessage.deliveryStatus != PENDING){
+//	        std::cout << "warn: Get a Delivery Report, but has no pending Instant Message. Maybe the device was not fully resseted" << std::endl;
+//	    }
+//	    currentInstantMessage.deliveryStatus = UsblParser::parseDeliveryReport(s);
+//	}
+//
+//	void Driver::incomingInstantMessage(std::string s){
+//	    std::cout << "Driver::incomingIM\n";
+//	    ReceiveInstantMessage rim = UsblParser::parseIncomingIm(s);
+//	    //TODO maybe there is a better solution as try and error
+//	    if (true /*reverse_mode == REVERSE_POSITION_RECEIVER*/){
+//	        try {
+//	            //TODO
+//		        std::cout << "trying buffer to string\n";
+//
+//		    std::string buffer_as_string = std::string(rim.buffer.begin(), rim.buffer.end());
+//		        std::cout << "trying parse remote\n";
+//
+//	            current_position = UsblParser::parseRemotePosition(buffer_as_string);
+//	        } catch (ParseError e){
+//		    	        std::cout << "there was a parse error, handling IM as normal IM\n";
+//
+//	            //If its can't be parsed as remote Position it's a User IM.
+//	            receivedInstantMessages.push_back(rim);
+//	        }
+//	    } else {
+//	        receivedInstantMessages.push_back(rim);
+//	    }
+//	    //TODO hier kann die uhrzeit nicht abgefragt werden alternative?
+//	    //rim.time = getSystemTime();
+//	}
+//
+//	void Driver::incomingPosition(std::string s){
+//	    //TODO initialize
+//	    current_position = UsblParser::parseUsbllong(s);
+//
+//	    current_position.time = base::Time::now();
+//	    std::cout << "driver: incomingPosition set time to " << current_position.time.toString() << std::endl;
+//
+//	    std::cout << "X: " << current_position.x << std::endl;
+//	    std::cout << "Y: " << current_position.y << std::endl;
+//	    std::cout << "Z: " << current_position.z << std::endl;
+//
+//	    new_position_available = true;
+//	}
+//
+//
+//
+//
+//
+//	void Driver::cancelIm(std::string s){
+//	    currentInstantMessage.deliveryStatus = CANCELED;
+//	}
+//
+//}
 
 
 
