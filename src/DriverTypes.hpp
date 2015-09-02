@@ -8,7 +8,8 @@ namespace usbl_evologics
 {
 
 	///The type of the interface to the local device
-	enum InterfaceType {
+	enum InterfaceType
+	{
         // Interface with modem/vehicle.
     	SERIAL,
     	// Interface with USBL/Dock/Boat
@@ -16,7 +17,8 @@ namespace usbl_evologics
 	};
 
     ///The type of operation.
-    enum OperationMode {
+    enum OperationMode
+    {
         // For raw sensors data. Can send command/instant_message with Time Independent Escape Sequence (TIES)
     	DATA,
     	// For command/instant_message exclusively
@@ -24,7 +26,8 @@ namespace usbl_evologics
     };
 
     ///The connection status of the acoustic connection to the remote device
-    enum ConnectionStatus {
+    enum ConnectionStatus
+    {
     	// Initial state after switching on/reset
         OFFLINE_READY,
         // Acoustic connection failed
@@ -51,7 +54,8 @@ namespace usbl_evologics
     };
 
     // Response to a command by local device. Every command generates a response
-	enum CommandResponse {
+	enum CommandResponse
+	{
         // Command accepted and will be applied as soon as possible. OK
 		COMMAND_RECEIVED,
 		// Response to a request. Current setting value
@@ -67,7 +71,8 @@ namespace usbl_evologics
     // Notification that does'nt require a command to be received.
 	// The number represents the number of fields splitted by comma(,) presents in a Notification
 	// <Notification>,<data1>,<data2>,<data3>,...
-	enum Notification {
+	enum Notification
+	{
         // Instant Message received
 		RECVIM,
         // Synchronous Instant Message received
@@ -89,7 +94,8 @@ namespace usbl_evologics
     };
 
     ///The delivery status of an instant message. Only if required by a specific command.
-    enum DeliveryStatus {
+    enum DeliveryStatus
+    {
         // No messages are been delivered
     	EMPTY,
     	// Message is been delivered
@@ -100,7 +106,8 @@ namespace usbl_evologics
         EXPIRED
     };
 
-    enum ResetType {
+    enum ResetType
+    {
     	// Reset device to stored settings and restart it.
     	// TCP connection will be closed. Restart in DATA mode.
     	DEVICE=0,
@@ -120,12 +127,14 @@ namespace usbl_evologics
 //    };
 
 
-	struct Answer {
+	struct Answer
+	{
 		CommandResponse response;
 		Notification notification;
 	};
 
-    struct VersionNumbers {
+    struct VersionNumbers
+    {
 		// Firmware version number
         std::string firmwareVersion;
         // Physical and data-layer protocol versions
@@ -135,7 +144,8 @@ namespace usbl_evologics
     };
 
 
-    struct StatusRequest {
+    struct StatusRequest
+    {
     	base::Time time;
 
     	// Interpreter type. True: AT interpreter. False: NET interpreter
@@ -157,7 +167,8 @@ namespace usbl_evologics
 
     };
 
-    struct Connection {
+    struct Connection
+    {
     	base::Time time;
 
     	// Connection status
@@ -170,7 +181,8 @@ namespace usbl_evologics
 
 
    /// Major device settings
-    struct DeviceSettings {
+    struct DeviceSettings
+    {
     	base::Time time;
 
     	// Defines Sound Pressure Level (SPL)
@@ -254,7 +266,8 @@ namespace usbl_evologics
     };
 
     // Wake-Up settings
-    struct WakeUpSettings {
+    struct WakeUpSettings
+    {
         // Wake Up active time.
     	// 0..3600 (s)
     	int wuActiveTime;
@@ -278,7 +291,8 @@ namespace usbl_evologics
         int awakeTime;
     };
 
-    struct DataChannel {
+    struct DataChannel
+    {
         // Channel of current input-output interface
         // Data transferring among different channel is impossible.
         // 0..7
@@ -307,7 +321,8 @@ namespace usbl_evologics
     // Multipath propagation of acoustic signal, from transmitter to receiver.
     // Geometry and reflection properties of underwater channel determine the number of
     // significant propagation path, the strengths and delays.
-    struct MultiPath {
+    struct MultiPath
+    {
     	// Delay of path propagation (in us)
     	int timeLine;
 
@@ -315,7 +330,8 @@ namespace usbl_evologics
     	int signalIntegrity;
     };
 
-    struct AcousticChannel {
+    struct AcousticChannel
+    {
     	//Local-2-Remote bitrate (bit/s)
     	int localBitrate;
 
@@ -344,7 +360,8 @@ namespace usbl_evologics
 
 
     // IN NOISE state
-    struct Noise{
+    struct Noise
+    {
     	double noise;
     	int size;
     	double sampleRate;
@@ -354,9 +371,10 @@ namespace usbl_evologics
 
 
     ///Device specific position structure. To be independent
-    struct Position {
-        double time;
-        double measurementTime;
+    struct Position
+    {
+    	base::Time time;
+    	base::Time measurementTime;
         int remoteAddress;
         // Coordinates in local device's reference frame (in m)
         double x;
@@ -371,16 +389,18 @@ namespace usbl_evologics
         double pitch;
         double yaw;
         // in us
-        double propagationTime;
+        base::Time propagationTime;
         int rssi;
         int integrity;
+        // Accuracy of the position fix, (in rad)
         double accuracy;
     };
 
     ///Device specific direction structure. In case device is not able to provide position, it provides Direction
-    struct Direction {
-        base::Time time;
-        base::Time measureTime;
+    struct Direction
+    {
+    	base::Time time;
+    	base::Time measurementTime;
         int remoteAddress;
         // Coordinates in local device's reference frame (in rad)
         double lBearing;
@@ -400,7 +420,8 @@ namespace usbl_evologics
 
 
     ///Statistics and indicators of the acoustic connection to the remote device
-    struct DeviceStats {
+    struct DeviceStats
+    {
         int dropCount;
         int overflowCount;
         int localRemoteBitrate;
@@ -413,37 +434,28 @@ namespace usbl_evologics
 
 
     ///Instant message to send it
-    struct SendedIM {
+    struct SendedIM
+    {
         int destination;
         bool deliveryReport;
         //enum DeliveryStatus deliveryStatus;
         std::vector<uint8_t> buffer;
     };
     ///Received instant message
-    struct ReceivedIM {
+    struct ReceivedIM
+    {
     	base::Time time;
         int destination;
         int source;
+        bool deliveryReport;
+        base::Time duration;
+        int rssi;
+        int integrity;
+        double velocity;
         std::vector<uint8_t> buffer;
     };
 
-    ///Type of an asynchronous message from the local device
-//    enum AsynchronousMessages {
-//        NO_ASYNCHRONOUS,
-//        INSTANT_MESSAGE,
-//        DELIVERY_REPORT,
-//        CANCELEDIM,
-//        USBLLONG,
-//        USBLANGLE
-//    };
 
-
-
-//	enum CommandCases {
-//        REQUEST_CONFIG,
-//        SEND_IM,
-//        REQUEST_STATE
-//    };
 
 
 
