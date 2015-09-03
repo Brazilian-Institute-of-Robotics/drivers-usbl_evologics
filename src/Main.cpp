@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     else
     	driver->openSerial("modem_ff", 19200);
 
-    SendedIM im;
+    SendIM im;
     im.destination = 1;
     im.deliveryReport = true;
     std::string s = "test12345";

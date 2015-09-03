@@ -354,13 +354,13 @@ std::string Driver::interpretNotification(std::string const& buffer, Notificatio
 
 	switch (notification) {
 		case USBLLONG:
-			ret = usblParser.parsePosition(buffer, pose);
+			ret = usblParser.parsePosition(buffer, usbl_pose);
 		break;
 		case USBLANGLE:
 			ret = "NOT POSSIBLE TO GET POSE";
 		break;
 		case RECVIM:
-			ret = usblParser.parseReceivedIM(buffer, receveidIM);
+			ret = usblParser.parseReceivedIM(buffer, receiveIM);
 		break;
 		case RECVIMS:
 			//usblParser.parseReceivedIMS();
@@ -463,19 +463,31 @@ InterfaceType Driver::getInterface(void)
 	return interface;
 }
 
-void Driver::sendInstantMessage(SendedIM const &im)
+void Driver::sendInstantMessage(SendIM const &im)
 {
 	queueCommand.push(usblParser.parseSendIM(im));
 }
 
-void Driver::receiveInstantMessage(ReceivedIM &im)
+void Driver::receiveInstantMessage(ReceiveIM &im)
+{
+
+}
+
+void Driver::getNewPose(base::samples::RigidBodyState &new_pose)
+{
+    new_pose.position[0] = usbl_pose.x;
+    new_pose.position[1] = usbl_pose.y;
+    new_pose.position[2] = usbl_pose.z;
+}
+
+void Driver::sendIMPose(base::samples::RigidBodyState const &send_pose)
 {
 
 }
 
 void Driver::goSurface(void)
 {
-    SendedIM im;
+    SendIM im;
     im.deliveryReport = true;
     im.destination = 1;
     std::cout <<"test1" <<std::endl;

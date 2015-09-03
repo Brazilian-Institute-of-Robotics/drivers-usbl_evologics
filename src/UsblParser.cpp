@@ -237,7 +237,7 @@ bool UsblParser::validateParticularResponse(std::string const &buffer)
 }
 
 
-std::string UsblParser::parseSendIM(SendedIM const &im)
+std::string UsblParser::parseSendIM(SendIM const &im)
 {
 	std::stringstream ss;
 	ss << "AT*SENDIM," << std::to_string(im.buffer.size())<< "," << std::to_string(im.destination) << ",";
@@ -254,7 +254,7 @@ std::string UsblParser::parseSendIM(SendedIM const &im)
 	return string_buffer;
 }
 
-std::string UsblParser::parseReceivedIM(std::string const &buffer, ReceivedIM &im)
+std::string UsblParser::parseReceivedIM(std::string const &buffer, ReceiveIM &im)
 {
 	std::string ret;
 	std::vector<std::string> fields;

@@ -31,9 +31,9 @@ namespace usbl_evologics
             bool validateParticularResponse(std::string const &buffer);
 
 
-            std::string parseSendIM(SendedIM const &im);
+            std::string parseSendIM(SendIM const &im);
 
-            std::string parseReceivedIM(std::string const &buffer, ReceivedIM &im);
+            std::string parseReceivedIM(std::string const &buffer, ReceiveIM &im);
             std::string parsePosition(std::string const &buffer, Position &pose);
             std::string parseIMReport(std::string const &buffer);
             std::string parseRequestedValue(std::string const &buffer, std::string const & command);

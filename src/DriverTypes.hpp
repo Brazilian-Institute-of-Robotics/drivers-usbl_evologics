@@ -360,7 +360,7 @@ namespace usbl_evologics
 
 
     // IN NOISE state
-    struct Noise
+    struct NoiseSample
     {
     	double noise;
     	int size;
@@ -434,7 +434,7 @@ namespace usbl_evologics
 
 
     ///Instant message to send it
-    struct SendedIM
+    struct SendIM
     {
         int destination;
         bool deliveryReport;
@@ -442,7 +442,7 @@ namespace usbl_evologics
         std::vector<uint8_t> buffer;
     };
     ///Received instant message
-    struct ReceivedIM
+    struct ReceiveIM
     {
     	base::Time time;
         int destination;

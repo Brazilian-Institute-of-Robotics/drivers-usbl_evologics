@@ -10,6 +10,7 @@
 #include "IMParser.hpp"
 #include "IMDataTypes.hpp"
 #include "DriverTypes.hpp"
+#include "base/samples/RigidBodyState.hpp"
 
 namespace usbl_evologics
 {
@@ -57,8 +58,12 @@ namespace usbl_evologics
 
     		InterfaceType getInterface(void);
 
-    		void sendInstantMessage(SendedIM const &im);
-    		void receiveInstantMessage(ReceivedIM &im);
+    		void sendInstantMessage(SendIM const &im);
+    		void receiveInstantMessage(ReceiveIM &im);
+
+    		void getNewPose(base::samples::RigidBodyState &new_pose);
+    		void sendIMPose(base::samples::RigidBodyState const &send_pose);
+
 
     		void sendRawData(std::string const& raw_data);
 
@@ -73,9 +78,9 @@ namespace usbl_evologics
 			OperationMode	mode;
 			InterfaceType	interface;
 
-			Position		pose;
-			SendedIM		sendedIM;
-            ReceivedIM		receveidIM;
+			Position		usbl_pose;
+			SendIM	    	sendedIM;
+            ReceiveIM		receiveIM;
 			ConnectionStatus	connection_state;
 
 //			CommandResponse		response;
