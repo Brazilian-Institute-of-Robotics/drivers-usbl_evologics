@@ -102,7 +102,6 @@ using namespace usbl_evologics;
 //
 //}
 
-
 int main(int argc, char** argv)
 {
     Driver *driver;
@@ -110,22 +109,22 @@ int main(int argc, char** argv)
     driver->setInterface(ETHERNET);
 
     if(driver->getInterface() == ETHERNET)
-    	driver->openTCP("192.168.0.191", 9200);
-//    	driver->openTCP("localhost", 631);
+        driver->openTCP("192.168.0.191", 9200);
+    //    	driver->openTCP("localhost", 631);
     else
-    	driver->openSerial("modem_ff", 19200);
+        driver->openSerial("modem_ff", 19200);
 
     SendIM im;
     im.destination = 1;
     im.deliveryReport = true;
     std::string s = "test12345";
     std::copy( s.begin(), s.end(), std::back_inserter(im.buffer));
-//    im.buffer.resize(5);
-//    im.buffer[0] = 0xAA;
-//    im.buffer[1] = 0x01;
-//    im.buffer[2] = 0x22;
-//    im.buffer[3] = 0x12;
-//    im.buffer[4] = 0x02;
+    //    im.buffer.resize(5);
+    //    im.buffer[0] = 0xAA;
+    //    im.buffer[1] = 0x01;
+    //    im.buffer[2] = 0x22;
+    //    im.buffer[3] = 0x12;
+    //    im.buffer[4] = 0x02;
 
 
 
@@ -141,29 +140,115 @@ int main(int argc, char** argv)
 
 
 
-    bool mail_command = true;
-    bool doIt = true;
+
+
     std::string out_msg;
     std::string raw_data;
+    Answer answer;
+    answer.type = RAW_DATA;
+
     int i=0;
-    while(i<20)
-	{
-        doIt = driver->sendData(mail_command);
-    	if(driver->readAnswer(mail_command, out_msg, raw_data))
-    	{
-    	    if(!out_msg.empty())
-    		    std::cout << "Answer Command " << i << " : "<< out_msg << std::endl;
-    		if(!raw_data.empty())
-    		    std::cout << "raw data " << i << " : "<< raw_data << std::endl;
-    	}
-    	driver->getIMDeliveryStatus();
-    	i++;
-    	out_msg.clear();
-    	raw_data.clear();
-	}
+    while(driver->getSizeQueueRawData() != 0)
+    {
+        driver->sendRawData();
+    }
+
+    while(driver->getSizeQueueCommand() != 0)
+    {
+        WaitResponse wait_response = driver->sendCommand();
+        while(wait_response == RESPONSE_REQUIRED && answer.type != RESPONSE)
+        {
+            try{
+                answer = driver->readAnswer();
+                if( answer.type == NOTIFICATION)
+                {
+                    switch (answer.notification){
+                    case USBLLONG:
+                        std::cout << "output new_pose" << std::endl;
+                        break;
+                    case RECVIM:
+                        std::cout << "output received IM" << std::endl;
+                        break;
+                    }
+                }
+                else if( answer.type == RESPONSE)
+                {
+                    switch (answer.response){
+                    case VALUE_REQUESTED:
+                        std::cout << "output updated status" << std::endl;
+                        break;
+                    }
+                }
+                else if( answer.type == RAW_DATA)
+                    std::cout<< "output raw data" <<std::endl;
+
+            }
+            catch (ValidationError &error) {
+                std::cout << "Validation error: "<< &error << std::endl;
+                // Temp. Ignore command
+//                driver->queueCommand.pop();
+            }
+            catch (ParseError &error) {
+                std::cout << "Parse error: "<< &error << std::endl;
+                // Temp. Ignore command
+//                driver->queueCommand.pop();
+            }
+
+        }
+    }
+
+    try{
+        answer = driver->readAnswer();
+        if( answer.type == NOTIFICATION)
+        {
+            switch (answer.notification){
+            case USBLLONG:
+                std::cout << "output new_pose" << std::endl;
+                break;
+            case RECVIM:
+                std::cout << "output received IM" << std::endl;
+                break;
+            }
+        }
+
+    }
+    catch (ValidationError &error) {
+        std::cout << "Validation error: "<< &error << std::endl;
+        // Temp. Ignore command
+//        driver->queueCommand.pop();
+    }
+    catch (ParseError &error) {
+        std::cout << "Parse error: "<< &error << std::endl;
+        // Temp. Ignore command
+//        driver->queueCommand.pop();
+    }
 
 
-//    atv_get_current_settings();
+
+/*
+    while (possuir comandos){
+        envia comando
+        pega tempo atual
+        while (tempo menor que limite e não recebeu resposta do comando) {
+            try {
+                ler dispositivo
+                se for resposta para o loop com sucesso
+                se for notificação interpreta notificação
+            }
+            catch {
+                trata execeção
+            }
+        }
+
+
+        if (timeout){
+            trata timeout
+        }
+
+    }
+*/
+
+
 
     return 0;
 }

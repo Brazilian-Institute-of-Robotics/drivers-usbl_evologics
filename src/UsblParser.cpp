@@ -11,213 +11,147 @@ UsblParser::UsblParser(){
 UsblParser::~UsblParser(){
 }
 
-
-//int UsblParser::isPacket(std::string const &buffer, OperationMode const &mode)
-//{
-//	int ret;
-//	if(mode == DATA)
-//	{
-//		if(buffer.size() == 1 && buffer.find("+") != std::string::npos)
-//			return 0;
-//		else if(buffer.size() == 2 && buffer.find("++") != std::string::npos)
-//			return 0;
-//		else if(buffer.find("+++") != std::string::npos)
-//		{
-//
-//		}
-//	}
-//
-//	return ret;
-//}
-
-
-bool UsblParser::findNotification(std::string const &buffer, Notification &notification)
+Notification UsblParser::findNotification(std::string const &buffer)
 {
-	if (buffer.find("USBLLONG")!=std::string::npos)
-	{
-		notification = USBLLONG;
-		return true;
-	}
-	else if (buffer.find("USBLANGLES")!=std::string::npos)
-	{
-		notification = USBLANGLE;
-		return true;
-	}
-	else if (buffer.find("DELIVEREDIM")!=std::string::npos ||
-			buffer.find("FAILEDIM")!=std::string::npos )
-	{
-		notification = DELIVERY_REPORT;
-		return true;
-	}
-	else if (buffer.find("CANCELEDIM")!=std::string::npos ||
-	        buffer.find("CANCELEDIMS")!=std::string::npos  ||
-	        buffer.find("CANCELEDPBM")!=std::string::npos )
-	{
-        notification = CANCELED_IM;
-        return true;
-	}
-	else if (buffer.find("RECVIM")!=std::string::npos)
-	{
-		notification = RECVIM;
-		return true;
-	}
-	else if (buffer.find("RECVIMS")!=std::string::npos)
-	{
-		notification = RECVIMS;
-		return true;
-	}
-	else if (buffer.find("RECVPBM")!=std::string::npos)
-	{
-		notification = RECVPBM;
-		return true;
-	}
-	else if (buffer.find("BITRATE")!=std::string::npos 	||
-			buffer.find("SRCLEVEL")!=std::string::npos 	||
-			buffer.find("PHYON")!=std::string::npos 	||
-			buffer.find("PHYOFF")!=std::string::npos 	||
-			buffer.find("RECVSTART")!=std::string::npos ||
-			buffer.find("RECVFAILED")!=std::string::npos ||
-			buffer.find("RECVEND")!=std::string::npos 	||
-			buffer.find("SENDSTART")!=std::string::npos ||
-			buffer.find("SENDEND")!=std::string::npos 	||
-			buffer.find("RADDR")!=std::string::npos		||
-			buffer.find("USBLPHYD")!=std::string::npos 	)
-	{
-		notification = EXTRA_NOTIFICATION;
-		return true;
-	}
-	else
-		return false;
+    if (buffer.find("USBLLONG")!=std::string::npos)
+        return USBLLONG;
+    else if (buffer.find("USBLANGLES")!=std::string::npos)
+        return USBLANGLE;
+    else if (buffer.find("DELIVEREDIM")!=std::string::npos ||
+            buffer.find("FAILEDIM")!=std::string::npos )
+        return DELIVERY_REPORT;
+    else if (buffer.find("CANCELEDIM")!=std::string::npos ||
+            buffer.find("CANCELEDIMS")!=std::string::npos  ||
+            buffer.find("CANCELEDPBM")!=std::string::npos )
+        return CANCELED_IM;
+    else if (buffer.find("RECVIM")!=std::string::npos)
+        return RECVIM;
+    else if (buffer.find("RECVIMS")!=std::string::npos)
+        return RECVIMS;
+    else if (buffer.find("RECVPBM")!=std::string::npos)
+        return RECVPBM;
+    else if (buffer.find("BITRATE")!=std::string::npos  || buffer.find("SRCLEVEL")!=std::string::npos   ||
+            buffer.find("PHYON")!=std::string::npos     || buffer.find("PHYOFF")!=std::string::npos     ||
+            buffer.find("RECVSTART")!=std::string::npos || buffer.find("RECVFAILED")!=std::string::npos ||
+            buffer.find("RECVEND")!=std::string::npos 	|| buffer.find("SENDSTART")!=std::string::npos  ||
+            buffer.find("SENDEND")!=std::string::npos 	|| buffer.find("RADDR")!=std::string::npos		||
+            buffer.find("USBLPHYD")!=std::string::npos 	)
+        return EXTRA_NOTIFICATION;
+    else
+        return NO_NOTIFICATION;
 }
 
-bool UsblParser::findResponse(std::string const &buffer, CommandResponse &response)
+CommandResponse UsblParser::findResponse(std::string const &buffer)
 {
-	if (buffer.find("OK")!=std::string::npos)
-	{
-		response = COMMAND_RECEIVED;
-		return true;
-	}
-	else if (buffer.find("ERROR")!=std::string::npos)
-	{
-		response = ERROR;
-		return true;
-	}
-	else if (buffer.find("BUSY")!=std::string::npos)
-	{
-		response = BUSY;
-		return true;
-	}
-	else
-	{
-		response = VALUE_REQUESTED;
-		return true;
-	}
+    if (buffer.find("OK")!=std::string::npos)
+        return COMMAND_RECEIVED;
+    else if (buffer.find("ERROR")!=std::string::npos)
+        return ERROR;
+    else if (buffer.find("BUSY")!=std::string::npos)
+        return BUSY;
+    else
+        return VALUE_REQUESTED;
 }
 
 // In DATA mode: +++AT:<length>:<notification><end-of-line>
 // IN COMMAND mode: <notification><end-of-line>
 // Use in DATA mode only
-bool UsblParser::validateNotification(std::string const &buffer)
+void UsblParser::validateNotification(std::string const &buffer)
 {
-	bool ret = false;
     std::vector<std::string> splitted;
     boost::split( splitted, buffer, boost::algorithm::is_any_of( ":" ) );
-    if(splitted.at(0) == "+++AT" )
-    	ret = true;
-    if(ret)
+    if(splitted.at(0) != "+++AT" )
     {
-    	  std::string::size_type sz;   // alias of size_t
-    	  int length = std::stoi(splitted.at(1),&sz);
-    	  if(length != splitted.at(2).size()-2)
-    		  // <end-of-line> = \d\a; size=2
-    		  ret = false;
+        std::stringstream error_string;
+        error_string << "UsblParser.cpp validateNotification: In DATA mode, could note find \"+++AT\" \" in buffer \""<<buffer<<"\" " << std::flush;
+        throw ValidationError(error_string.str());
     }
-    return ret;
+
+    std::string::size_type sz;   // alias of size_t
+    int length = std::stoi(splitted.at(1),&sz);
+    if(length != splitted.at(2).size()-2)
+        // <end-of-line> = \r\n; size=2
+    {
+        std::stringstream error_string;
+        error_string << "UsblParser.cpp validateNotification: In DATA mode, the indicated length \""<< length <<"\", doesn't match the size of notification \""<< splitted.at(2).size()-2<<"\", in: "<< buffer<< std::flush;
+        throw ValidationError(error_string.str());
+    }
 }
 
 // In DATA mode: +++AT:<length>:<notification><end-of-line>
 // IN COMMAND mode: <notification><end-of-line>
-// Validate <notification>, by the number of known fields, independently if in COMMAND or DATA mode
-bool UsblParser::splitValidateNotification(std::string const &buffer, Notification const &notification, std::string &output_msg)
+void UsblParser::splitValidateNotification(std::string const &buffer, Notification const &notification)
 {
-	bool ret = false;
-	std::vector<std::string> parts;
-	std::string aux_string;
-	// DATA mode
-	if (buffer.find(":") != std::string::npos)
-	{	// get <notification> part of string
-		// <end-of-line> doesn't affect the analysis
-		if(splitValidate(buffer, ":", 3, parts))
-				aux_string = parts[2];
-		else
-		{
-			output_msg = parts[0];
-			return false;
-		}
-	}
-	else
-		aux_string = buffer;
-	// Analysis of number of fields in <notification>
-	ret = splitValidate(aux_string, ",", getNumberFields(notification), parts);
-	if(!ret)
-		output_msg = parts[0];
-	return ret;
+    std::string aux_string;
+    // DATA mode
+    if (buffer.find("+++AT:") != std::string::npos)
+    {	// get <notification> part of string
+        // <end-of-line> doesn't affect the analysis
+        std::vector<std::string> splitted = splitValidate(buffer, ":", 3);
+        aux_string = splitted[2];
+    }
+    else
+        aux_string = buffer;
+
+    // Analysis of number of fields in <notification>
+    splitValidate(aux_string, ",", getNumberFields(notification));
 }
 
 
 // In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
 // IN COMMAND mode: <response><end-of-line>
 // Use in DATA mode only
-bool UsblParser::validateResponse(std::string const &buffer, std::string const &command)
+void UsblParser::validateResponse(std::string const &buffer, std::string const &command)
 {
-	bool ret = false;
+    // Check for the answer of command AT&V (Get Current Set) that isn't like the general case
+    if(command.find("AT&V") != std::string::npos)
+        validateParticularResponse(buffer);
 
-	// Check for the answer of command AT&V, Get Current Set, that isn't like the general case
-	if(command.find("AT&V") != std::string::npos)
-	    return validateParticularResponse(buffer);
+    else
+    {
+        // Check for general case
+        std::vector<std::string> splitted = splitValidate(buffer, ":", 3);
 
-    std::vector<std::string> splitted;
-    ret = splitValidate(buffer, ":", 3,splitted);
-    // Check if <ATcommand> is in the command string
-    // Remove +++ from splitted[0]
-    splitted[0].erase(std::remove(splitted[0].begin(), splitted[0].end(), '+'), splitted[0].end());
-    if(ret)
-	{   // Found <ATcommmad> in the command string
-    	if(command.find(splitted.at(0)) == std::string::npos )
-    		ret = false;
-	}
-    if(ret)
-    {   // Check the indicated <length> with the <command response>.size()
-    	  std::string::size_type sz;   // alias of size_t
-    	  int length = std::stoi(splitted.at(1),&sz);
-    	  if(length != splitted.at(2).size()-2)
-    	      // <end-of-line> = \n\r; size=2
-    		  ret = false;
+        // Check if <ATcommand> is in the command string
+        // Remove +++ from splitted[0]
+        splitted[0].erase(std::remove(splitted[0].begin(), splitted[0].end(), '+'), splitted[0].end());
+        // Found <ATcommmad> in the command string
+        if(command.find(splitted.at(0)) == std::string::npos )
+        {
+            std::stringstream error_string;
+            error_string << "UsblParser.cpp validateResponse: In DATA mode, could not find command \""<< splitted.at(0) <<"\" in the command buffer \""<< command<<"\" "<< std::flush;
+            throw ValidationError(error_string.str());
+        }
+
+        // Check the indicated <length> with the <command response>.size()
+        std::string::size_type sz;   // alias of size_t
+        int length = std::stoi(splitted.at(1),&sz);
+        if(length != splitted.at(2).size()-2)
+            // <end-of-line> = \n\r; size=2
+        {
+            std::stringstream error_string;
+            error_string << "UsblParser.cpp validateResponse: In DATA mode, the indicated length \""<< length <<"\", doesn't match the size of notification \""<< splitted.at(2).size()-2<<"\", in: \""<< buffer<< "\""<<std::flush;
+            throw ValidationError(error_string.str());
+        }
     }
-    return ret;
 }
 
 // Use in DATA mode only, for AT&V command.
 // +++AT&V:<length>:<requested data><end-line>
 // <requested data> = <field1><: ><value><end-line><field2><: ><value><end-line>...
-bool UsblParser::validateParticularResponse(std::string const &buffer)
+void UsblParser::validateParticularResponse(std::string const &buffer)
 {
-    bool ret = false;
     std::string msg = buffer;
-    std::cout <<"valiParticular: test0"<<std::endl;
 
     if(msg.find("AT&V") != std::string::npos)
     {
-        std::cout <<"valiParticular: test1"<<std::endl;
         int npos = std::string::npos;
         if ((npos = msg.find(":")) != std::string::npos)
         {
-            std::cout <<"valiParticular: test2"<<std::endl;
             //Remove +++<ATcommand>:
             msg = msg.substr(npos+1, msg.size()-npos);
             if ((npos = msg.find(":")) != std::string::npos)
             {
-                std::cout <<"valiParticular: test3"<<std::endl;
                 //Convert <length> to int
                 std::string::size_type sz;   // alias of size_t
                 int length;
@@ -225,164 +159,176 @@ bool UsblParser::validateParticularResponse(std::string const &buffer)
                 //Remove <length>:
                 msg = msg.substr(npos+1, msg.size()-npos);
                 // <end-of-line> = \n\r; size=2
-                if(length == msg.size()-2)
+                if(length != msg.size()-2)
                 {
-                    std::cout <<"valiParticular: test4"<<std::endl;
-                    ret = true;
+                    std::stringstream error_string;
+                    error_string << "UsblParser.cpp validateParticularResponse: In DATA mode, the indicated length \""<< length <<"\", doesn't match the size of notification \""<< msg.size()-2<<"\", in: \""<< buffer<<"\"" << std::flush;
+                    throw ValidationError(error_string.str());
                 }
+            }
+            else
+            {
+                std::stringstream error_string;
+                error_string << "UsblParser.cpp validateParticularResponse: In DATA mode, could not find \":\" in \""<< msg <<"\", from buffer \""<< buffer<<"\""<< std::flush;
+                throw ValidationError(error_string.str());
             }
         }
     }
-    return ret;
+
 }
 
-
+//Parse Instanta Message to be sent to remote device
 std::string UsblParser::parseSendIM(SendIM const &im)
 {
-	std::stringstream ss;
-	ss << "AT*SENDIM," << std::to_string(im.buffer.size())<< "," << std::to_string(im.destination) << ",";
-	if(im.deliveryReport)
-		ss << "ack,";
-	else
-		ss << "noack,";
-	// convert buffer from std::vector to std::string
-	std::string string_buffer(im.buffer.begin(), im.buffer.end());
-	ss << string_buffer;
+    std::stringstream ss;
+    ss << "AT*SENDIM," << std::to_string(im.buffer.size())<< "," << std::to_string(im.destination) << ",";
+    if(im.deliveryReport)
+        ss << "ack,";
+    else
+        ss << "noack,";
+    // convert buffer from std::vector to std::string
+    std::string string_buffer(im.buffer.begin(), im.buffer.end());
+    ss << string_buffer;
 
-	// convert whole command string
-	string_buffer = ss.str();
-	return string_buffer;
+    return ss.str();
 }
 
-std::string UsblParser::parseReceivedIM(std::string const &buffer, ReceiveIM &im)
+// Output received Instant Message from remote device
+ReceiveIM UsblParser::parseReceivedIM(std::string const &buffer)
 {
-	std::string ret;
-	std::vector<std::string> fields;
-	std::string::size_type sz;     // alias of size_t
-	if (splitValidate(buffer, ",", getNumberFields(RECVIM), fields))
-	{
-		im.time	=	base::Time::now();
-		im.source	=	std::stoi(fields[2],&sz);
-		im.destination	=	std::stoi(fields[3],&sz);
-		if(fields[4] == "ack")
-			im.deliveryReport	=	true;
-		else
-			im.deliveryReport	=	false;
-		im.duration	=	 base::Time::fromMicroseconds(std::stod(fields[5],&sz));
-		im.rssi	=	std::stoi(fields[6],&sz);
-		im.integrity	=	std::stoi(fields[7],&sz);
-		im.velocity	=	std::stod(fields[8],&sz);
+    ReceiveIM im;
+    std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(RECVIM));
+    std::string::size_type sz;     // alias of size_t
 
-		std::vector<uint8_t> aux_buffer(fields[9].begin(), fields[9].end());
-		// Remove <end-line> (\r\n) from buffer
-		aux_buffer.pop_back(); aux_buffer.pop_back();
-		im.buffer	=	aux_buffer;
+    im.time	=	base::Time::now();
+    im.source	=	std::stoi(splitted[2],&sz);
+    im.destination	=	std::stoi(splitted[3],&sz);
+    if(splitted[4] == "ack")
+        im.deliveryReport	=	true;
+    else
+        im.deliveryReport	=	false;
+    im.duration	=	 base::Time::fromMicroseconds(std::stod(splitted[5],&sz));
+    im.rssi	=	std::stoi(splitted[6],&sz);
+    im.integrity	=	std::stoi(splitted[7],&sz);
+    im.velocity	=	std::stod(splitted[8],&sz);
 
-		int size = std::stoi(fields[1],&sz);
-		if(size == im.buffer.size())
-			ret = "NEW IM";
-		else
-			ret = "Wrong size of buffer";
-	}
-	else
-		ret = fields[0];
+    std::vector<uint8_t> msg(splitted[9].begin(), splitted[9].end());
+    // Remove <end-line> (\r\n) from buffer
+    msg.pop_back(); msg.pop_back();
+    im.buffer = msg;
 
-	return ret;
-}
-
-std::string UsblParser::parsePosition(std::string const &buffer, Position &pose)
-{
-	std::string ret;
-	std::vector<std::string> fields;
-	std::string::size_type sz;     // alias of size_t
-	if (splitValidate(buffer, ",", getNumberFields(USBLLONG), fields))
-	{
-		pose.time	=	 base::Time::fromSeconds(std::stod(fields[1],&sz));
-		pose.measurementTime	=	base::Time::fromSeconds(std::stod(fields[2],&sz));
-		pose.remoteAddress	=	std::stoi(fields[3],&sz);
-		pose.x	=	std::stod(fields[4],&sz);
-		pose.y	=	std::stod(fields[5],&sz);
-		pose.z	=	std::stod(fields[6],&sz);
-		pose.E	=	std::stod(fields[7],&sz);
-		pose.N	=	std::stod(fields[8],&sz);
-		pose.U	=	std::stod(fields[9],&sz);
-		pose.roll	=	std::stod(fields[10],&sz);
-		pose.pitch	=	std::stod(fields[11],&sz);
-		pose.yaw	=	std::stod(fields[12],&sz);
-		pose.propagationTime	=	base::Time::fromSeconds(std::stod(fields[13],&sz));
-		pose.rssi	=	std::stoi(fields[14],&sz);
-		pose.integrity	=	std::stoi(fields[14],&sz);
-		pose.accuracy	=	std::stoi(fields[14],&sz);
-		ret = "NEW POSE";
-	}
-	else
-		ret = fields[0];
-
-	return ret;
-}
-std::string UsblParser::parseIMReport(std::string const &buffer)
-{
-	std::string ret;
-	std::vector<std::string> fields;
-	std::string::size_type sz;     // alias of size_t
-	if (splitValidate(buffer, ",", getNumberFields(DELIVERY_REPORT), fields))
-	{
-		ret = fields[0];
-	}
-	else
-		ret = fields[0];
-
-	return ret;
-}
-
-std::string UsblParser::parseRequestedValue(std::string const &buffer, std::string const & command)
-{
-	return "OK";
-}
-
-bool UsblParser::splitValidate(std::string const s, const char* symbol, size_t const parts, std::vector<std::string> &splitted)
-{
-    std::vector<std::string> aux_splitted;
-//    std::cout << "splitValidate "<< parts << std::endl;
-    boost::split( aux_splitted, s, boost::algorithm::is_any_of( symbol ) );
-//    std::cout << aux_splitted.size() << std::endl;
-    if (aux_splitted.size() != parts)
+    int size = std::stoi(splitted[1],&sz);
+    if(size != im.buffer.size())
     {
         std::stringstream error_string;
-        error_string << "UsblParser.cpp splitValidate: Tried to split the string \""<<s<<"\" at \""<< symbol <<" in " << parts << " parts, but get " << splitted.size() << " parts" << std::flush;
-        aux_splitted[0] = error_string.str();
-        return false;
+        error_string << "UsblParser.cpp parseReceivedIM: Tried to split a receiving Instant Message, but the message \""<<splitted[9]<<"\" has \""<< size <<" characters and not \"" << splitted[1] << "\" as predicted. "<< std::flush;
+        throw ParseError(error_string.str());
     }
-    splitted = aux_splitted;
-    return true;
+
+    return im;
 }
 
+// Output Position of remote device
+Position UsblParser::parsePosition(std::string const &buffer)
+{
+    Position pose;
+    std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(USBLLONG));
+    std::string::size_type sz;     // alias of size_t
+
+    pose.time	=	 base::Time::fromSeconds(std::stod(splitted[1],&sz));
+    pose.measurementTime	=	base::Time::fromSeconds(std::stod(splitted[2],&sz));
+    pose.remoteAddress	=	std::stoi(splitted[3],&sz);
+    pose.x	=	std::stod(splitted[4],&sz);
+    pose.y	=	std::stod(splitted[5],&sz);
+    pose.z	=	std::stod(splitted[6],&sz);
+    pose.E	=	std::stod(splitted[7],&sz);
+    pose.N	=	std::stod(splitted[8],&sz);
+    pose.U	=	std::stod(splitted[9],&sz);
+    pose.roll	=	std::stod(splitted[10],&sz);
+    pose.pitch	=	std::stod(splitted[11],&sz);
+    pose.yaw	=	std::stod(splitted[12],&sz);
+    pose.propagationTime	=	base::Time::fromSeconds(std::stod(splitted[13],&sz));
+    pose.rssi	=	std::stoi(splitted[14],&sz);
+    pose.integrity	=	std::stoi(splitted[14],&sz);
+    pose.accuracy	=	std::stoi(splitted[14],&sz);
+
+    return pose;
+}
+
+// Defines if a Instant Message has it receipt confirmed
+bool UsblParser::parseIMReport(std::string const &buffer)
+{
+    std::string ret;
+    std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(DELIVERY_REPORT));
+    if (splitted[0].find("DELIVEREDIM") != std::string::npos)
+        return true;
+    else if (splitted[0].find("FAILEDIM") != std::string::npos)
+        return false;
+    else
+    {
+        std::stringstream error_string;
+        error_string << "UsblParser.cpp parseIMReport: DELIVERY_REPORT not as expected: \""<< splitted[0]<< "\"" <<std::flush;
+        throw ParseError(error_string.str());
+    }
+}
+
+// TODO To be implement
+std::string UsblParser::parseRequestedValue(std::string const &buffer, std::string const & command)
+{
+    return "OK";
+}
+
+// Return splitted strings by defined character.
+std::vector<std::string> UsblParser::splitValidate(std::string const& buffer, const char* symbol, size_t const parts)
+{
+    std::vector<std::string> splitted;
+    //    std::cout << "splitValidate "<< parts << std::endl;
+    boost::split( splitted, buffer, boost::algorithm::is_any_of( symbol ) );
+    //    std::cout << splitted.size() << std::endl;
+    if (splitted.size() != parts)
+    {
+        std::stringstream error_string;
+        error_string << "UsblParser.cpp splitValidate: Tried to split the string \""<<buffer<<"\" at \""<< symbol <<"\" in " << parts << " parts, but get " << splitted.size() << " parts" << std::flush;
+        throw ValidationError(error_string.str());
+    }
+    return splitted;
+
+}
+
+// Return the amount of fields splitted by comma (,) in a notification.
 int UsblParser::getNumberFields(Notification const & notification)
 {
-	int ret = 0;
-	switch (notification) {
-		case RECVIM:
-		case RECVIMS:
-			ret = 10;
-		break;
-		case RECVPBM:
-			ret = 9;
-		break;
-		case DELIVERY_REPORT:
-		case CANCELED_IM:
-			ret = 2;
-		break;
-		case USBLLONG:
-			ret = 17;
-		break;
-		case USBLANGLE:
-			ret = 14;
-		break;
-		case EXTRA_NOTIFICATION:
-			ret = 1;
-		break;
-	}
-	return ret;
+    switch (notification) {
+    case RECVIM:
+    case RECVIMS:
+        return 10;
+        break;
+    case RECVPBM:
+        return 9;
+        break;
+    case DELIVERY_REPORT:
+    case CANCELED_IM:
+        return 2;
+        break;
+    case USBLLONG:
+        return 17;
+        break;
+    case USBLANGLE:
+        return 14;
+        break;
+    case EXTRA_NOTIFICATION:
+        return 1;
+        break;
+    case NO_NOTIFICATION:
+        std::stringstream error_string;
+        error_string << "UsblParser.cpp getNumberFields: Received  \""<< notification <<"\"" << std::flush;
+        throw ValidationError(error_string.str());
+        break;
+    }
+    std::stringstream error_string;
+    error_string << "UsblParser.cpp getNumberFields: \""<< notification <<"\" is not determined" << std::flush;
+    throw ValidationError(error_string.str());
+
 }
 
 
