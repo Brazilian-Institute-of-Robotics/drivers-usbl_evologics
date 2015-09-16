@@ -12,7 +12,9 @@
 #include "DriverTypes.hpp"
 #include "Exceptions.hpp"
 #include "base/samples/RigidBodyState.hpp"
+#include "base/Logging.hpp"
 
+using namespace std;
 namespace usbl_evologics
 {
 
@@ -24,66 +26,143 @@ public:
     Driver();
     ~Driver();
 
-    // Define the interface with device. ETHERNET or SERIAL.
+
+    /** Define the interface with device. ETHERNET or SERIAL.
+     *
+     * @param deviceInterface, ETHERNET or SERIAL
+     */
     void setInterface(InterfaceType	deviceInterface);
 
-    // Send a command from queueCommand to device.
-    // check queueCommand. Pre-management of mode operation.
-    // Fill command according mode operation.
-    // Return false if queue is empty
-    WaitResponse sendCommand(void);
+    /** Send a command to device.
+     *
+     * Fill buffer with necessary data.
+     * Manage the mode of operation according to command.
+     * @param command to be sent.
+     */
+    void sendCommand(string const &command);
 
-    // send a raw data from queueRawdata to remote device
-    // check queueRawData. Pop sent raw data.
-    // Return false if queue is empty
-    bool sendRawData(void);
+    /** Send raw data to remote device.
+     *
+     * Use in DATA mode.
+     * Doesn't require response.
+     * @param raw_data string to be sent to remote device.
+     *
+     */
+    void sendRawData(string const &raw_data);
 
-    // return a valid answer, as a response or as a notification.
-    // resp=true means the unique and necessary response of a command is received.
-    // queueCommand.pop() realized in this case.
-    Answer readAnswer(void);
+//    // return a valid answer, as a response or as a notification.
+//    // resp=true means the unique and necessary response of a command is received.
+//    // queueCommand.pop() realized in this case.
+//    CommandResponse readAnswer(void);
 
+    /** Read response from device.
+     *
+     * Read from device. Push Notification and Raw data in respective queue.
+     * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+     * ResponseInfo.response is the kind of response and ResponseInfo.buffer is the response.
+     */
+    ResponseInfo readResponse(void);
 
-    // List of Commands. They will be pushed to queueCommand
-    void getConnetionStatus(void);
+    /** Read input data till get a response.
+     *
+     * @param command that was sent to device.
+     * @param expected response from device.
+     * @return string with response content, in COMMAND mode
+     */
+    string waitResponse(string const &command, CommandResponse expected);
+
+    /** Wait for a OK response
+     *
+     * @param command sent to device.
+     */
+    void waitResponseOK(string const &command);
+
+    /** Wait for a integer response.
+     *
+     * @param command sent to device.
+     * @return integer requested.
+     */
+    int waitResponseInt(string const &command);
+
+    /** Wait for string response.
+     *
+     * @param command sent to device.
+     * @return string requested.
+     */
+    string waitResponseString(string const &command);
+
+    /** Get Underwater Connection Status.
+     *
+     * @return connection status
+     */
+    ConnectionStatus getConnetionStatus(void);
+
+    /** Get Current Setting parameters.
+     *
+     * TODO Parse values.
+     */
     void getCurrentSetting(void);
-    void getIMDeliveryStatus(void);
 
-    //General commands to AUV. TODO integrate with component and test
-    void goSurface(void);
+    /** get Instant Message Delivery status.
+     *
+     * @return delivery status
+     */
+    DeliveryStatus getIMDeliveryStatus(void);
 
-
-    // Guard Time Escape Sequence
-    // Switches to COMMAND mode
+    /** Switch to COMMAND mode.
+     *
+     * Guard Time Escape Sequence.
+     * Wait 1 second before and after send command.
+     */
     void GTES(void);
 
-    // Get interface type. SERIAL or ETHERNET.
+    /** Get interface type.
+     *
+     * @return interface type. SERIAL or ETHERNET.
+     */
     InterfaceType getInterface(void);
 
-    // Enqueue Instant Message to be sent to remote device.
+    /** Send Instant Message to remote device.
+     *
+     * @param im Instant Message to be sent.
+     */
     void sendInstantMessage(SendIM const &im);
-    // TODO implement.
-    ReceiveIM receiveInstantMessage(std::string const &buffer);
-    // TODO implement.
+
+    /** Parse a received Instant Message.
+     *
+     * @param buffer that contains the IM
+     * @return Received Instant Message
+     */
+    ReceiveIM receiveInstantMessage(string const &buffer);
+
+    /** Get the newest pose of remote device.
+     *
+     * Only used by devices with ETHERNET interface.
+     * Convert the data from internal struct to RigidBodyState.
+     * @return RigidBodyState pose.
+     * TODO implement.
+     */
     base::samples::RigidBodyState getNewPose(void);
-    // TODO implement.
-    void sendIMPose(base::samples::RigidBodyState const &send_pose);
 
-    // Enqueue raw data to be sent to remote device.
-    void enqueueRawData(std::string const& raw_data);
+    /** Helper method to separate AT and raw packets in a data stream
+     */
+    int extractRawFromATPackets(string const& buffer) const;
 
-    // Return amount of command to be sent to device.
-    int getSizeQueueCommand(void);
-    // enqueue command string in queueCommand
-    void enqueueCommand(std::string & command);
+    /** Helper method to extract packets from raw data
+     *
+     * This is to be reimplemented in subclasses if the raw data
+     * has a packet-based protocol. The default implementation will
+     * just interpret any amount of raw data as a packet
+     */
+    virtual int extractRawDataPacket(string const& buffer) const;
 
-    // Return amount of raw data to be sent to remote device.
-    int getSizeQueueRawData(void);
-
+    /** Given a buffer that starts with a TIE header (+++), return whether it
+     * could be a AT command
+     */
+    int extractATPacket(string const& buffer) const;
 
 private:
     UsblParser	usblParser;
-    IMParser    imParser;
 
     OperationMode	mode;
     InterfaceType	interface;
@@ -91,12 +170,6 @@ private:
     Position    usbl_pose;
     SendIM      sendedIM;
     ReceiveIM   receiveIM;
-    ConnectionStatus	connection_state;
-
-    std::string raw_data;
-
-    // CommandResponse	response;
-    //	Notification	notification;
 
     VersionNumbers device;
     StatusRequest device_status;
@@ -104,77 +177,140 @@ private:
     DataChannel channel;
     AcousticChannel acoustic_channel;
 
-    std::queue<std::string> queueCommand;
-    std::queue<std::string> queueRawData;
+    /**
+     * Queue of received Raw Data
+     */
+    queue<string> queueRawData;
 
-//    bool mailCommand;
+    /**
+     * Queue of received Notification
+     */
+    queue<NotificationInfo> queueNotification;
+
+
     static const int max_packet_size = 20000;
 
-    // Auxiliary function used by readAnswer().
-    int readInternal(std::string& buffer);
+    /** Read packets
+     *
+     * @return string with data (response, notification or raw data).
+     */
+    string readInternal(void);
 
-    // Auxiliary function used by extractPacket().
-    // Check if a specific Notification string is present in buffer, just in COMMAND mode.
-    int checkNotificationCommandMode(std::string const& buffer) const;
-    // Auxiliary function used by extractPacket().
-    // Response to command AT&V (getCurrentSetting) uses multiples
-    //  '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
-    // Maybe there are other command's responses that use the same pattern.
-    int checkParticularResponse(std::string const& buffer) const;
-    // Auxiliary function used by extractPacket().
-    int checkRegularResponse(std::string const& buffer) const;
+    /** Check if a Notification string is present in buffer.
+     *
+     * Auxiliary function of extractPacket()
+     * To be used in COMMAND mode.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message, or -1 in case of no Notification.
+     */
+    int checkNotificationCommandMode(string const& buffer) const;
 
+    /** Check the size of a particular response.
+     *
+     * Auxiliary function of extractPacket().
+     * Response to command AT&V (getCurrentSetting) uses multiples '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
+     * Maybe there are other command's responses that use the same pattern.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message.
+     */
+    int checkParticularResponse(string const& buffer) const;
 
-    // In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
-    // IN COMMAND mode: <response><end-of-line>
-    // Return a valid kind of Response. If not a response return NO_RESPONSE.
-    // Throw ValidationError or ModeError in case of failure.
-    CommandResponse isResponse(std::string const &buffer);
+    /** Check the size of regular response.
+     *
+     * Auxiliary function used by extractPacket().
+     * Response and Notification end by a end-of-line '\r\n'.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message.
+     */
+    int checkRegularResponse(string const& buffer) const;
 
-    // Check for a valid response in DATA mode only.
-    // Used by isResponse().
-    // Throw ValidationError or ModeError in case of failure.
-    void validResponse(std::string const &buffer);
+    /** Check kind of response.
+     *
+     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
+     * IN COMMAND mode: <response><end-of-line>
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed
+     * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
+     */
+    CommandResponse isResponse(string const &buffer);
 
+    /** Check for a valid response in DATA mode.
+     *
+     *  Used by waitResponse().
+     *  Throw ValidationError or ModeError in case of failure.
+     *  @param buffer to be analyzed.
+     *  @param command sent to device.
+     */
+    void validResponse(string const &buffer, string const &command);
 
-    // In DATA mode: +++AT:<length>:<notification><end-of-line>
-    // IN COMMAND mode: <notification><end-of-line>
-    // Return a valid kind of Notification. If not a notification return NO_NOTIFICATION.
-    // Throw ValidationError or ModeError in case of failure.
-    Notification isNotification(std::string const &buffer);
+    /** Check kind of notification.
+     *
+     * In DATA mode: +++AT:<length>:<notification><end-of-line>
+     * IN COMMAND mode: <notification><end-of-line>
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed.
+     * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
+     */
+    Notification isNotification(string const &buffer);
 
-    // Check for a valid notification in DATA mode only.
-    // Used by isNotification().
-    // Throw ValidationError or ModeError in case of failure.
-    void validNotification(std::string const &buffer);
+    /** Check a valid notification in DATA mode.
+     *
+     * Used by isNotification().
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed.
+     */
+    void validNotification(string const &buffer);
 
-    // Check for a valid notification both in DATA and COMMAND mode.
-    // Used by isNotification().
-    // Throw ValidationError in case of failure.
-    void fullValidation(std::string const &buffer, Notification const &notification);
+    /** Check a valid notification.
+     *
+     * Used by isNotification().
+     * Can be used in DATA or COMMAND mode.
+     * Throw ValidationError in case of failure.
+     * @param buffer to be analyzed.
+     * @param notification kind present in buffer.
+     */
+    void fullValidation(string const &buffer, Notification const &notification);
 
-
-    // TODO. Check the best way to interpreted every kind of response and what it should return.
-    std::string interpretResponse(std::string const &buffer, std::string const &command, CommandResponse const &response);
     // TODO. Check the best way to interpreted every kind of notification and what it should return.
-    std::string interpretNotification(std::string const &buffer, Notification const &notification);
+    /** Interpret notification.
+     *
+     * Interpret the pose, instant messages and delivery reports notification in respective variable.
+     * @param buffer to be interpreted.
+     * @param notification kind of buffer.
+     */
+    void interpretNotification(string const &buffer, Notification const &notification);
 
-    // Return a filled command string to be sent to device.
-    // Used by sendCommand().
-    std::string fillCommand(std::string const &command);
-    // Return a filled command with end-line, according interface type.
-    // Used by fillComand().
-    std::string addEndLine (std::string const &command);
+    /** Filled command string to be sent to device.
+     *
+     *  Used by sendCommand().
+     *  @param command to be sent.
+     *  @return string filled.
+     */
+    string fillCommand(string const &command);
 
-    // Manage mode operation according command sent.
-    // Act before get a response.
-    // Used by sendCommand().
-    // Return FALSE if command does not require response (ONLY case, AT0 - go to command mode). TRUE otherwise.
-    WaitResponse modeManager(std::string const &command);
-    // Manage mode operation according command sent and response obtained.
-    // Act after get a response.
-    // Used by interprateResponse().
-    void modeMsgManager(std::string const &command);
+    /** Add a end line, according interface type.
+     *
+     * Used by fillCommand().
+     * SERIAL, <end-line> = '\r'.
+     * ETHERNET, <end-line> = '\n'.
+     * @param command to be sent.
+     * @return string command with end line.
+     */
+    string addEndLine (string const &command);
+
+    /** Manage mode operation according command sent.
+     *
+     * Act before get a response.
+     * @param command sent to device.
+     */
+    void modeManager(string const &command);
+
+    /** Manage mode operation according command sent and response obtained.
+     *
+     * Act after get a response.
+     * @param command sent to device.
+     */
+    void modeMsgManager(string const &command);
 
 protected:
 

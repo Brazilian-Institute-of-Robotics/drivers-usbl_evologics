@@ -39,6 +39,18 @@ struct ModeError : std::runtime_error
     : std::runtime_error(desc) {}
 };
 
+struct BusyError : std::runtime_error
+{
+    explicit BusyError(std::string const& desc)
+    : std::runtime_error(desc) {}
+};
+
+struct UnexpectedRawPacket : std::runtime_error
+{
+    explicit UnexpectedRawPacket(std::string const& desc)
+        : std::runtime_error(desc) {}
+};
+
 }
 
 #endif

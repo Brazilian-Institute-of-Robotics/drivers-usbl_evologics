@@ -7,7 +7,9 @@
 namespace usbl_evologics
 {
 
-///The type of the interface to the local device
+/** Type of interface with local device.
+ *
+ */
 enum InterfaceType
 {
     // Interface with modem/vehicle.
@@ -17,15 +19,22 @@ enum InterfaceType
 };
 
 ///The type of operation.
+/** Type of operation.
+ *
+ * In DATA mode, device can exchange raw data with remote device and receive commands/notifications in AT format.
+ * In COMMAND mode, device can NOT exchange raw data, only directs commands/notifications.
+ */
 enum OperationMode
 {
-    // For raw sensors data. Can send command/instant_message with Time Independent Escape Sequence (TIES)
+    // For raw sensors data. Can send command/notification with Time Independent Escape Sequence (TIES)
     DATA,
-    // For command/instant_message exclusively
+    // For command/notification exclusively
     COMMAND
 };
 
-///The connection status of the acoustic connection to the remote device
+/** Connection status of the acoustic connection to the remote device.
+ *
+ */
 enum ConnectionStatus
 {
     // Initial state after switching on/reset
@@ -54,38 +63,44 @@ enum ConnectionStatus
 };
 
 // Response to a command by local device. Every command generates a response
+/** Kind of response to a command by local device.
+ *
+ * Command generates a response. Command AT0 (switch to data mode) does'nt generate response.
+ */
 enum CommandResponse
 {
     // Command accepted and will be applied as soon as possible. OK
     COMMAND_RECEIVED,
-    // Response to a request. Current setting value
+    // Response to a request. Current setting value.
     VALUE_REQUESTED,
     // Error message
     ERROR,
     // Busy message
     BUSY,
-    //No response. Only command ATO (switches from COMMAND to DATA mode) doesn't get response
+    //No response.
     NO_RESPONSE
 };
 
-// Notification that does'nt require a command to be received.
-// The number represents the number of fields splitted by comma(,) presents in a Notification
-// <Notification>,<data1>,<data2>,<data3>,...
+/** Notification that can be received.
+ *
+ * Notification are asynchronous. They doesn't require a command to be received.
+ * They can arrive at any time, and each one has a defined structure.
+ */
 enum Notification
 {
-    // Instant Message received
+    // Instant Message received.
     RECVIM,
-    // Synchronous Instant Message received
+    // Synchronous Instant Message received.
     RECVIMS,
-    // PiggyBack Message received
+    // PiggyBack Message received.
     RECVPBM,
-    // Report of sending a Instant Message. Delivered or Failed
+    // Report of sending a Instant Message. Delivered or Failed.
     DELIVERY_REPORT,
-    // Transmission canceled due the wrong delivery time. Try again
+    // Transmission canceled due the wrong delivery time. Try again.
     CANCELED_IM,
-    // Pose of remote device
+    // Pose of remote device.
     USBLLONG,
-    // Orientation of remote device, in case the pose was computed
+    // Orientation of remote device, in case the pose wasn't computed.
     USBLANGLE,
     // Extra notifications. See about Extended notification. Not implemented.
     EXTRA_NOTIFICATION,
@@ -93,51 +108,98 @@ enum Notification
     NO_NOTIFICATION
 };
 
-///The delivery status of an instant message. Only if required by a specific command.
+/** Delivery status of an instant message.
+ *
+ * Only if required by a specific command.
+ */
 enum DeliveryStatus
 {
-    // No messages are been delivered
+    // No messages are been delivered.
     EMPTY,
-    // Message is been delivered
+    // Message is been delivered.
     PENDING,
-    // Delivered of an Instant Message was not acknowledged
+    // Delivered of an Instant Message was not acknowledged.
     FAILED,
-    // A synchronous Instant Message has expired
+    // A synchronous Instant Message has expired.
     EXPIRED
 };
 
+/** Reset device or clear buffer.
+ *
+ * Parameter of command ATZn
+ * Reset device, drop data and/or instant messages.
+ */
 enum ResetType
 {
     // Reset device to stored settings and restart it.
     // TCP connection will be closed. Restart in DATA mode.
+    // No command response.
     DEVICE = 0,
-    // Terminate acoustic connection
+    // Drop raw data and terminate acoustic connection.
     ACOUSTIC_CONNECTION = 1,
     // Drop Instant Messages
     INSTANT_MESSAGES = 3,
-    // Clear the transmission buffer
+    // Clear the transmission buffer - drop raw data and instant messages.
     SEND_BUFFER = 4
 };
 
-enum AnswerType {
-    RESPONSE,
-    NOTIFICATION,
-    RAW_DATA
-};
-
-enum WaitResponse {
-    NO_RESPONSE_REQUIRED,
-    RESPONSE_REQUIRED
-};
-
-struct Answer
+/** Firmware information
+ *
+ *  Parameter for command ATIn
+ *  View firmware information
+ */
+enum FirmwareInformation
 {
-    AnswerType type;
-    CommandResponse response;
-    Notification notification;
-    std::string raw_data;
+    // Firmware version number.
+    VERSION_NUMBER = 0,
+    // Physical layer protocol and data-link layer protocol
+    PHY_MAC = 1,
+    // Device Manufacturer.
+    MANUFACTURER = 7
 };
 
+/** Sound Pressure Level (SPL) in transmission mode
+ *
+ *  Default value is 3 (IN_AIR).
+ *  For test in air, use ONLY value IN_AIR.
+ */
+enum SourceLevel
+{
+    // Maximum SPL.
+    // See The Factory Certificate value for further information.
+    MAXIMUM = 0,
+    // Maximum - 6dB.
+    MEDIUM = 1,
+    // Maximum - 12bB.
+    LOW = 2,
+    // In AIR test.
+    // Maximum - 20dB.
+    IN_AIR = 3
+};
+
+/** Notification information
+ *
+ * Kind of notification and its content.
+ */
+struct NotificationInfo
+{
+    Notification notification;
+    std::string buffer;
+};
+
+/** Response information
+ *
+ * Kind of response and its content.
+ */
+struct ResponseInfo
+{
+    CommandResponse response;
+    std::string buffer;
+};
+
+/** Firmware information
+ *
+ */
 struct VersionNumbers
 {
     // Firmware version number
@@ -148,6 +210,9 @@ struct VersionNumbers
     std::string apiVersion;
 };
 
+/**  Configuration for acoustic connection
+ *
+ */
 struct StatusRequest
 {
     base::Time time;
@@ -171,6 +236,9 @@ struct StatusRequest
 
 };
 
+/** Connection status of acoustic link
+ *
+ */
 struct Connection
 {
     base::Time time;
@@ -182,7 +250,9 @@ struct Connection
     std::vector<int> freeBuffer;
 };
 
-/// Major device settings
+/** Major device settings
+ *
+ */
 struct DeviceSettings
 {
     base::Time time;
@@ -192,7 +262,7 @@ struct DeviceSettings
     // 1: Maximum - 6dB
     // 2: Maximum - 12dB
     // 3: Maximum - 20dB. Test IN AIR
-    int sourceLevel;
+    SourceLevel sourceLevel;
 
     // True: local sourceLevel can be changed by remote device.
     //		  Matching of sourceLevel during connection.
@@ -267,7 +337,9 @@ struct DeviceSettings
     bool promiscuosMode;
 };
 
-// Wake-Up settings
+/** Wake-up settings
+ *
+ */
 struct WakeUpSettings
 {
     // Wake Up active time.
@@ -293,6 +365,9 @@ struct WakeUpSettings
     int awakeTime;
 };
 
+/** Data Channel settings
+ *
+ */
 struct DataChannel
 {
     // Channel of current input-output interface
@@ -320,9 +395,11 @@ struct DataChannel
     base::Time time;
 };
 
-// Multipath propagation of acoustic signal, from transmitter to receiver.
-// Geometry and reflection properties of underwater channel determine the number of
-// significant propagation path, the strengths and delays.
+/** Multipath propagation of acoustic signal, from transmitter to receiver.
+ *
+ * Geometry and reflection properties of underwater channel determine the number of
+ * significant propagation path, the strengths and delays.
+ */
 struct MultiPath
 {
     // Delay of path propagation (in us)
@@ -332,6 +409,9 @@ struct MultiPath
     int signalIntegrity;
 };
 
+/** Acoustic channel performance
+ *
+ */
 struct AcousticChannel
 {
     //Local-2-Remote bitrate (bit/s)
@@ -360,7 +440,9 @@ struct AcousticChannel
     base::Time time;
 };
 
-// IN NOISE state
+/** IN NOISE state
+ *
+ */
 struct NoiseSample
 {
     double noise;
@@ -370,7 +452,10 @@ struct NoiseSample
     double rssi;
 };
 
-///Device specific position structure. To be independent
+/** Device specific position structure.
+ *
+ *  To be independent.
+ */
 struct Position
 {
     base::Time time;
@@ -396,7 +481,10 @@ struct Position
     double accuracy;
 };
 
-///Device specific direction structure. In case device is not able to provide position, it provides Direction
+/** Device specific direction structure.
+ *
+ * In case device is not able to provide position, it provides Direction
+ */
 struct Direction
 {
     base::Time time;
@@ -418,29 +506,19 @@ struct Direction
     double accuracy;
 };
 
-///Statistics and indicators of the acoustic connection to the remote device
-struct DeviceStats
-{
-    int dropCount;
-    int overflowCount;
-    int localRemoteBitrate;
-    int remoteLocalBitrate;
-    int receivedSignalStrengthIndicator;
-    int signalIntegrityLevel;
-    int propagationTime;
-    int relativeVelocity;
-};
-
-///Instant message to send it
+/** Instant message to be sent
+ *
+ */
 struct SendIM
 {
     int destination;
     bool deliveryReport;
-    //enum DeliveryStatus deliveryStatus;
     std::vector<uint8_t> buffer;
 };
 
-///Received instant message
+/** Received instant message
+ *
+ */
 struct ReceiveIM
 {
     base::Time time;

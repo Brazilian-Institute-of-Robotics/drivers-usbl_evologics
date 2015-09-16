@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 
     if(driver->getInterface() == ETHERNET)
         driver->openTCP("192.168.0.191", 9200);
-    //    	driver->openTCP("localhost", 631);
+//        driver->openTCP("localhost", 631);
     else
         driver->openSerial("modem_ff", 19200);
 
@@ -127,101 +127,56 @@ int main(int argc, char** argv)
     //    im.buffer[4] = 0x02;
 
 
-
-    driver->getConnetionStatus();
-    driver->sendInstantMessage(im);
-    driver->getConnetionStatus();
-    driver->goSurface();
-    driver->getIMDeliveryStatus();
-    driver->goSurface();
-    driver->getCurrentSetting();
-    driver->goSurface();
-    driver->getConnetionStatus();
-
-
-
-
-
-    std::string out_msg;
-    std::string raw_data;
-    Answer answer;
-    answer.type = RAW_DATA;
-
-    int i=0;
-    while(driver->getSizeQueueRawData() != 0)
-    {
-        driver->sendRawData();
-    }
-
-    while(driver->getSizeQueueCommand() != 0)
-    {
-        WaitResponse wait_response = driver->sendCommand();
-        while(wait_response == RESPONSE_REQUIRED && answer.type != RESPONSE)
-        {
-            try{
-                answer = driver->readAnswer();
-                if( answer.type == NOTIFICATION)
-                {
-                    switch (answer.notification){
-                    case USBLLONG:
-                        std::cout << "output new_pose" << std::endl;
-                        break;
-                    case RECVIM:
-                        std::cout << "output received IM" << std::endl;
-                        break;
-                    }
-                }
-                else if( answer.type == RESPONSE)
-                {
-                    switch (answer.response){
-                    case VALUE_REQUESTED:
-                        std::cout << "output updated status" << std::endl;
-                        break;
-                    }
-                }
-                else if( answer.type == RAW_DATA)
-                    std::cout<< "output raw data" <<std::endl;
-
-            }
-            catch (ValidationError &error) {
-                std::cout << "Validation error: "<< &error << std::endl;
-                // Temp. Ignore command
-//                driver->queueCommand.pop();
-            }
-            catch (ParseError &error) {
-                std::cout << "Parse error: "<< &error << std::endl;
-                // Temp. Ignore command
-//                driver->queueCommand.pop();
-            }
-
-        }
-    }
-
     try{
-        answer = driver->readAnswer();
-        if( answer.type == NOTIFICATION)
-        {
-            switch (answer.notification){
-            case USBLLONG:
-                std::cout << "output new_pose" << std::endl;
-                break;
-            case RECVIM:
-                std::cout << "output received IM" << std::endl;
-                break;
-            }
-        }
+        driver->getConnetionStatus();
+        driver->GTES();
+        driver->sendInstantMessage(im);
+        driver->getConnetionStatus();
+        driver->sendInstantMessage(im);
+        driver->getIMDeliveryStatus();
+        driver->sendInstantMessage(im);
+        driver->getCurrentSetting();
+        driver->sendInstantMessage(im);
+        driver->getConnetionStatus();
+    }
+    catch (std::exception &error){
+        std::cout << "Exception Error: "<< error.what() << std::endl;
+    }
 
-    }
-    catch (ValidationError &error) {
-        std::cout << "Validation error: "<< &error << std::endl;
-        // Temp. Ignore command
-//        driver->queueCommand.pop();
-    }
-    catch (ParseError &error) {
-        std::cout << "Parse error: "<< &error << std::endl;
-        // Temp. Ignore command
-//        driver->queueCommand.pop();
-    }
+
+
+
+
+
+//    std::string out_msg;
+//    std::string raw_data;
+//    Answer answer;
+//    answer.type = RAW_DATA;
+
+
+//    try{
+//        answer = driver->readAnswer();
+//        if( answer.type == NOTIFICATION)
+//        {
+//            switch (answer.notification){
+//            case USBLLONG:
+//                std::cout << "output new_pose" << std::endl;
+//                break;
+//            case RECVIM:
+//                std::cout << "output received IM" << std::endl;
+//                break;
+//            }
+//        }
+//
+//    }
+//    catch (ValidationError &error) {
+//        std::cout << "Validation error: "<< error.what() << std::endl;
+//        // Temp. Ignore command
+//    }
+//    catch (ParseError &error) {
+//        std::cout << "Parse error: "<< error.what() << std::endl;
+//        // Temp. Ignore command
+//    }
 
 
 

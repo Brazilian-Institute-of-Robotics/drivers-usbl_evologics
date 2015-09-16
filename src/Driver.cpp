@@ -1,8 +1,10 @@
 #include "Driver.hpp"
 #include <iostream>
 #include <sstream>
+#include "base/Logging.hpp"
 //#include "Exceptions.hpp"
 
+using namespace std;
 using namespace usbl_evologics;
 
 Driver::Driver()
@@ -15,62 +17,32 @@ Driver::~Driver()
 {
 }
 
-//bool Driver::sendData(bool &mailCommand)
-//{
-//    bool ret = sendCommand(mailCommand);
-//    if(mode == DATA)
-//    {
-//        ret |= sendRawData();
-//    }
-//    return ret;
-//}
-
-WaitResponse Driver::sendCommand(void)
+// Send a command to device.
+void Driver::sendCommand(string const &command)
 {
-    if(!queueCommand.empty())
-    {
-        std::string command = queueCommand.front();
+    // Fill buffer (header and end-line) according operational mode and interface type.
+    string buffer = fillCommand(command);
+    iodrivers_base::Driver::writePacket(reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.length());
 
-        std::cout << "Write Line: " << command << std::endl;
-        std::string buffer = fillCommand(command);
-
-        iodrivers_base::Driver::writePacket(reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.length());
-
-        return modeManager(command);
-    }
-    return NO_RESPONSE_REQUIRED;
+    // Manage the operational mode, DATA or COMMAND, according to command.
+    modeManager(command);
 }
 
-bool Driver::sendRawData(void)
+// Send raw data to remote device.
+void Driver::sendRawData(string const &raw_data)
 {
-    if(!queueRawData.empty())
-    {   // TODO Need to check the size of the Raw data?
-        // Maybe some data can be dropped if data's size is too big.
-        std::string buffer = queueRawData.front();
-        std::cout << "Send Raw Data "  << std::endl;
-        bool result = iodrivers_base::Driver::writePacket(reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.length());
-        if(result)
-            // No need to wait for answer
-            queueRawData.pop();
-        return result;
-    }
-    return false;
+    iodrivers_base::Driver::writePacket(reinterpret_cast<const uint8_t*>(raw_data.c_str()), raw_data.length());
 }
 
-void Driver::enqueueRawData(std::string const& raw_data)
+// Filled command string to be sent to device.
+string Driver::fillCommand(string const &command)
 {
-    queueRawData.push(raw_data);
-}
-
-std::string Driver::fillCommand(std::string const &command)
-{
-    std::stringstream ss;
-    std::string buffer;
+    stringstream ss;
     // Guard Time Escape Sequence (GTES) doesn't require <end-line>
     // GTES: (1s)<+++>(1s)
     if(command == "+++")
     {
-        ss << command << std::flush;
+        ss << command << flush;
         if(mode == DATA)
             sleep(1);
     }
@@ -78,210 +50,283 @@ std::string Driver::fillCommand(std::string const &command)
     {
         if (mode == DATA)
             // If in DATA, buffer = +++<AT command>
-            ss << "+++" << std::flush;
-        ss << addEndLine(command) << std::flush;
+            ss << "+++" << flush;
+        ss << addEndLine(command) << flush;
     }
     return ss.str();
 }
 
-std::string Driver::addEndLine(std::string const &command)
+// Add a end line, according interface type.
+string Driver::addEndLine(string const &command)
 {
-    std::stringstream ss;
+    stringstream ss;
     if (interface == SERIAL)
-        ss << command << "\r" << std::flush;
+        ss << command << "\r" << flush;
     else // (interface == ETHERNET)
-        ss << command << "\n" << std::flush;
+        ss << command << "\n" << flush;
     return ss.str();
+}
+
+int Driver::extractRawDataPacket(string const& buffer) const
+{
+    return buffer.size();
+}
+
+
+// Check the size of a particular response.
+int Driver::checkParticularResponse(string const& buffer) const
+{
+    string::size_type eol = buffer.find("\r\n\r\n");
+    if(eol != string::npos)
+        // Add \r\n\r\n to buffer.
+        return eol+4;
+    else
+        return 0;
+}
+
+// Check the size of regular response.
+int Driver::checkRegularResponse(string const& buffer) const
+{
+
+    string::size_type eol = buffer.find("\r\n");
+    if(eol != string::npos)
+        // Add \r\n to buffer.
+        return eol+2;
+    else
+        return 0;
+}
+
+int Driver::extractATPacket(string const& buffer) const
+{
+    // Smallest packet possible is +++AT:0:\r\n
+    if (buffer.size() < 10)
+        return 0;
+    if (buffer.substr(0, 5) != "+++AT")
+        return -3;
+    // Get length.
+    // +++<AT command>:<length>:<command response><end-of-line>
+    // +++AT:<length>:<notification><end-of-line>
+    string::size_type npos = string::npos;
+    string::size_type length = 0;
+    if ((npos = buffer.find(":")) != string::npos)
+    {
+        length += npos;
+        string msg = buffer;
+        msg = msg.substr(npos+1, msg.size()-npos);
+        if ((npos = msg.find(":")) != string::npos)
+        {
+            length += npos;
+            // add 2 colon ":".
+            length += 2;
+            // Convert <length> to integer
+            length += stoi(msg.substr(0, npos),&npos);
+            // add <end-of-line>
+            length += 2;
+            if(length > buffer.size())
+            {
+                LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer ", length, buffer.c_str());
+                return 0;
+            }
+            // Check the presence of end-of-line (\r\n).
+            if (buffer.substr(length-2, length) != "\r\n")
+                throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + buffer + "\"");
+            return length;
+        }
+        else if (buffer.size() > 16)
+            throw runtime_error("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer \"" + buffer + "\"");
+        return 0;
+    }
+    // Check max command size. +++AT?CLOCK:
+    else if (buffer.size() > 12)
+        throw runtime_error("Could not find any \":\" before 12 bytes in buffer " + buffer);
+    return 0;
+}
+
+int Driver::extractRawFromATPackets(string const& buffer) const
+{
+    // TIES: Time Independent Escape Sequence
+    const char* TIES_HEADER = "+++";
+    const int   TIES_HEADER_SIZE = 3;
+
+    string::size_type buffer_size = buffer.size();
+    string::size_type ties_start = 0;
+    while (ties_start < buffer_size)
+    {
+        // Look for the start of the first character of a TIES header
+        while (ties_start < buffer_size && buffer[ties_start] != TIES_HEADER[0])
+            ties_start++;
+
+        // Check whether we actually have a header. If there's enough space left in the
+        // buffer, it has to be exactly like a full header
+        if (ties_start + TIES_HEADER_SIZE < buffer_size)
+        {
+            if (buffer.substr(ties_start, TIES_HEADER_SIZE) == TIES_HEADER)
+            {
+                if (ties_start == 0)
+                    return extractATPacket(buffer);
+
+                int raw_data_packet = extractRawDataPacket(buffer.substr(0, ties_start));
+                if (raw_data_packet == 0)
+                    throw UnexpectedRawPacket("found beginning of raw packet without an end");
+                else return raw_data_packet;
+            }
+            ++ties_start;
+        }
+        else if (string(TIES_HEADER, buffer_size - ties_start) == buffer.substr(ties_start, buffer_size - ties_start))
+        {
+            // Here, we have something that might be the start of a TIES header at the end of the buffer
+            return extractRawDataPacket(buffer.substr(0, ties_start));
+        }
+    }
+    return extractRawDataPacket(buffer.substr(0, ties_start));
 }
 
 int Driver::extractPacket(uint8_t const* buffer, size_t buffer_size) const
 {
-    std::string buffer_as_string = std::string(reinterpret_cast<char const*>(buffer), buffer_size);
-    buffer_as_string = buffer_as_string.substr(0, buffer_size);
+    string buffer_as_string = string(reinterpret_cast<char const*>(buffer), buffer_size);
 
     // Both COMMAND and DATA mode, answer finish by \r\n.
     if(mode == DATA)
-    {   // First, check for Notification or Response. Start with "+++AT"
-        if(buffer_as_string.size() < 1 && buffer_as_string.find("+") != std::string::npos)
-            return 0;
-        else if(buffer_as_string.size() == 2 && buffer_as_string.find("++") != std::string::npos)
-            return 0;
-        else if(buffer_as_string.find("+++") != std::string::npos)
-        {
-            if(buffer_as_string.size() < 6)
-                return 0;
-            // Check for Notification
-            else if(buffer_as_string.find("+++AT:") != std::string::npos)
-            {   // Check for Notification.
-                std::cout << "Check for Notification" << std::endl;
-                int ret = checkRegularResponse(buffer_as_string);
-                if(ret >= 0)
-                    return ret;
-            }
-            else
-            {   // Check for particular Response.
-                int ret = checkParticularResponse(buffer_as_string);
-                if(ret >= 0)
-                    return ret;
-                // Check for regular Response.
-                ret = checkRegularResponse(buffer_as_string);
-                if(ret >= 0)
-                    return ret;
-            }
-        }
-        // Treat as RAW DATA. Driver is transparent about it.
-        return buffer_size;
-    }
+        return extractRawFromATPackets(buffer_as_string);
     // Check in COMMAND mode
     else
-    {   // First, check for Notification
+    {   // Check for a single number as response.
+        if(buffer_as_string.size() < 4)
+            return checkRegularResponse(buffer_as_string);
+        // Check for Notification
         int ret = checkNotificationCommandMode(buffer_as_string);
         if(ret >= 0)
             return ret;
         // Second, check for particular Response.
-        ret = checkParticularResponse(buffer_as_string);
-        if(ret >= 0)
-            return ret;
+        if(buffer_as_string.find("Sour") != string::npos)
+            return checkParticularResponse(buffer_as_string);
         // Last, check for regular Response.
-        ret = checkRegularResponse(buffer_as_string);
-        if(ret >= 0)
-            return ret;
-        // Unexpected
-        return -buffer_size;
+        return checkRegularResponse(buffer_as_string);
     }
 }
 
-Answer Driver::readAnswer(void)
+// Read response from device.
+ResponseInfo Driver::readResponse(void)
 {
-    Answer answer;
-    answer.notification = NO_NOTIFICATION;
-    answer.response = NO_RESPONSE;
-    std::string buffer_as_string;
     Notification notification;
     CommandResponse response;
+    ResponseInfo response_info;
+    response_info.response = NO_RESPONSE;
 
-    int buffer_size = readInternal(buffer_as_string);
-
-    //	std::cout<< "readAnswer. buffer.size "<< buffer_size <<" "<<buffer_as_string.size() << std::endl;
-    //	std::cout<< buffer_size << " "<< buffer_as_string << std::endl;
-
-    //	raw_data = buffer_as_string;
-
-    if((answer.notification = isNotification(buffer_as_string)) != NO_NOTIFICATION)
+    // Get string from device.
+    string buffer_as_string = readInternal();
+    // Check for Notification and enqueue data.
+    if((notification = isNotification(buffer_as_string)) != NO_NOTIFICATION)
     {
-        interpretNotification(buffer_as_string, notification);
-        std::cout<< "return2" << std::endl;
-        answer.type = NOTIFICATION;
-        return answer;
+        // interpretNotification(buffer_as_string, notification);
+        NotificationInfo notification_info;
+        notification_info.notification = notification;
+        notification_info.buffer = buffer_as_string;
+        queueNotification.push(notification_info);
+        return response_info;
     }
-    else if((answer.response = isResponse(buffer_as_string)) != NO_RESPONSE)
+    // Check for response and output it.
+    else if((response = isResponse(buffer_as_string)) != NO_RESPONSE)
     {
-        std::string command = queueCommand.front();
-        interpretResponse(buffer_as_string, command, response);
-
-        queueCommand.pop();
-        std::cout<< "pop: " << command << std::endl;
-
-        std::cout<< "return4" << std::endl;
-        answer.type = RESPONSE;
-        return answer;
+        ResponseInfo response_info;
+        response_info.response = response;
+        response_info.buffer = buffer_as_string;
+        return response_info;
     }
-    else
-    {
-        answer.type = RAW_DATA;
-        answer.raw_data = buffer_as_string;
-        return answer;
-    }
-    std::cout<< "return5" << std::endl;
+    // If data is neither notification or response, it's raw data. Enqueue it.
+    queueRawData.push(buffer_as_string);
+    return response_info;
 }
 
-// Auxiliary function used by readAnswer().
-int Driver::readInternal(std::string &buffer)
+
+
+// Read packets.
+string Driver::readInternal(void)
 {
-    uint8_t* read_buffer = new uint8_t[max_packet_size];
-    int readpacket = iodrivers_base::Driver::readPacket(read_buffer, max_packet_size, 3000, 3000);
+    vector<uint8_t> read_buffer;
+    read_buffer.resize(max_packet_size);
+    int readpacket = iodrivers_base::Driver::readPacket(&read_buffer[0], max_packet_size);
 
-    if (readpacket > 0)
-    {
-        buffer.resize(readpacket);
-        std::string str(read_buffer, read_buffer+readpacket);
-        buffer = str;
-    }
-    delete[] read_buffer;
-    return readpacket;
+    return string(reinterpret_cast<char const*>(&read_buffer[0]), readpacket);
 }
 
-// Auxiliary function used by extractPacket().
-// Response to command AT&V (getCurrentSetting) uses multiples
-//  '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
-// Maybe there are other command's responses that use the same pattern.
-int Driver::checkParticularResponse(std::string const& buffer) const
+// Read input data till get a response.
+string Driver::waitResponse(string const &command, CommandResponse expected)
 {
-    std::string command = queueCommand.front();
-    if(command.find("AT&V") != std::string::npos)
+    ResponseInfo response_info;
+    response_info.response = NO_RESPONSE;
+    base::Time init_time = base::Time::now();
+    // 1 second time-out. Arbitrary value.
+    base::Time time_out = base::Time::fromSeconds(1);
+    base::Time time_now = base::Time::now();
+
+    while(response_info.response != expected && (time_now - init_time) <= time_out)
     {
-        std::cout << "checkParticularResponse" << std::endl;
-        int eol = buffer.find("\r\n\r\n");
-        if(eol != std::string::npos){
-            std::cout<< "size particular response: " << eol+4 << std::endl;
-            return eol+4;
-        }
-        else
-            return 0;
+        // Read till get expected response.
+        response_info = readResponse();
+        time_now = base::Time::now();
+
+        if(response_info.response == ERROR)
+            throw DeviceError("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device return the follow ERROR msg: \"" + response_info.buffer + "\"");
+        if(response_info.response == BUSY)
+             throw BusyError("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device return the follow BUSY msg: \"" + response_info.buffer + "\". Try it latter.");
     }
-    return -1;
+    if((time_now - init_time) > time_out)
+        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
+    // In DATA mode, validate response and return content without header.
+    if(mode == DATA)
+    {
+        validResponse(response_info.buffer, command);
+        return usblParser.getAnswerContent(response_info.buffer);
+    }
+    return response_info.buffer;
 }
 
-// Auxiliary function used by extractPacket().
-// Usual response has an end-line by \r\n
-int Driver::checkRegularResponse(std::string const& buffer) const
+// Wait for a OK response.
+void Driver::waitResponseOK(string const &command)
 {
-    std::cout << "checkRegularResponse" << std::endl;
-    int eol = buffer.find("\r\n");
-    if(eol != std::string::npos)
-        // Add \r\n to buffer
-        return eol+1;
-    else
-        return 0;
-    return -1;
+    waitResponse(command, COMMAND_RECEIVED);
 }
 
-// Auxiliary function used by extractPacket().
-// Check if a specific Notification string is present in buffer, just in COMMAND mode.
-int Driver::checkNotificationCommandMode(std::string const& buffer) const
+// Wait for a integer response.
+int Driver::waitResponseInt(string const &command)
+{
+    return usblParser.getNumber(waitResponseString(command));
+}
+
+// Wait for string response.
+string Driver::waitResponseString(string const &command)
+{
+    return waitResponse(command, VALUE_REQUESTED);
+}
+
+// Check if a Notification string is present in buffer.
+int Driver::checkNotificationCommandMode(string const& buffer) const
 {
     if (buffer.size() < 4)
         return 0;
     else
     {   // All 4 letters notification
-        if (buffer.find("RECV") !=std::string::npos ||
-                buffer.find("DELI") !=std::string::npos ||
-                buffer.find("FAIL") !=std::string::npos ||
-                buffer.find("CANC") !=std::string::npos ||
-                buffer.find("EXPI") !=std::string::npos ||
-                buffer.find("SEND") !=std::string::npos ||
-                buffer.find("USBL") !=std::string::npos ||
-                buffer.find("BITR") !=std::string::npos ||
-                buffer.find("SRCL") !=std::string::npos ||
-                buffer.find("PHYO") !=std::string::npos ||
-                buffer.find("RADD") !=std::string::npos )
+        if (buffer.find("RECV") !=string::npos ||
+                buffer.find("DELI") !=string::npos ||
+                buffer.find("FAIL") !=string::npos ||
+                buffer.find("CANC") !=string::npos ||
+                buffer.find("EXPI") !=string::npos ||
+                buffer.find("SEND") !=string::npos ||
+                buffer.find("USBL") !=string::npos ||
+                buffer.find("BITR") !=string::npos ||
+                buffer.find("SRCL") !=string::npos ||
+                buffer.find("PHYO") !=string::npos ||
+                buffer.find("RADD") !=string::npos )
             return checkRegularResponse(buffer);
         else
             return -1;
     }
 }
 
-// In DATA mode: +++AT:<length>:<notification><end-of-line>
-// IN COMMAND mode: <notification><end-of-line>
-// Return a valid kind of Notification. If not a notification return NO_NOTIFICATION.
-// Throw ValidationError or ModeError in case of failure.
-Notification Driver::isNotification(std::string const &buffer)
+// Check kind of notification.
+Notification Driver::isNotification(string const &buffer)
 {
-//    bool ret = false;
-//    if(validNotification(buffer))
-//        return usblParser.findNotification(buffer);
-//    else
-//        return NO_NOTIFICATION;
     Notification notification = usblParser.findNotification(buffer);
     if(notification != NO_NOTIFICATION)
     {
@@ -292,32 +337,17 @@ Notification Driver::isNotification(std::string const &buffer)
     return notification;
 }
 
-// In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
-// IN COMMAND mode: <response><end-of-line>
-// Return a valid kind of Response. If not a response return NO_RESPONSE.
-// Throw ValidationError or ModeError in case of failure.
-CommandResponse Driver::isResponse(std::string const &buffer)
+// Check kind of response.
+CommandResponse Driver::isResponse(string const &buffer)
 {
-//    if(validResponse(buffer))
-//        return usblParser.findResponse(buffer);
-//    else
-//        return NO_RESPONSE;
-    CommandResponse response = usblParser.findResponse(buffer);
     // In DATA mode, all response starts by "+++AT". If there is no initial string, it isn't a response.
-    if(mode == DATA && buffer.find("+++AT")==std::string::npos)
-        response == NO_RESPONSE;
-    else if(mode == DATA)
-        // validResponse only works in DATA mode.
-        validResponse(buffer);
-    return response;
+    if(mode == DATA && buffer.find("+++AT")==string::npos)
+        return NO_RESPONSE;
+    return usblParser.findResponse(buffer);
 }
 
-// In DATA mode: +++AT:<length>:<notification><end-of-line>
-// IN COMMAND mode: <notification><end-of-line>
-// Check for a valid notification in DATA mode only.
-// Used by isNotification().
-// Throw ValidationError or ModeError in case of failure.
-void Driver::validNotification(std::string const &buffer)
+// Check a valid notification in DATA mode.
+void Driver::validNotification(string const &buffer)
 {
     if(mode == DATA)
     {
@@ -326,171 +356,130 @@ void Driver::validNotification(std::string const &buffer)
     // Not possible to use UsblParser::validateNotification() in COMMAND mode.
     else
     {
-        std::stringstream error_string;
-        error_string << "USBL Driver.cpp validNotification: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<std::flush;
+        stringstream error_string;
+        error_string << "USBL Driver.cpp validNotification: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<flush;
         throw ModeError(error_string.str());
     }
 }
 
-// In DATA mode: +++AT:<length>:<notification><end-of-line>
-// IN COMMAND mode: <notification><end-of-line>
-// Check for a valid notification both in DATA and COMMAND mode.
-// Used by isNotification().
-// Throw ValidationError in case of failure.
-void Driver::fullValidation(std::string const &buffer, Notification const &notification)
+// Check a valid notification.
+void Driver::fullValidation(string const &buffer, Notification const &notification)
 {
     usblParser.splitValidateNotification(buffer, notification);
 }
 
-// In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
-// IN COMMAND mode: <response><end-of-line>
-// Check for a valid response in DATA mode only.
-// Used by isResponse().
-// Throw ValidationError or ModeError in case of failure.
-void Driver::validResponse(std::string const &buffer)
+// Check for a valid response in DATA mode.
+void Driver::validResponse(string const &buffer, string const &command)
 {
     if(mode == DATA)
-    {
-        std::string command = queueCommand.front();
-        //		std::cout<< "validResponse "<< command << std::endl;
         usblParser.validateResponse(buffer, command);
-    }
     // Not possible to use UsblParser::validateResponse() in COMMAND mode.
     else
     {
-        std::stringstream error_string;
-        error_string << "USBL Driver.cpp validResponse: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<std::flush;
+        stringstream error_string;
+        error_string << "USBL Driver.cpp validResponse: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<flush;
         throw ModeError(error_string.str());
     }
 }
 
-std::string Driver::interpretNotification(std::string const& buffer, Notification const &notification)
+// // TODO. Check the best way to interpreted every kind of notification and what it should return.
+// Interpret notification.
+void Driver::interpretNotification(string const& buffer, Notification const &notification)
 {
-    std::string ret;
-
     switch (notification) {
     case USBLLONG:
         usbl_pose = usblParser.parsePosition(buffer);
         break;
     case USBLANGLE:
-        ret = "NOT POSSIBLE TO GET POSE";
+        throw DeviceError("NOT POSSIBLE TO GET POSE. USBANGLE NOT IMPLEMENTED");
         break;
     case RECVIM:
         receiveIM = usblParser.parseReceivedIM(buffer);
         break;
     case RECVIMS:
         //usblParser.parseReceivedIMS();
-        ret = "NEW Synchronous IM. Not implemented";
+        throw DeviceError("NEW Synchronous IM. Not implemented");
         break;
     case RECVPBM:
         //usblParser.parseReceivedPBM();
-        ret = "NEW PiggyBack M. Not implemented";
+        throw DeviceError("NEW PiggyBack M. Not implemented");
         break;
     case DELIVERY_REPORT:
-        ret = usblParser.parseIMReport(buffer);
+        usblParser.parseIMReport(buffer);
         break;
     case CANCELED_IM:
-        ret = usblParser.parseIMReport(buffer);
+        usblParser.parseIMReport(buffer);
         break;
     case EXTRA_NOTIFICATION:
-        ret = "Extra Notification. Not implemented";
+        throw DeviceError("Extra Notification. Not implemented");
+        break;
+    case NO_NOTIFICATION:
+        throw DeviceError("NO Notification. Not implemented");
         break;
     }
-    return ret;
 }
 
-std::string Driver::interpretResponse(std::string const& buffer, std::string const& command, CommandResponse const &response)
+// Manage mode operation according command sent.
+void Driver::modeManager(string const &command)
 {
-    std::string ret;
-    std::stringstream ss;
-    switch (response) {
-    case ERROR:
-        ss << "OK. ";
-        ss << buffer << std::flush;
-        ret = ss.str();
-        break;
-    case BUSY:
-        ss << "TRY AGAIN. ";
-        ss << buffer << std::flush;
-        ret = ss.str();
-        break;
-    case COMMAND_RECEIVED:
-        modeMsgManager(command);
-        ss << "OK" << buffer << std::flush;
-        ret = ss.str();
-        break;
-    case VALUE_REQUESTED:
-        ss << "OK. " << buffer << ". ";
-        ss << usblParser.parseRequestedValue(buffer, command) << std::flush;;
-        ret = ss.str();
-        break;
-    }
-    return ret;
-}
-
-
-WaitResponse Driver::modeManager(std::string const &command)
-{
-    // Command ATO. Switch from DATA to COMMAND mode doesn't require answer
-    if(command.find("ATO")!=std::string::npos && mode == COMMAND)
+    // Command ATO. Switch to DATA mode doesn't require answer
+    if(command.find("ATO")!=string::npos && mode == COMMAND)
     {
         // Proceed just after send the command
-        queueCommand.pop();
         mode = DATA;
-        return NO_RESPONSE_REQUIRED;
     }
     // Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
-    else if(command.find("+++")!=std::string::npos && mode == DATA )
+    else if(command.find("+++")!=string::npos && mode == DATA )
     {
         sleep(1);
+        // Receive answer in COMMAND mode.
+        mode = COMMAND;
         // switch to COMMAND mode after receive a OK answer
-        //mode = COMMAND;
     }
     // Switch to COMMAND mode. Require OK response.
-    else if(command.find("ATC")!=std::string::npos && mode == DATA)
-    {
-        //mode = COMMAND;
-    }
-    return RESPONSE_REQUIRED;
+//    else if(command.find("ATC")!=string::npos && mode == DATA)
+//    {    }
 }
 
-void Driver::modeMsgManager(std::string const &command)
+// Manage mode operation according command sent and response obtained.
+void Driver::modeMsgManager(string const &command)
 {
     // Command ATO. Switch from DATA to COMMAND mode doesn't require answer
-    if(command.find("ATO")!=std::string::npos && mode == COMMAND)
+    if(command.find("ATO")!=string::npos && mode == COMMAND)
     {
         // Proceed just after send the command
         //queueCommand.pop();
         //mode = DATA;
     }
     // Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
-    else if(command.find("+++")!=std::string::npos && mode == DATA)// && response == COMMAND_RECEIVED)
+    else if(command.find("+++")!=string::npos && mode != COMMAND)// && response == COMMAND_RECEIVED)
     {
-        mode = COMMAND;
+        // If there was a error, keep in DATA mode.
+        mode = DATA;
     }
     // Switch to COMMAND mode. Require OK response.
-    else if(command.find("ATC")!=std::string::npos && mode == DATA)// && response == COMMAND_RECEIVED)
+    else if(command.find("ATC")!=string::npos && mode == DATA)// && response == COMMAND_RECEIVED)
     {
         mode = COMMAND;
     }
 }
 
-
-InterfaceType Driver::getInterface(void)
-{
-    return interface;
-}
-
+// Send Instant Message to remote device.
 void Driver::sendInstantMessage(SendIM const &im)
 {
-    queueCommand.push(usblParser.parseSendIM(im));
+    string command = usblParser.parseSendIM(im);
+    sendCommand(command);
+    waitResponseOK(command);
 }
 
-ReceiveIM Driver::receiveInstantMessage(std::string const &buffer)
+// Parse a received Instant Message.
+ReceiveIM Driver::receiveInstantMessage(string const &buffer)
 {
     return usblParser.parseReceivedIM(buffer);
 }
 
+// TODO to be implemented
+// Get the newest pose of remote device.
 base::samples::RigidBodyState Driver::getNewPose(void)
 {
     base::samples::RigidBodyState new_pose;
@@ -501,58 +490,48 @@ base::samples::RigidBodyState Driver::getNewPose(void)
     return new_pose;
 }
 
-void Driver::sendIMPose(base::samples::RigidBodyState const &send_pose)
+// Get interface type.
+InterfaceType Driver::getInterface(void)
 {
-
+    return interface;
 }
 
-void Driver::goSurface(void)
-{
-    SendIM im;
-    im.deliveryReport = true;
-    im.destination = 1;
-    std::cout <<"test1" <<std::endl;
-    std::string str = imParser.goSurface();
-    std::vector<uint8_t> aux_buffer(str.begin(), str.end());
-    std::cout <<"test2" <<std::endl;
-    im.buffer = aux_buffer;
-    sendInstantMessage(im);
-    std::cout <<"test3" <<std::endl;
-}
-
-// Return amount of command to be sent to device.
-int Driver::getSizeQueueCommand(void)
-{
-    return queueCommand.size();
-}
-
-// Return amount of raw data to be sent to remote device.
-int Driver::getSizeQueueRawData(void)
-{
-    return queueRawData.size();
-}
-
+// Define the interface with device. ETHERNET or SERIAL.
 void Driver::setInterface(InterfaceType	deviceInterface)
 {
     interface = deviceInterface;
 }
 
-void Driver::getConnetionStatus(void)
+// Get Underwater Connection Status.
+ConnectionStatus Driver::getConnetionStatus(void)
 {
-    queueCommand.push("AT?S");
+    string command = "AT?S";
+    sendCommand(command);
+    return usblParser.parseConnectionStatus(waitResponseString(command));
 }
 
+// TODO parse input.
+// Get Current Setting parameters.
 void Driver::getCurrentSetting(void)
 {
-    queueCommand.push("AT&V");
+    string command = "AT&V";
+    sendCommand(command);
+    string response = waitResponseString(command);
 }
 
-void Driver::getIMDeliveryStatus(void)
+// get Instant Message Delivery status.
+DeliveryStatus Driver::getIMDeliveryStatus(void)
 {
-    queueCommand.push("AT?DI");
+    string command = "AT?DI";
+    sendCommand(command);
+    return usblParser.parseDeliveryStatus(waitResponseString(command));
 }
 
+// Switch to COMMAND mode.
 void Driver::GTES(void)
 {
-    queueCommand.push("+++");
+    string command = "+++";
+    sendCommand(command);
+    waitResponseOK(command);
+    modeMsgManager(command);
 }
