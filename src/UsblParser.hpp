@@ -3,114 +3,160 @@
 
 #include <iodrivers_base/Driver.hpp>
 #include "DriverTypes.hpp"
+#include <string.h>
+#include <iostream>
+using namespace std;
 namespace usbl_evologics
 {
-    class UsblParser
-    {
-        private:
-            static std::vector<std::string> splitValidate(std::string s, const char* symbol, size_t const parts);
-            static std::vector<std::string> validateResponse(std::string const s);
-            static int getInt(std::string s);
+class UsblParser
+{
+private:
+    /** Check if buffer can be splitted in an establish amount.
+     *
+     * @param buffer to be analyzezd.
+     * @param symbol of split.
+     * @param parts of splitted buffer.
+     * @return vector of string with parts size.
+     */
+    vector<string> splitValidate(string const &buffer, const char* symbol, size_t const parts);
+
+public:
+    UsblParser();
+    ~UsblParser();
 
 
-        public:
-            UsblParser();
-            /*
-             * The function looks for a command in the string s.
-             *
-             * @param[in] data The string to analysing
-             * @return A int value with result of analysing the data
-             * Negative Value: There is no-commmand data in the front of the string with len value. The data can be skipped without analysing.
-             * 0: There is no command, but it can be a command. (incomplete command)
-             * positive value: There is a command in front of the string until value.
-             */
-            static int isPacket(std::string const data);
-            /*
-             * The functions looks for any asynchronous message in the command.
-             * The function returns a enum with the type of the asynchrnous message.
-             *
-             * @param[in] command The string to analysing
-             * @return A enum with the type of the asynchronous message. If there is no asynchronous message, then NO_ASYNCHRONOUS
-             */
-            static AsynchronousMessages parseAsynchronousCommand(std::string const command);
-            /*
-             * The function parses a asynchronous Position Message USBLLONG
-             *
-             * @param[in] the position to anlysing
-             * @return A complete positon
-             * */
-            static Position parseUsbllong(std::string const positionstring);
-            /*
-             * The function parses a Delivery Report.
-             *
-             * @param[in] report The report to analysing
-             * @return A enum with the extracted delivery status
-             * */
-            static DeliveryStatus parseDeliveryReport(std::string const report);
-            /*
-             * The function interpretes the response as integer.
-             * 
-             * @param[in] data The data in a uint8 array to analysing
-             * @param[in] size The length of data
-             * @return The extracted int
-             */
-            static int parseInt(uint8_t const* data, size_t const size);
-            /*
-             * The function interpretes the response as integer.
-             * The function also throws an exception, if this response isn't fit to the command
-             * 
-             * @param[in] data The data in a uint8 array to analysing
-             * @param[in] size The length of data
-             * @param[in] command The command to fit the data with this command 
-             * @return The extracted int
-             */
-            static int parseInt(uint8_t const* data, size_t const size, std::string const command);
-            /*
-             * The function interpretes the response as OK.
-             * If the respnse isn't an OK the function throws an Exception.
-             * @param[in] data The data in a uint8 array to analysing
-             * @param[in] size The length of data
-             */
-            static void parseOk(uint8_t const* data, size_t const size);
-            /*
-             * The function interpretes the string as a connection status and
-             * returns a enum with the status.
-             *
-             * @param[in] command The command to analysing
-             * @return The connection status in a enum
-             */
-            static ConnectionStatus parseConnectionStatus(std::string const command);
-            /*
-             * The function interpretes the string as a incoming instant message and returns
-             * the extracted instant message
-             *
-             * @param[in] command The command to analysing
-             * @return The instant message in a struct
-             */
-            static ReceiveInstantMessage parseIncomingIm(std::string const s);
-            /*
-             * The functions interpretes the string as a position and
-             * returns a struct with the position.
-             *
-             * @param[in] command The command to analysing
-             * @return The position in a struct
-             */
-            static Position parsePosition(std::string const command);
-            static Position parseRemotePosition(std::string const s);
-            /*
-             * The funcion extracts the string in the response and returns the string.
-             * You have to interprete the string anymore.
-             * The function throws an exception, if the response isn't fit to the command.
-             *
-             * @param[in] data The data in a uint8 array to analysing
-             * @param[in] size The length of data
-             * @param[in] command The command to fit the data with this command 
-             * @return The extracted string
-             */
-            static std::string parseString(uint8_t const* data, size_t const size, std::string const command);
+    /** Find a Notification in a buffer.
+     *
+     *  @param buffer to be analyzed.
+     *  @return Kind of notification. If buffer is not a Notification, returns NO_NOTIFICATION.
+     */
+    Notification findNotification(string const &buffer);
 
-            static std::string parsePhyNumber(std::string const s);
-            static std::string parseMacNumber(std::string const s);
-    };
+    /** Validate a Notification buffer in DATA mode.
+     *
+     * In DATA mode: +++AT:<length>:<notification><end-of-line>
+     * Check presence of "+++AT" and length of <notification>
+     * Throw ValidationError in case of failure.
+     * @param  buffer Notification in DATA mode.
+     */
+    void validateNotification(string const &buffer);
+
+    /** Validate the number of field of a Notification.
+     *
+     * In DATA mode: +++AT:<length>:<notification><end-of-line>
+     * In COMMAND mode: <notification><end-of-line>
+     * Check the number if fields in <notification>. Can be used in DATA or COMMAND mode.
+     * Throw ValidationError in case of failure.
+     * @param buffer Notification in DATA or COMMAND mode.
+     * @param notification Kind of Notification in buffer.
+     */
+    void splitValidateNotification(string const &buffer, Notification const &notification);
+
+    /** Check for a Response in buffer.
+     *
+     * Look for particular response: "OK", "ERROR" or "BUSY". If could not find these, return REQUEST_VALUE.
+     * @param buffer to be analyzed.
+     * @return Kind of response.
+     */
+    CommandResponse findResponse(string const &buffer);
+
+    /** Validate a Response buffer in DATA mode.
+     *
+     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
+     * Check presence of "+++<AT command>" and length of <command response>
+     * Throw ValidationError in case of failure.
+     * @param buffer Response in DATA mode.
+     * @param command sent to device.
+     */
+    void validateResponse(string const &buffer, string const &command);
+
+    /** Validate a Particular Response in DATA mode.
+     *
+     * Command "AT&V" (Get Current Set) has particular response.
+     * In DATA mode: +++AT&V:<length>:<requested data><end-line>
+     * <requested data> = <field1>: <value><end-line><field2>: <value><end-line>...
+     * Throw ValidationError in case of failure.
+     * @param buffer Response of "AT&V" command
+     */
+    void validateParticularResponse(string const &buffer);
+
+    /** Get response or notification content in DATA mode.
+     *
+     *  In DATA mode:
+     *  +++<AT command>:<length>:<command response><end-of-line>
+     *  +++<AT>:<length>:<notification><end-line>
+     *  Return data like in COMMAND mode.
+     *  Throy ValidationError or ModeError in case of failure.
+     *  @param buffer Notification or Response in DATA mode.
+     *  @return <content><end-line> like in COMMAND mode.
+     */
+    string getAnswerContent(string const &buffer);
+
+    /** Parse a Instant Message into string to be sent to device.
+     *
+     * @param im Instant Message.
+     * @return string to be sent to device.
+     */
+    string parseSendIM(SendIM const &im);
+
+    /** Parse a received Instant Message from buffer to ReceiveIM.
+     *
+     * Throw ParseError or ValidationError in case of failure.
+     * @param buffer with Instant Message.
+     * @return Received Instant Message.
+     */
+    ReceiveIM parseReceivedIM(string const &buffer);
+
+    /** Parse a received pose from buffer to Position.
+     *
+     * Throw ValidationError in case of failure.
+     * @param buffer with Pose.
+     * @return Position.
+     */
+    Position parsePosition(string const &buffer);
+
+    /** Check if Instant Message was delivered.
+     *
+     * Throw ParseError in case of failure.
+     * @param buffer from device.
+     * @return TRUE if delivery was successful, FALSE if remote device doesn't confirm receipt.
+     */
+    bool parseIMReport(string const &buffer);
+
+    /** Get the number of fields in a Notification.
+     *
+     * Notification are splitted by comma ",".
+     * Each Notification has a determined amount of fields.
+     * Throw ValidationError in case of failure.
+     * @param notification.
+     * @return number of fields.
+     */
+    int getNumberFields(Notification const &notification);
+
+    /** Get the integer from a response buffer in COMMAND mode.
+     *
+     * Throw ParseError in case of failure.
+     * @param buffer with integer as response.
+     * @return integer number.
+     */
+    int getNumber(string const &buffer);
+
+    /** Parse Connection Status of underwater link.
+     *
+     * Throw ParseError in case of failure.
+     * @param buffer with Connection Status
+     * @return ConnectionStatus of underwater link
+     */
+    ConnectionStatus parseConnectionStatus (string const &buffer);
+
+    /** Parse Delivery Status of a Message
+     *
+     * Throw ParseError in case of failure.
+     * @param buffer with Delivery Status.
+     * @return DeleviryStatus.
+     */
+    DeliveryStatus parseDeliveryStatus (string const &buffer);
+
+};
 }
 #endif
