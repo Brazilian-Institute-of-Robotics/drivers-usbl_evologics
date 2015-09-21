@@ -7,8 +7,6 @@
 #include <map>
 #include <queue>
 #include "UsblParser.hpp"
-#include "IMParser.hpp"
-#include "IMDataTypes.hpp"
 #include "DriverTypes.hpp"
 #include "Exceptions.hpp"
 #include "base/samples/RigidBodyState.hpp"
