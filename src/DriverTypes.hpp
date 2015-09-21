@@ -513,7 +513,7 @@ struct SendIM
 {
     int destination;
     bool deliveryReport;
-    std::vector<uint8_t> buffer;
+    std::string buffer;
 };
 
 /** Received instant message
@@ -529,7 +529,7 @@ struct ReceiveIM
     int rssi;
     int integrity;
     double velocity;
-    std::vector<uint8_t> buffer;
+    std::string buffer;
 };
 
 }

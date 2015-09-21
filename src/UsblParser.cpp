@@ -179,9 +179,7 @@ string UsblParser::parseSendIM(SendIM const &im)
         ss << "ack,";
     else
         ss << "noack,";
-    // convert buffer from vector to string
-    string string_buffer(im.buffer.begin(), im.buffer.end());
-    ss << string_buffer;
+    ss << im.buffer;
 
     return ss.str();
 }
@@ -205,10 +203,9 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
     im.integrity = stoi(splitted[7],&sz);
     im.velocity = stod(splitted[8],&sz);
 
-    vector<uint8_t> msg(splitted[9].begin(), splitted[9].end());
     // Remove <end-line> (\r\n) from buffer
-    msg.pop_back(); msg.pop_back();
-    im.buffer = msg;
+    splitted[9].erase(splitted[9].end()-2, splitted[9].end());
+    im.buffer = splitted[9];
 
     string::size_type size = stoi(splitted[1],&sz);
     if(size != im.buffer.size())
@@ -318,38 +315,50 @@ int UsblParser::getNumber(string const &buffer)
 }
 
 // Parse Connection Status of underwater link.
-ConnectionStatus UsblParser::parseConnectionStatus (string const &buffer)
+Connection UsblParser::parseConnectionStatus (string const &buffer)
 {
+    Connection connection;
+    connection.time = base::Time::now();
     if (buffer.find("OFFLINE")!= string::npos)
     {
         if (buffer.find("OFFLINE CONNECTION FAILED") != string::npos)
-            return OFFLINE_CONNECTION_FAILED;
+            connection.status = OFFLINE_CONNECTION_FAILED;
         else if (buffer.find("OFFLINE TERMINATED") != string::npos)
-            return OFFLINE_TERMINATED;
+            connection.status = OFFLINE_TERMINATED;
         else if (buffer.find("OFFLINE ALARM") != string::npos)
-            return OFFLINE_ALARM;
+            connection.status = OFFLINE_ALARM;
         else if (buffer.find("OFFLINE READY") != string::npos)
-            return OFFLINE_READY;
+            connection.status = OFFLINE_READY;
     }
     else if (buffer.find("INITIATION") != string::npos)
     {
         if (buffer.find("INITIATION LISTEN") != string::npos)
-            return INITIATION_LISTEN;
+            connection.status = INITIATION_LISTEN;
         else if (buffer.find("INITIATION ESTABLISH") != string::npos)
-            return INITIATION_ESTABLISH;
+            connection.status = INITIATION_ESTABLISH;
         else if (buffer.find("INITIATION DISCONNECT") != string::npos)
-            return INITIATION_DISCONNECT;
+            connection.status = INITIATION_DISCONNECT;
     }
     else if (buffer.find("ONLINE")!= string::npos)
-        return ONLINE;
+        connection.status = ONLINE;
     else if (buffer.find("BACKOFF")!= string::npos)
-        return BACKOFF;
+        connection.status = BACKOFF;
     else if (buffer.find("NOISE")!= string::npos)
-        return NOISE;
+        connection.status = NOISE;
     else if (buffer.find("DEAF")!= string::npos)
-        return DEAF;
-
-    throw ParseError("UsblParser.cpp parseConnectionStatus. Waiting for Connection Status but read \"" + buffer + "\"");
+        connection.status = DEAF;
+    else
+        throw ParseError("UsblParser.cpp parseConnectionStatus. Waiting for Connection Status but read \"" + buffer + "\"");
+    // Get amount of free buffer of channels
+    vector<string> splitted;
+    boost::split( splitted, buffer, boost::algorithm::is_any_of( " " ) );
+    connection.freeBuffer.clear();
+    for(int i=0; i<splitted.size(); i++)
+    {
+        if(isdigit(splitted.at(i)[0]))
+            connection.freeBuffer.push_back(atoi(splitted.at(i).c_str()));
+    }
+    return connection;
 }
 
 // Parse Delivery Status of a Message.
@@ -366,3 +375,4 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
 
     throw ParseError("UsblParser.cpp parseDeliveryStatus. Waiting for Delivery Status but read \"" + buffer + "\"");
 }
+

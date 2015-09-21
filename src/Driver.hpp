@@ -10,6 +10,8 @@
 #include "DriverTypes.hpp"
 #include "Exceptions.hpp"
 #include "base/samples/RigidBodyState.hpp"
+#include <base/Eigen.hpp>
+#include "base/Pose.hpp"
 #include "base/Logging.hpp"
 
 using namespace std;
@@ -47,11 +49,6 @@ public:
      *
      */
     void sendRawData(string const &raw_data);
-
-//    // return a valid answer, as a response or as a notification.
-//    // resp=true means the unique and necessary response of a command is received.
-//    // queueCommand.pop() realized in this case.
-//    CommandResponse readAnswer(void);
 
     /** Read response from device.
      *
@@ -93,7 +90,7 @@ public:
      *
      * @return connection status
      */
-    ConnectionStatus getConnetionStatus(void);
+    Connection getConnectionStatus(void);
 
     /** Get Current Setting parameters.
      *
@@ -107,12 +104,40 @@ public:
      */
     DeliveryStatus getIMDeliveryStatus(void);
 
+    /** Delivery report notification for Instant Message.
+     *
+     * If a send Instant Message requires to be acknowledge by remote device,
+     * a notification is sent to device.
+     * @returns TRUE if IM delivery was successful. FALSE if IM not acknowledged
+     *  (a false means the local device did not receive a delivered acknowledgment. The IM may actually be delivered).
+     *  throw a exception if
+     */
+    bool getIMDeliveryReport(string const &buffer);
+
     /** Switch to COMMAND mode.
      *
      * Guard Time Escape Sequence.
      * Wait 1 second before and after send command.
      */
     void GTES(void);
+
+    /** Switch to Command mode.
+     *
+     * No need for waiting time.
+     */
+    void switch2CMDmode(void);
+
+    /** Switch to DATA mode.
+     *
+     * Doesn't require response.
+     */
+    void switch2DATAmode(void);
+
+    /* Reset device, drop data and/or instant message
+     *
+     * @param type define what will be reset in device
+     */
+    void resetDevice(ResetType const &type);
 
     /** Get interface type.
      *
@@ -133,14 +158,23 @@ public:
      */
     ReceiveIM receiveInstantMessage(string const &buffer);
 
-    /** Get the newest pose of remote device.
+    /** Get the RigidBodyState pose of remote device.
      *
      * Only used by devices with ETHERNET interface.
      * Convert the data from internal struct to RigidBodyState.
      * @return RigidBodyState pose.
      * TODO implement.
      */
-    base::samples::RigidBodyState getNewPose(void);
+    base::samples::RigidBodyState getPose(Position const &pose);
+
+    /** Get the Position pose of remote device.
+     *
+     * Only used by devices with ETHERNET interface.
+     * Convert the received buffer from USBLLONG notification to Position.
+     * It may have some data of interest.
+     * @return Position pose.
+     */
+    Position getPose(string const &buffer);
 
     /** Helper method to separate AT and raw packets in a data stream
      */
@@ -158,6 +192,37 @@ public:
      * could be a AT command
      */
     int extractATPacket(string const& buffer) const;
+
+    /** Pop out RawData from queueRawData.
+     *
+     *  @return string of raw data
+     */
+    std::string getRawData(void);
+
+    /** verify if queueRawData has raw data.
+     *
+     * @return TRUE if queue has raw data, FALSE otherwise.
+     */
+    bool hasRawData(void);
+
+    /** Pop out Notification from queueNotification.
+     *
+     *  @return NotificationInfo
+     */
+   NotificationInfo getNotification(void);
+
+   /** verify if queueNotification has any notification.
+    *
+    * @return TRUE if queue has notification, FALSE otherwise.
+    */
+  bool hasNotification(void);
+
+   /** Get mode of operation.
+    *
+    * DATA or COMMAND
+    * @return Operation mode.
+    */
+   OperationMode getMode(void);
 
 private:
     UsblParser	usblParser;
@@ -309,6 +374,14 @@ private:
      * @param command sent to device.
      */
     void modeMsgManager(string const &command);
+
+    /** Converts from euler angles to quaternions.
+     *
+     * euler = [roll, pitch, yaw]
+     * @param eulerAngles - Euler angles vector
+     * @return quaternion - Quaternion variable
+     */
+    base::Quaterniond eulerToQuaternion(const base::Vector3d &eulerAngles);
 
 protected:
 
