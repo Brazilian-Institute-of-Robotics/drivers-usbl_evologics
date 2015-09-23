@@ -557,7 +557,7 @@ void Driver::GTES(void)
 }
 
 // Switch to COMMAND mode.
-void Driver::switch2CMDmode(void)
+void Driver::switchToCommandMode(void)
 {
     string command = "ATC";
     sendCommand(command);
@@ -566,7 +566,7 @@ void Driver::switch2CMDmode(void)
 }
 
 // Switch to DATA mode.
-void Driver::switch2DATAmode(void)
+void Driver::switchToDataMode(void)
 {
     string command = "AT0";
     sendCommand(command);
@@ -624,17 +624,14 @@ OperationMode Driver::getMode(void)
     return mode;
 }
 
+// Converts from euler angles to quaternions.
+// TODO need validation and test.
 base::Quaterniond Driver::eulerToQuaternion(const base::Vector3d &eulerAngles)
 {
-    base::Quaterniond quaternion;
+    base::Quaterniond quaternion =
+            Eigen::AngleAxisd(eulerAngles(2), Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(eulerAngles(1), Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(eulerAngles(0), Eigen::Vector3d::UnitX());
 
-    quaternion.w() = ( cos(eulerAngles(0)/2)*cos(eulerAngles(1)/2)*cos(eulerAngles(2)/2) ) +
-            ( sin(eulerAngles(0)/2)*sin(eulerAngles(1)/2)*sin(eulerAngles(2)/2) );
-    quaternion.x() = ( sin(eulerAngles(0)/2)*cos(eulerAngles(1)/2)*cos(eulerAngles(2)/2) ) -
-            ( cos(eulerAngles(0)/2)*sin(eulerAngles(1)/2)*sin(eulerAngles(2)/2) );
-    quaternion.y() = ( cos(eulerAngles(0)/2)*sin(eulerAngles(1)/2)*cos(eulerAngles(2)/2) ) +
-            ( sin(eulerAngles(0)/2)*cos(eulerAngles(1)/2)*sin(eulerAngles(2)/2) );
-    quaternion.z() = ( cos(eulerAngles(0)/2)*cos(eulerAngles(1)/2)*sin(eulerAngles(2)/2) ) -
-            ( sin(eulerAngles(0)/2)*sin(eulerAngles(1)/2)*cos(eulerAngles(2)/2) );
     return quaternion;
 }

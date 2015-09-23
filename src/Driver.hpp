@@ -125,13 +125,13 @@ public:
      *
      * No need for waiting time.
      */
-    void switch2CMDmode(void);
+    void switchToCommandMode(void);
 
     /** Switch to DATA mode.
      *
      * Doesn't require response.
      */
-    void switch2DATAmode(void);
+    void switchToDataMode(void);
 
     /* Reset device, drop data and/or instant message
      *
