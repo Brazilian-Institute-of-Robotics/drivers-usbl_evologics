@@ -145,9 +145,9 @@ public:
      *
      * Throw ParseError in case of failure.
      * @param buffer with Connection Status
-     * @return ConnectionStatus of underwater link
+     * @return Connection of underwater link
      */
-    ConnectionStatus parseConnectionStatus (string const &buffer);
+    Connection parseConnectionStatus (string const &buffer);
 
     /** Parse Delivery Status of a Message
      *

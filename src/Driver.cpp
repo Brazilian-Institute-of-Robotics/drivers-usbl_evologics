@@ -434,11 +434,13 @@ void Driver::modeManager(string const &command)
         sleep(1);
         // Receive answer in COMMAND mode.
         mode = COMMAND;
-        // switch to COMMAND mode after receive a OK answer
     }
     // Switch to COMMAND mode. Require OK response.
-//    else if(command.find("ATC")!=string::npos && mode == DATA)
-//    {    }
+    else if(command.find("ATC")!=string::npos && mode == DATA)
+    {
+        // Receive answer in COMMAND mode.
+        mode = COMMAND;
+    }
 }
 
 // Manage mode operation according command sent and response obtained.
@@ -452,15 +454,16 @@ void Driver::modeMsgManager(string const &command)
         //mode = DATA;
     }
     // Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
-    else if(command.find("+++")!=string::npos && mode != COMMAND)// && response == COMMAND_RECEIVED)
+    else if(command.find("+++")!=string::npos && mode != COMMAND)
     {
         // If there was a error, keep in DATA mode.
         mode = DATA;
     }
     // Switch to COMMAND mode. Require OK response.
-    else if(command.find("ATC")!=string::npos && mode == DATA)// && response == COMMAND_RECEIVED)
+    else if(command.find("ATC")!=string::npos && mode != COMMAND)
     {
-        mode = COMMAND;
+        // If there was a error, keep in DATA mode.
+        mode = DATA;
     }
 }
 
@@ -478,16 +481,27 @@ ReceiveIM Driver::receiveInstantMessage(string const &buffer)
     return usblParser.parseReceivedIM(buffer);
 }
 
-// TODO to be implemented
-// Get the newest pose of remote device.
-base::samples::RigidBodyState Driver::getNewPose(void)
+// Get the RigidBodyState pose of remote device.
+base::samples::RigidBodyState Driver::getPose(Position const &pose)
 {
     base::samples::RigidBodyState new_pose;
-    new_pose.position[0] = usbl_pose.x;
-    new_pose.position[1] = usbl_pose.y;
-    new_pose.position[2] = usbl_pose.z;
+    new_pose.time = pose.measurementTime;
+    new_pose.position[0] = pose.x;
+    new_pose.position[1] = pose.y;
+    new_pose.position[2] = pose.z;
+    base::Vector3d euler;
+    euler[0] = pose.roll;
+    euler[1] = pose.pitch;
+    euler[2] = pose.yaw;
+    new_pose.orientation = eulerToQuaternion(euler);
 
     return new_pose;
+}
+
+// Get the Position pose of remote device.
+Position Driver::getPose(string const &buffer)
+{
+    return usblParser.parsePosition(buffer);
 }
 
 // Get interface type.
@@ -503,7 +517,7 @@ void Driver::setInterface(InterfaceType	deviceInterface)
 }
 
 // Get Underwater Connection Status.
-ConnectionStatus Driver::getConnetionStatus(void)
+Connection Driver::getConnectionStatus(void)
 {
     string command = "AT?S";
     sendCommand(command);
@@ -527,6 +541,12 @@ DeliveryStatus Driver::getIMDeliveryStatus(void)
     return usblParser.parseDeliveryStatus(waitResponseString(command));
 }
 
+// Delivery report notification for Instant Message.
+bool Driver::getIMDeliveryReport(string const &buffer)
+{
+   return usblParser.parseIMReport(buffer);
+}
+
 // Switch to COMMAND mode.
 void Driver::GTES(void)
 {
@@ -534,4 +554,84 @@ void Driver::GTES(void)
     sendCommand(command);
     waitResponseOK(command);
     modeMsgManager(command);
+}
+
+// Switch to COMMAND mode.
+void Driver::switchToCommandMode(void)
+{
+    string command = "ATC";
+    sendCommand(command);
+    waitResponseOK(command);
+    modeMsgManager(command);
+}
+
+// Switch to DATA mode.
+void Driver::switchToDataMode(void)
+{
+    string command = "AT0";
+    sendCommand(command);
+    modeMsgManager(command);
+}
+
+// Reset device, drop data and/or instant message.
+void Driver::resetDevice(ResetType const &type)
+{
+    stringstream command;
+    command << "ATZ" << type;
+    sendCommand(command.str());
+    waitResponseOK(command.str());
+}
+
+// Pop out RawData from queueRawData.
+std::string Driver::getRawData(void)
+{
+    if(!queueRawData.empty())
+    {
+        std::string ret = queueRawData.front();
+        queueRawData.pop();
+        return ret;
+    }
+    throw runtime_error("Driver.cpp getRawData: queueRawData is empty.");
+}
+
+// verify if queueRawData has raw data.
+bool Driver::hasRawData(void)
+{
+    return !queueRawData.empty();
+}
+
+// Pop out Notification from queueNotification.
+NotificationInfo Driver::getNotification(void)
+{
+    if(!queueNotification.empty())
+    {
+        NotificationInfo ret = queueNotification.front();
+        queueNotification.pop();
+        return ret;
+    }
+    throw runtime_error("Driver.cpp getNotification: queuenNotification is empty.");
+}
+
+// verify if queueNotification has any notification.
+bool Driver::hasNotification(void)
+{
+    return !queueNotification.empty();
+}
+
+// Get mode of operation.
+OperationMode Driver::getMode(void)
+{
+    return mode;
+}
+
+// Converts from euler angles to quaternions.
+// TODO need validation and test.
+base::Quaterniond Driver::eulerToQuaternion(const base::Vector3d &eulerAngles)
+{
+    base::Quaterniond quaternion =
+            Eigen::AngleAxisd(eulerAngles(2), Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(eulerAngles(1), Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(eulerAngles(0), Eigen::Vector3d::UnitX());
+
+    return quaternion;
 }
