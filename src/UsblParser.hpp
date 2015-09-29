@@ -5,6 +5,7 @@
 #include "DriverTypes.hpp"
 #include <string.h>
 #include <iostream>
+
 using namespace std;
 namespace usbl_evologics
 {
@@ -18,7 +19,7 @@ private:
      * @param parts of splitted buffer.
      * @return vector of string with parts size.
      */
-    vector<string> splitValidate(string const &buffer, const char* symbol, size_t const parts);
+    vector<string> splitValidate(string const &buffer,  const char* symbol, size_t const parts);
 
 public:
     UsblParser();
@@ -141,21 +142,45 @@ public:
      */
     int getNumber(string const &buffer);
 
-    /** Parse Connection Status of underwater link.
+    /** Get the double from a response buffer in COMMAND mode.
+     *
+     * Throw ou_of_range in case of failure.
+     * @param buffer with floating point number as response.
+     * @return double number.
+     */
+    double getDouble(string const &buffer);
+
+    /** Parse AcousticConnection Status of underwater link.
      *
      * Throw ParseError in case of failure.
      * @param buffer with Connection Status
-     * @return Connection of underwater link
+     * @return AcousticConnection of underwater link
      */
-    Connection parseConnectionStatus (string const &buffer);
+    AcousticConnection parseConnectionStatus (string const &buffer);
 
-    /** Parse Delivery Status of a Message
+    /** Parse Delivery Status of a Message.
      *
      * Throw ParseError in case of failure.
      * @param buffer with Delivery Status.
      * @return DeleviryStatus.
      */
     DeliveryStatus parseDeliveryStatus (string const &buffer);
+
+    /** Parse current settings.
+     *
+     * Throw ParseError in case of failure.
+     * @param buffer with list of current device settings.
+     * @return
+     */
+    DeviceSettings parseCurrentSettings (string const &buffer);
+
+    /** Parse Multipath structure
+     *
+     * @param buffer with list of last received acoustic signal's propagation.
+     * @return vector of Multipath.
+     */
+    vector<MultiPath> parseMultipath (string const &buffer);
+
 
 };
 }

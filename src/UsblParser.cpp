@@ -257,8 +257,12 @@ bool UsblParser::parseIMReport(string const &buffer)
 vector<string> UsblParser::splitValidate(string const& buffer, const char* symbol, size_t const parts)
 {
     vector<string> splitted;
+    splitted.clear();
     //    cout << "splitValidate "<< parts << endl;
-    boost::split( splitted, buffer, boost::algorithm::is_any_of( symbol ) );
+    boost::split( splitted, buffer, boost::is_any_of( symbol ), boost::token_compress_on );
+//    boost::split_regex( splitted, buffer, boost::regex( symbol ) );
+    for (int j=0; j<splitted.size(); j++)
+        cout << "parts: "<< splitted.at(j) << endl;
     //    cout << splitted.size() << endl;
     if (splitted.size() != parts)
         throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + buffer + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
@@ -314,10 +318,19 @@ int UsblParser::getNumber(string const &buffer)
     return value;
 }
 
-// Parse Connection Status of underwater link.
-Connection UsblParser::parseConnectionStatus (string const &buffer)
+// Get the double from a response buffer in COMMAND mode.
+double UsblParser::getDouble(string const &buffer)
 {
-    Connection connection;
+    string buffer_tmp = buffer;
+    boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
+    std::string::size_type sz;     // alias of size_t
+    return stod(buffer_tmp, &sz);
+}
+
+// Parse AcousticConnection Status of underwater link.
+AcousticConnection UsblParser::parseConnectionStatus (string const &buffer)
+{
+    AcousticConnection connection;
     connection.time = base::Time::now();
     if (buffer.find("OFFLINE")!= string::npos)
     {
@@ -376,3 +389,118 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
     throw ParseError("UsblParser.cpp parseDeliveryStatus. Waiting for Delivery Status but read \"" + buffer + "\"");
 }
 
+// Parse current settings.
+DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
+{
+    DeviceSettings settings;
+    settings.time = base::Time::now();
+    vector<string> splitted;
+    boost::split( splitted, buffer, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
+    // Remove last empty string from vector
+    splitted.pop_back();
+
+    for( int i=0; i < splitted.size(); i++ )
+    {
+        vector<string> splitted2 = splitValidate(splitted.at(i), ":", 2);
+        if(splitted2.at(0).find("Source Level Control") != string::npos)
+        {
+            if(atoi(splitted2.at(1).c_str()) == 0)
+                settings.sourceLevelControl = false;
+            else
+                settings.sourceLevelControl = true;
+        }
+        else if(splitted2.at(0).find("Source Level") != string::npos)
+            settings.sourceLevel = (SourceLevel) atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Gain") != string::npos)
+        {
+            if(atoi(splitted2.at(1).c_str()) == 0)
+                settings.lowGain = false;
+            else
+                settings.lowGain = true;
+        }
+        else if(splitted2.at(0).find("Carrier Waveform ID") != string::npos)
+            settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Local Address") != string::npos)
+            settings.localAddress = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Cluster Size") != string::npos)
+            settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Highest Address") != string::npos)
+            settings.highestAddress = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Cluster Size") != string::npos)
+            settings.clusterSize = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Packet Time") != string::npos)
+            settings.packetTime = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Retry Timeout") != string::npos)
+            settings.retryTimeout = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Wake Up Active Time") != string::npos)
+            settings.wuActiveTime = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Wake Up Period") != string::npos)
+            settings.wuPeriod = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Promiscuous Mode") != string::npos)
+        {
+            if(atoi(splitted2.at(1).c_str()) == 0)
+                settings.promiscuosMode = false;
+            else
+                settings.promiscuosMode = true;
+        }
+        else if(splitted2.at(0).find("Sound Speed") != string::npos)
+            settings.speedSound = atoi(splitted2.at(1).c_str());
+        // "Rerty". That is exactly what BIR's usbl send.
+        else if(splitted2.at(0).find("IM Rerty Count") != string::npos)
+            settings.imRetry = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Retry Count") != string::npos)
+            settings.packetTime = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Idle Timeout") != string::npos)
+            settings.idleTimeout = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Hold Timeout") != string::npos)
+            settings.wuHoldTimeout = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0).find("Pool Size") != string::npos)
+        {
+            // Get values for each channels available
+            vector<string> splitted3;
+            boost::split( splitted3, splitted2.at(1), boost::algorithm::is_any_of( " " ) );
+            settings.poolSize.clear();
+            for(int i=0; i<splitted3.size(); i++)
+            {
+                if(isdigit(splitted3.at(i)[0]))
+                    settings.poolSize.push_back(atoi(splitted3.at(i).c_str()));
+            }
+        }
+        else if(splitted2.at(0).find("Drop Counter") != string::npos)
+        {
+            // Get values for each channels available
+            vector<string> splitted3;
+            boost::split( splitted3, splitted2.at(1), boost::algorithm::is_any_of( " " ) );
+            settings.dropCount.clear();
+            for(int i=0; i<splitted3.size(); i++)
+            {
+                if(isdigit(splitted3.at(i)[0]))
+                    settings.dropCount.push_back(atoi(splitted3.at(i).c_str()));
+            }
+        }
+        else if(splitted2.at(0).find("Overflow Counter") != string::npos)
+        {
+            // Get values for each channels available
+            vector<string> splitted3;
+            boost::split( splitted3, splitted2.at(1), boost::algorithm::is_any_of( " " ) );
+            settings.overflowCounter.clear();
+            for(int i=0; i<splitted3.size(); i++)
+            {
+                if(isdigit(splitted3.at(i)[0]))
+                    settings.overflowCounter.push_back(atoi(splitted3.at(i).c_str()));
+            }
+        }
+        else
+            throw ParseError("UsblParser.cpp parseCurrentSettings. Waiting for attribute to set but read \"" + splitted2.at(0) + "\" in buffer \"" + buffer +"\"");
+    }
+    return settings;
+}
+
+// Parse Multipath structure
+// TODO need implementation
+vector<MultiPath> UsblParser::parseMultipath (string const &buffer)
+{
+    vector<MultiPath> multipath;
+
+    return multipath;
+}
