@@ -207,7 +207,7 @@ struct VersionNumbers
     // Physical and data-layer protocol versions
     std::string accousticVersion;
     // Device manufacturer
-    std::string apiVersion;
+    std::string manufacturer;
 };
 
 /**  Configuration for acoustic connection
@@ -239,7 +239,7 @@ struct StatusRequest
 /** Connection status of acoustic link
  *
  */
-struct Connection
+struct AcousticConnection
 {
     base::Time time;
 
@@ -248,6 +248,7 @@ struct Connection
 
     // Free transmission buffer space (in bytes)
     std::vector<int> freeBuffer;
+
 };
 
 /** Major device settings
@@ -265,12 +266,12 @@ struct DeviceSettings
     SourceLevel sourceLevel;
 
     // True: local sourceLevel can be changed by remote device.
-    //		  Matching of sourceLevel during connection.
-    // False: local sourceLevel cannot be changed by remote device.
+    //		  Matching of sourceLevel during connection. 1
+    // False: local sourceLevel cannot be changed by remote device. 0
     bool sourceLevelControl;
 
-    // True: low gain, reduced sensitivity. For short distance and test
-    // False: Normal gain, high sensitivity
+    // True: low gain, reduced sensitivity. For short distance and test. 1
+    // False: Normal gain, high sensitivity. 0
     bool lowGain;
 
     // Devices can just establish a connection with specific carrier Waveform ID combinations
@@ -284,7 +285,7 @@ struct DeviceSettings
     // The Address of the remote device to transmit BurstData or Instant Messages.
     // If the Remote Address is 0 the device accepts every connection request, but can not initiate a connection.
     // remoteAddress of local device must match localAddress of remote device.
-    int remoteAddress;
+//    int remoteAddress;
 
     // Define limits of devices in the network
     // Values: 2, 6, 14, 30, 62, 126, 254
@@ -308,7 +309,7 @@ struct DeviceSettings
 
     // Number of message that keep connection. Above that value, the connection is closed.
     // If set to 0, connection will remain online
-    int keepOnline;
+//    int keepOnline;
 
     // The timeout before closing an idle acoustic connection
     // 0-3600 s
@@ -317,14 +318,14 @@ struct DeviceSettings
     // Channel of current input-output interface
     // Data transferring among different channel is impossible.
     // 0..7
-    int currentChannel;
+//    int currentChannel;
 
     // Time (s) since the device is powered on
     // Can be synchronized by NTP. Need check
-    base::Time systemTime;
+//    base::Time systemTime;
 
     // System Clock. Reset whem physical layer hardware of device is turned off
-    base::Time clock;
+//    base::Time clock;
 
     // Speed of sound 1300-1700 m/s
     int speedSound;
@@ -332,16 +333,10 @@ struct DeviceSettings
     // Instant Message retry 0-255. 255 = retry indefinitely
     int imRetry;
 
-    // True: Local device will only accept message addressed to it
-    // False: Receive message addressed to any device on network
+    // False: Local device will only accept message addressed to it. 0
+    // True: Receive message addressed to any device on network. 1
     bool promiscuosMode;
-};
 
-/** Wake-up settings
- *
- */
-struct WakeUpSettings
-{
     // Wake Up active time.
     // 0..3600 (s)
     int wuActiveTime;
@@ -354,46 +349,80 @@ struct WakeUpSettings
     // 0..3600 (s)
     int wuHoldTimeout;
 
-    // Awake Remote Mode
-    // Local device awake a remote device in wake-up module
-    // True: Try to awake
-    bool awake;
+    // Transmission buffer size (bytes) per channel.
+    // 8096.. 2097152
+    std::vector<int> poolSize;
 
-    // Remote Active Time
-    // Set in order to cover wuActiveTime of remote device
-    // 0..3600 (s)
-    int awakeTime;
+    // Dropped data from transmission buffer (bytes) per channel.
+    // Set 0 for reset counter;
+    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
+    std::vector<int> dropCount;
+
+    // Current Overflow count of the channel per channel.
+    // Set 0 for reset counter;
+    std::vector<int> overflowCounter;
+
+
+
 };
+
+/** Wake-up settings
+ *
+ */
+//struct WakeUpSettings
+//{
+//    // Wake Up active time.
+//    // 0..3600 (s)
+//    int wuActiveTime;
+//
+//    // Wake Up period
+//    // 0..3600 (s)
+//    int wuPeriod;
+//
+//    // Wake Up hold timeout
+//    // 0..3600 (s)
+//    int wuHoldTimeout;
+//
+//    // Awake Remote Mode
+//    // Local device awake a remote device in wake-up module
+//    // True: Try to awake
+//    bool awake;
+//
+//    // Remote Active Time
+//    // Set in order to cover wuActiveTime of remote device
+//    // 0..3600 (s)
+//    int awakeTime;
+//};
 
 /** Data Channel settings
  *
  */
-struct DataChannel
-{
-    // Channel of current input-output interface
-    // Data transferring among different channel is impossible.
-    // 0..7
-    int channelNumber;
-
-    // Transmission buffer size (bytes)
-    // 8096.. 2097152
-    int poolSize;
-
-    // Dropped data from transmission buffer (bytes)
-    // Cases: 1)ResetType; 2)idleTimeout; transmission to remoteAddress 0
-    int dropCount;
-
-    // Current Overflow count of the channel.
-    int overflowCounter;
-
-    // TRUE: generate pose for every Instant Message
-    bool poseEnable;
-
-    // TRUE: enables extended notification. Extra set of informations. Default FALSE
-    bool extendedControl;
-
-    base::Time time;
-};
+//struct DataChannel
+//{
+//    // Channel of current input-output interface
+//    // Data transferring among different channel is impossible.
+//    // 0..7
+//    int channelNumber;
+//
+//    // Transmission buffer size (bytes)
+//    // 8096.. 2097152
+//    int poolSize;
+//
+//    // Dropped data from transmission buffer (bytes)
+//    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
+//    int dropCount;
+//
+//    // Current Overflow count of the channel.
+//    int overflowCounter;
+//
+//    // TRUE: generate pose for every Instant Message
+//    bool poseEnable;
+//
+//    // TRUE: enables extended notification. Extra set of informations. Default FALSE
+//    bool extendedControl;
+//
+//    base::Time time;
+//};
 
 /** Multipath propagation of acoustic signal, from transmitter to receiver.
  *
@@ -427,7 +456,7 @@ struct AcousticChannel
 
     // Signal integrity represent distortions of signal.
     // Weak connection of integrityLevel < 100.
-    double signalIntegrity;
+    int signalIntegrity;
 
     // Propagation time between devices. Delay (im ms)
     int propagationTime;

@@ -29,9 +29,9 @@ void Driver::sendCommand(string const &command)
 }
 
 // Send raw data to remote device.
-void Driver::sendRawData(string const &raw_data)
+void Driver::sendRawData(vector<uint8_t> const &raw_data)
 {
-    iodrivers_base::Driver::writePacket(reinterpret_cast<const uint8_t*>(raw_data.c_str()), raw_data.length());
+    iodrivers_base::Driver::writePacket(raw_data.data(), raw_data.size());
 }
 
 // Filled command string to be sent to device.
@@ -233,7 +233,7 @@ ResponseInfo Driver::readResponse(void)
         response_info.buffer = buffer_as_string;
         return response_info;
     }
-    // If data is neither notification or response, it's raw data. Enqueue it.
+    // If data is neither notification or response, it's raw data.
     queueRawData.push(buffer_as_string);
     return response_info;
 }
@@ -292,6 +292,12 @@ void Driver::waitResponseOK(string const &command)
 int Driver::waitResponseInt(string const &command)
 {
     return usblParser.getNumber(waitResponseString(command));
+}
+
+// Wait for a floating point response.
+double Driver::waitResponseDouble(string const &command)
+{
+    return usblParser.getDouble(waitResponseString(command));
 }
 
 // Wait for string response.
@@ -517,7 +523,7 @@ void Driver::setInterface(InterfaceType	deviceInterface)
 }
 
 // Get Underwater Connection Status.
-Connection Driver::getConnectionStatus(void)
+AcousticConnection Driver::getConnectionStatus(void)
 {
     string command = "AT?S";
     sendCommand(command);
@@ -526,11 +532,11 @@ Connection Driver::getConnectionStatus(void)
 
 // TODO parse input.
 // Get Current Setting parameters.
-void Driver::getCurrentSetting(void)
+DeviceSettings Driver::getCurrentSetting(void)
 {
     string command = "AT&V";
     sendCommand(command);
-    string response = waitResponseString(command);
+    return usblParser.parseCurrentSettings(waitResponseString(command));
 }
 
 // get Instant Message Delivery status.
@@ -583,11 +589,11 @@ void Driver::resetDevice(ResetType const &type)
 }
 
 // Pop out RawData from queueRawData.
-std::string Driver::getRawData(void)
+std::vector<uint8_t> Driver::getRawData(void)
 {
     if(!queueRawData.empty())
     {
-        std::string ret = queueRawData.front();
+        std::vector<uint8_t> ret(queueRawData.front().begin(), queueRawData.front().end());
         queueRawData.pop();
         return ret;
     }
@@ -635,3 +641,273 @@ base::Quaterniond Driver::eulerToQuaternion(const base::Vector3d &eulerAngles)
 
     return quaternion;
 }
+
+// Set the specific carrier Waveform ID.
+void Driver::setCarrierWaveformID(int value)
+{
+    string command = "AT!C";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set number of packets in one train.
+void Driver::setClusterSize(int value)
+{
+    string command = "AT!ZC";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Define limits of devices in the network.
+void Driver::setHighestAddress(int value)
+{
+    string command = "AT!AM";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// The timeout before closing an idle acoustic connection.
+void Driver::setIdleTimeout(int value)
+{
+    string command = "AT!ZI";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Instant Message retry
+void Driver::setIMRetry(int value)
+{
+    string command = "AT!RI";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Address of local device
+void Driver::setLocalAddress(int value)
+{
+    string command = "AT!AL";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set input amplifier gain
+void Driver::setLowGain(bool low_gain)
+{
+    string command = "AT!G";
+    if(low_gain)
+        command.append(to_string(1));
+    else
+        command.append(to_string(0));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set maximum duration of a data packet.
+void Driver::setPacketTime(int value)
+{
+    string command = "AT!ZP";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set if device will receive instant message addressed to others devices
+void Driver::setPromiscuosMode(bool promiscuos_mode)
+{
+    string command = "AT!RP";
+    if(promiscuos_mode)
+        command.append(to_string(1));
+    else
+        command.append(to_string(0));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set number of connection establishment retries.
+void Driver::setRetryCount(int value)
+{
+    string command = "AT!RC";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set time of wait for establish an acoustic connection
+void Driver::setRetryTimeout(int value)
+{
+    string command = "AT!RT";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set Source Level
+void Driver::setSourceLevel(SourceLevel source_level)
+{
+    string command = "AT!L";
+    command.append(to_string((int)source_level));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set if source level of local device can be changed remotely over a acoustic connection.
+void Driver::setSourceLevelcontrol(bool source_level_control)
+{
+    string command = "AT!LC";
+    if(source_level_control)
+        command.append(to_string(1));
+    else
+        command.append(to_string(0));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set speed of sound on water
+void Driver::setSpeedSound(int value)
+{
+    string command = "AT!CA";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set active interval of acoustic channel monitoring.
+void Driver::setWakeUpActiveTime(int value)
+{
+    string command = "AT!DA";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set hold timeout after completed data transmission.
+void Driver::setWakeUpHoldTimeout(int value)
+{
+    string command = "AT!ZH";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set period of the acoustic channel monitoring cycle.
+void Driver::setWakeUpPeriod(int value)
+{
+    string command = "AT!DT";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set transmission buffer size of actual data channel.
+void Driver::setPoolSize(int value)
+{
+    resetDevice(SEND_BUFFER);
+    string command = "AT@ZL";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Reset Drop Counter.
+void Driver::resetDropCounter(void)
+{
+    string command = "AT@ZD";
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Reset Overflow Counter.
+void Driver::resetOverflowCounter(void)
+{
+    string command = "AT@ZO";
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Get firmware information of device.
+VersionNumbers Driver::getFirmwareInformation(void)
+{
+    VersionNumbers info;
+    string command = "ATI";
+    stringstream ss;
+
+    ss << command << VERSION_NUMBER;
+    sendCommand(ss.str());
+    info.firmwareVersion = waitResponseString(ss.str());
+    ss.clear();
+
+    ss << command << PHY_MAC;
+    sendCommand(ss.str());
+    info.accousticVersion = waitResponseString(ss.str());
+    ss.clear();
+
+    ss << command << MANUFACTURER;
+    sendCommand(ss.str());
+    info.manufacturer = waitResponseString(ss.str());
+    ss.clear();
+
+    return info;
+}
+
+// Get last transmission's raw bitrate value of local-to-remote direction.
+int Driver::getLocalToRemoteBitrate(void)
+{
+    string command = "AT?BL";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get last transmission's raw bitrate value of remote-to-local direction.
+int Driver::getRemoteToLocalBitrate(void)
+{
+    string command = "AT?BR";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get Received Signal Strength Indicator.
+double Driver::getRSSI(void)
+{
+    string command = "AT?E";
+    sendCommand(command);
+    return waitResponseDouble(command);
+}
+
+// Get Signal Integrity.
+int Driver::getSignalIntegrity(void)
+{
+    string command = "AT?I";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get acoustic signal's propagation time between communicating devices.
+int Driver::getPropagationTime(void)
+{
+    string command = "AT?T";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get relative velocity between communicating devices.
+double Driver::getRelativeVelocity(void)
+{
+    string command = "AT?V";
+    sendCommand(command);
+    return waitResponseDouble(command);
+}
+
+// Get Multipath propagation structure.
+std::vector<MultiPath> Driver::getMultipath(void)
+{
+    string command = "AT?P";
+    sendCommand(command);
+    return usblParser.parseMultipath(waitResponseString(command));
+}
+

@@ -48,7 +48,7 @@ public:
      * @param raw_data string to be sent to remote device.
      *
      */
-    void sendRawData(string const &raw_data);
+    void sendRawData(vector<uint8_t> const &raw_data);
 
     /** Read response from device.
      *
@@ -79,6 +79,13 @@ public:
      */
     int waitResponseInt(string const &command);
 
+    /** Wait for a floating point response.
+     *
+     * @param command sent to device.
+     * @return double requested.
+     */
+    double waitResponseDouble(string const &command);
+
     /** Wait for string response.
      *
      * @param command sent to device.
@@ -90,13 +97,13 @@ public:
      *
      * @return connection status
      */
-    Connection getConnectionStatus(void);
+    AcousticConnection getConnectionStatus(void);
 
     /** Get Current Setting parameters.
      *
      * TODO Parse values.
      */
-    void getCurrentSetting(void);
+    DeviceSettings getCurrentSetting(void);
 
     /** get Instant Message Delivery status.
      *
@@ -197,7 +204,7 @@ public:
      *
      *  @return string of raw data
      */
-    std::string getRawData(void);
+    std::vector<uint8_t> getRawData(void);
 
     /** verify if queueRawData has raw data.
      *
@@ -224,6 +231,214 @@ public:
     */
    OperationMode getMode(void);
 
+   /** Set the specific carrier Waveform ID
+    *
+    * Devices can just establish a connection with specific carrier Waveform ID combinations
+    * The combinations are 0-1 and 2-2.
+    * It's recommended to use 0-1 for a two devices connection and 2-2 for networking.
+    *  @param value of carrier waveform
+    */
+   void setCarrierWaveformID(int value);
+
+   /** Set number of packets in one train.
+    *
+    * It's recommended to use a cluster size less then 10 for moving objects.
+    * For stationary you can use a cluster size up to 32.
+    * @param value
+    */
+   void setClusterSize(int value);
+
+   /** Set limits of devices in the network.
+    *
+    * @param value: 2, 6, 14, 30, 62, 126, 254
+    */
+   void setHighestAddress(int value);
+
+   /** Set timeout before closing an idle acoustic connection
+    *
+    * @param value in seconds (0-3600 s)
+    */
+   void setIdleTimeout(int value);
+
+   /** Set Instant Message retry count
+    *
+    * Range 0-255. 255 = retry indefinitely
+    * @param value
+    */
+   void setIMRetry(int value);
+
+   /** Set address of local device
+    *
+    * 1-highest_address
+    * @param value
+    */
+   void setLocalAddress(int value);
+
+   /** Set input amplifier gain
+    *
+    * Low gain recommended for short-distance communication or test.
+    * TRUE low gain applied.
+    * FALSE normal gain applied.
+    * @param low_gain
+    */
+   void setLowGain(bool low_gain);
+
+   /** Set maximum duration of a data packet.
+    *
+    * Packet Time MUST be equal for all devices.
+    * Range 50..1000 (in ms).
+    * Short values are recommend for challenging hydroacoustic channels.
+    * @param value maximum duration of a data packet.
+    */
+   void setPacketTime(int value);
+
+   /** Set if device will receive instant message addressed to others devices.
+    *
+    *  FALSE: Local device will only accept message addressed to it. 0
+    *  TRUE: Receive message addressed to any device on network. 1
+    *  @param promiscuos_mode
+    */
+   void setPromiscuosMode(bool promiscuos_mode);
+
+   /** Set number of connection establishment retries.
+    *
+    * @param value number of connection retries
+    */
+   void setRetryCount(int value);
+
+   /** Set time of wait for establish an acoustic connection
+    *
+    * retry timeout should exceed the round-trip time that corresponds to the device's
+    * maximum operation range.
+    * Range 500..12000 (in ms)
+    * @param value in ms
+    */
+   void setRetryTimeout(int value);
+
+   /** Set Source Level
+    *
+    * Defines Sound Pressure Level (SPL)
+    * @param source_level
+    */
+   void setSourceLevel(SourceLevel source_level);
+
+   /** Set if source level of local device can be changed remotely over a acoustic connection.
+    *
+    * TRUE: local sourceLevel can be changed by remote device.
+    * Automatically change for source level of remote device during connection. 1
+    * FALSE: local sourceLevel cannot be changed by remote device. 0
+    * @param source_level_control
+    */
+   void setSourceLevelcontrol(bool source_level_control);
+
+   /** Set speed of sound on water
+    *
+    * Range 1300..1700 m/s
+    * @param value in m/s
+    */
+   void setSpeedSound(int value);
+
+   /** Set active interval of acoustic channel monitoring.
+    *
+    * Command effect only on devices with the Wake Up Module installed.
+    * Range: 0..3600 (in s)
+    * NOTE: MUST be less than the total duration of the Wake Up cycle.
+    * @param value in s
+    */
+   void setWakeUpActiveTime(int value);
+
+   /** Set hold timeout after completed data transmission.
+    *
+    * Command effect only on devices with the Wake Up Module installed.
+    * Range: 0..3600 (in s)
+    * @param value in s
+    */
+   void setWakeUpHoldTimeout(int value);
+
+   /** Set period of the acoustic channel monitoring cycle.
+    *
+    * Comprises an active interval and an idle interval.
+    * Command effect only on devices with the Wake Up Module installed.
+    * Range: 0..3600 (in s)
+    * @param value in s
+    */
+   void setWakeUpPeriod(int value);
+
+   /** Set transmission buffer size of actual data channel.
+    *
+    *  Before changing buffer size, the buffer will empty.
+    *  Range: 8096..2097152
+    *  @param value bufer size in bytes
+    */
+   void setPoolSize(int value);
+
+   /** Reset Drop Counter.
+    *
+    */
+   void resetDropCounter(void);
+
+   /** Reset Overflow Counter.
+    *
+    */
+   void resetOverflowCounter(void);
+
+   /** Get firmware information of device.
+    *
+    * @return VersionNumbers
+    */
+   VersionNumbers getFirmwareInformation(void);
+
+   /** Get last transmission's raw bitrate value of local-to-remote direction.
+    *
+    * Include both useful data (raw data) and the protocol overhead.
+    * @return bitrate in bits per second.
+    */
+   int getLocalToRemoteBitrate(void);
+
+   /** Get last transmission's raw bitrate value of remote-to-local direction.
+    *
+    * Include both useful data (raw data) and the protocol overhead.
+    * @return bitrate in bits per second.
+    */
+   int getRemoteToLocalBitrate(void);
+
+   /** Get Received Signal Strength Indicator.
+    *
+    * Indicates the received signal level in dB re 1 V and represents the relative received signal strength.
+    * Higher RSSI values correspond to stronger signals.
+    * Signal strength is acceptable when measured RSSI values lie between -20dB and -85dB.
+    * In NOISE state, return RMS of the noise. RSSI of communication should exceeds the noise by 6dB.
+    * @return rssi in dB.
+    */
+   double getRSSI(void);
+
+   /** Get Signal Integrity.
+    *
+    * Illustrate distortion of last acoustic signal.
+    * High Signal Integrity Level values correspond to less distortion signals.
+    * An acoustic link is weak if value is less than 100.
+    * @return signal integrity level.
+    */
+   int getSignalIntegrity(void);
+
+   /** Get acoustic signal's propagation time between communicating devices.
+    *
+    * @return propagation time in ms
+    */
+   int getPropagationTime(void);
+
+   /** Get relative velocity between communicating devices.
+    *
+    * @return relative velocity in m/s
+    */
+   double getRelativeVelocity(void);
+
+   /** Get Multipath propagation structure.
+    *
+    * @return Multipath components
+    */
+   std::vector<MultiPath> getMultipath(void);
+
 private:
     UsblParser	usblParser;
 
@@ -237,7 +452,6 @@ private:
     VersionNumbers device;
     StatusRequest device_status;
     DeviceSettings device_settings;
-    DataChannel channel;
     AcousticChannel acoustic_channel;
 
     /**
