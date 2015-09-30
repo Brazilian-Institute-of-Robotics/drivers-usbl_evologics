@@ -258,12 +258,9 @@ vector<string> UsblParser::splitValidate(string const& buffer, const char* symbo
 {
     vector<string> splitted;
     splitted.clear();
-    //    cout << "splitValidate "<< parts << endl;
     boost::split( splitted, buffer, boost::is_any_of( symbol ), boost::token_compress_on );
-//    boost::split_regex( splitted, buffer, boost::regex( symbol ) );
     for (int j=0; j<splitted.size(); j++)
         cout << "parts: "<< splitted.at(j) << endl;
-    //    cout << splitted.size() << endl;
     if (splitted.size() != parts)
         throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + buffer + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
     return splitted;
@@ -466,30 +463,6 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
                     settings.poolSize.push_back(atoi(splitted3.at(i).c_str()));
             }
         }
-        else if(splitted2.at(0).find("Drop Counter") != string::npos)
-        {
-            // Get values for each channels available
-            vector<string> splitted3;
-            boost::split( splitted3, splitted2.at(1), boost::algorithm::is_any_of( " " ) );
-            settings.dropCount.clear();
-            for(int i=0; i<splitted3.size(); i++)
-            {
-                if(isdigit(splitted3.at(i)[0]))
-                    settings.dropCount.push_back(atoi(splitted3.at(i).c_str()));
-            }
-        }
-        else if(splitted2.at(0).find("Overflow Counter") != string::npos)
-        {
-            // Get values for each channels available
-            vector<string> splitted3;
-            boost::split( splitted3, splitted2.at(1), boost::algorithm::is_any_of( " " ) );
-            settings.overflowCounter.clear();
-            for(int i=0; i<splitted3.size(); i++)
-            {
-                if(isdigit(splitted3.at(i)[0]))
-                    settings.overflowCounter.push_back(atoi(splitted3.at(i).c_str()));
-            }
-        }
         else
             throw ParseError("UsblParser.cpp parseCurrentSettings. Waiting for attribute to set but read \"" + splitted2.at(0) + "\" in buffer \"" + buffer +"\"");
     }
@@ -500,7 +473,27 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
 // TODO need implementation
 vector<MultiPath> UsblParser::parseMultipath (string const &buffer)
 {
-    vector<MultiPath> multipath;
+    vector<MultiPath> vec_multipath;
+    // Ignore last "\n\r\n" from buffer.
+    vector<string> splitted = splitValidate(buffer.substr(0,buffer.size()-3), "\n", 8);
 
-    return multipath;
+    for( int i=0; i < splitted.size(); i++ )
+    {
+        string msg = splitted.at(i);
+        string::size_type npos = string::npos;
+        // Find first value
+        if ((npos = msg.find_first_of("0123456789")) != string::npos)
+        {
+            MultiPath multipath;
+            multipath.timeline = atoi(msg.c_str());
+            // Find separator
+            if ((npos = msg.find(" ")) != string::npos)
+                msg = msg.substr(npos+1, msg.size()-npos);
+            // Look for second value
+            if ((npos = msg.find_first_of("0123456789")) != string::npos)
+                multipath.signalIntegrity = atoi(msg.c_str());
+            vec_multipath.push_back(multipath);
+        }
+    }
+    return vec_multipath;
 }

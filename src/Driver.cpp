@@ -275,8 +275,9 @@ string Driver::waitResponse(string const &command, CommandResponse expected)
         throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
     // In DATA mode, validate response and return content without header.
     if(mode == DATA)
-    {
-        validResponse(response_info.buffer, command);
+    {   // Buffer validation of indicated length was displaced for extract packet.
+        // No need to do it here again.
+//        validResponse(response_info.buffer, command);
         return usblParser.getAnswerContent(response_info.buffer);
     }
     return response_info.buffer;
@@ -336,8 +337,10 @@ Notification Driver::isNotification(string const &buffer)
     Notification notification = usblParser.findNotification(buffer);
     if(notification != NO_NOTIFICATION)
     {
-        if(mode == DATA)
-            validNotification(buffer);
+        // Buffer validation of indicated length was displaced for extract packet.
+        // No need to do it here again.
+//        if(mode == DATA)
+//            validNotification(buffer);
         fullValidation(buffer, notification);
     }
     return notification;
@@ -385,43 +388,6 @@ void Driver::validResponse(string const &buffer, string const &command)
         stringstream error_string;
         error_string << "USBL Driver.cpp validResponse: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<flush;
         throw ModeError(error_string.str());
-    }
-}
-
-// // TODO. Check the best way to interpreted every kind of notification and what it should return.
-// Interpret notification.
-void Driver::interpretNotification(string const& buffer, Notification const &notification)
-{
-    switch (notification) {
-    case USBLLONG:
-        usbl_pose = usblParser.parsePosition(buffer);
-        break;
-    case USBLANGLE:
-        throw DeviceError("NOT POSSIBLE TO GET POSE. USBANGLE NOT IMPLEMENTED");
-        break;
-    case RECVIM:
-        receiveIM = usblParser.parseReceivedIM(buffer);
-        break;
-    case RECVIMS:
-        //usblParser.parseReceivedIMS();
-        throw DeviceError("NEW Synchronous IM. Not implemented");
-        break;
-    case RECVPBM:
-        //usblParser.parseReceivedPBM();
-        throw DeviceError("NEW PiggyBack M. Not implemented");
-        break;
-    case DELIVERY_REPORT:
-        usblParser.parseIMReport(buffer);
-        break;
-    case CANCELED_IM:
-        usblParser.parseIMReport(buffer);
-        break;
-    case EXTRA_NOTIFICATION:
-        throw DeviceError("Extra Notification. Not implemented");
-        break;
-    case NO_NOTIFICATION:
-        throw DeviceError("NO Notification. Not implemented");
-        break;
     }
 }
 
@@ -479,6 +445,12 @@ void Driver::sendInstantMessage(SendIM const &im)
     string command = usblParser.parseSendIM(im);
     sendCommand(command);
     waitResponseOK(command);
+}
+
+// Get Instant Message parsed as string
+string Driver::getStringOfIM(SendIM const &im)
+{
+    return fillCommand(usblParser.parseSendIM(im));
 }
 
 // Parse a received Instant Message.
@@ -840,17 +812,20 @@ VersionNumbers Driver::getFirmwareInformation(void)
     ss << command << VERSION_NUMBER;
     sendCommand(ss.str());
     info.firmwareVersion = waitResponseString(ss.str());
-    ss.clear();
+    // clean buffer
+    ss.str(string());
 
     ss << command << PHY_MAC;
     sendCommand(ss.str());
     info.accousticVersion = waitResponseString(ss.str());
-    ss.clear();
+    // clean buffer
+    ss.str(string());
 
     ss << command << MANUFACTURER;
     sendCommand(ss.str());
     info.manufacturer = waitResponseString(ss.str());
-    ss.clear();
+    // clean buffer
+    ss.str(string());
 
     return info;
 }
@@ -911,3 +886,26 @@ std::vector<MultiPath> Driver::getMultipath(void)
     return usblParser.parseMultipath(waitResponseString(command));
 }
 
+// Get dropCounter of actual channel
+int Driver::getDropCounter(void)
+{
+    string command = "AT?ZD";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get overflowCounter of actual channel
+int Driver::getOverflowCounter(void)
+{
+    string command = "AT?ZO";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get channel number of current interface.
+int Driver::getChannelNumber(void)
+{
+    string command = "AT?ZS";
+    sendCommand(command);
+    return waitResponseInt(command);
+}

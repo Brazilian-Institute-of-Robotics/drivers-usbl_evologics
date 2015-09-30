@@ -107,6 +107,7 @@ int main(int argc, char** argv)
     Driver *driver;
     driver = new Driver();
     driver->setInterface(ETHERNET);
+    driver->setReadTimeout(base::Time::fromMilliseconds(1000));
 
     if(driver->getInterface() == ETHERNET)
         driver->openTCP("192.168.0.191", 9200);
@@ -128,16 +129,17 @@ int main(int argc, char** argv)
 
 
     try{
-        driver->getConnetionStatus();
-        driver->GTES();
-        driver->sendInstantMessage(im);
-        driver->getConnetionStatus();
+        driver->getConnectionStatus();
+//        driver->GTES();
+//        driver->sendInstantMessage(im);
+        driver->getConnectionStatus();
         driver->sendInstantMessage(im);
         driver->getIMDeliveryStatus();
-        driver->sendInstantMessage(im);
+        driver->getMultipath();
+//        driver->sendInstantMessage(im);
         driver->getCurrentSetting();
-        driver->sendInstantMessage(im);
-        driver->getConnetionStatus();
+//        driver->sendInstantMessage(im);
+        driver->getConnectionStatus();
     }
     catch (std::exception &error){
         std::cout << "Exception Error: "<< error.what() << std::endl;

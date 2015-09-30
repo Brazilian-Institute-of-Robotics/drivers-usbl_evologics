@@ -158,6 +158,13 @@ public:
      */
     void sendInstantMessage(SendIM const &im);
 
+    /** Get Instant Message parsed as string
+     *
+     * @param im Instant Message to be sent.
+     * @return string parsed of im.
+     */
+    string getStringOfIM(SendIM const &im);
+
     /** Parse a received Instant Message.
      *
      * @param buffer that contains the IM
@@ -439,20 +446,38 @@ public:
     */
    std::vector<MultiPath> getMultipath(void);
 
+   /** Get dropCounter of actual channel
+    *
+    * @return value in bytes
+    */
+   int getDropCounter(void);
+
+   /** Get overflowCounter of actual channel
+    *
+    * @return value in bytes
+    */
+   int getOverflowCounter(void);
+
+   /** Get channel number of current interface.
+    *
+    * @return value in bytes
+    */
+   int getChannelNumber(void);
+
 private:
     UsblParser	usblParser;
 
+    /** Mode of operation
+     *
+     * DATA or COMMAND
+     */
     OperationMode	mode;
+
+    /** Interface type
+     *
+     * ETHERNET or SERIAL
+     */
     InterfaceType	interface;
-
-    Position    usbl_pose;
-    SendIM      sendedIM;
-    ReceiveIM   receiveIM;
-
-    VersionNumbers device;
-    StatusRequest device_status;
-    DeviceSettings device_settings;
-    AcousticChannel acoustic_channel;
 
     /**
      * Queue of received Raw Data
@@ -547,15 +572,6 @@ private:
      * @param notification kind present in buffer.
      */
     void fullValidation(string const &buffer, Notification const &notification);
-
-    // TODO. Check the best way to interpreted every kind of notification and what it should return.
-    /** Interpret notification.
-     *
-     * Interpret the pose, instant messages and delivery reports notification in respective variable.
-     * @param buffer to be interpreted.
-     * @param notification kind of buffer.
-     */
-    void interpretNotification(string const &buffer, Notification const &notification);
 
     /** Filled command string to be sent to device.
      *

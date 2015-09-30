@@ -353,16 +353,22 @@ struct DeviceSettings
     // 8096.. 2097152
     std::vector<int> poolSize;
 
-    // Dropped data from transmission buffer (bytes) per channel.
-    // Set 0 for reset counter;
-    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
-    std::vector<int> dropCount;
+//    // Dropped data from transmission buffer (bytes) per channel.
+//    // Set 0 for reset counter;
+//    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
+//    std::vector<int> dropCount;
 
-    // Current Overflow count of the channel per channel.
-    // Set 0 for reset counter;
-    std::vector<int> overflowCounter;
+//    // Current Overflow count of the channel per channel.
+//    // Set 0 for reset counter;
+//    std::vector<int> overflowCounter;
 
+    // True: Reset dropCount
+    // False: Do not reset dropCount
+    bool resetDropCount;
 
+    // True: Reset overflowCounter
+    // Flase: Do not reset overflowCounter
+    bool resetOverflowCounter;
 
 };
 
@@ -432,7 +438,7 @@ struct DeviceSettings
 struct MultiPath
 {
     // Delay of path propagation (in us)
-    int timeLine;
+    int timeline;
 
     // Strengths of signal
     int signalIntegrity;
@@ -443,6 +449,18 @@ struct MultiPath
  */
 struct AcousticChannel
 {
+    // Channel of current input-output interface
+    // Data transferring among different channel is impossible.
+    // 0..7
+    int channelNumber;
+
+    // Dropped data from transmission buffer (bytes) of channelNumber, in bytes.
+    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
+    int dropCount;
+
+    // Current Overflow count of channelNumber, in bytes.
+    int overflowCounter;
+
     //Local-2-Remote bitrate (bit/s)
     int localBitrate;
 
