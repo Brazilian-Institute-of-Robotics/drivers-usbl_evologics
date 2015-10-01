@@ -33,15 +33,6 @@ public:
      */
     Notification findNotification(string const &buffer);
 
-    /** Validate a Notification buffer in DATA mode.
-     *
-     * In DATA mode: +++AT:<length>:<notification><end-of-line>
-     * Check presence of "+++AT" and length of <notification>
-     * Throw ValidationError in case of failure.
-     * @param  buffer Notification in DATA mode.
-     */
-    void validateNotification(string const &buffer);
-
     /** Validate the number of field of a Notification.
      *
      * In DATA mode: +++AT:<length>:<notification><end-of-line>
@@ -60,26 +51,6 @@ public:
      * @return Kind of response.
      */
     CommandResponse findResponse(string const &buffer);
-
-    /** Validate a Response buffer in DATA mode.
-     *
-     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
-     * Check presence of "+++<AT command>" and length of <command response>
-     * Throw ValidationError in case of failure.
-     * @param buffer Response in DATA mode.
-     * @param command sent to device.
-     */
-    void validateResponse(string const &buffer, string const &command);
-
-    /** Validate a Particular Response in DATA mode.
-     *
-     * Command "AT&V" (Get Current Set) has particular response.
-     * In DATA mode: +++AT&V:<length>:<requested data><end-line>
-     * <requested data> = <field1>: <value><end-line><field2>: <value><end-line>...
-     * Throw ValidationError in case of failure.
-     * @param buffer Response of "AT&V" command
-     */
-    void validateParticularResponse(string const &buffer);
 
     /** Get response or notification content in DATA mode.
      *

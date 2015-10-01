@@ -285,7 +285,7 @@ struct DeviceSettings
     // The Address of the remote device to transmit BurstData or Instant Messages.
     // If the Remote Address is 0 the device accepts every connection request, but can not initiate a connection.
     // remoteAddress of local device must match localAddress of remote device.
-//    int remoteAddress;
+    int remoteAddress;
 
     // Define limits of devices in the network
     // Values: 2, 6, 14, 30, 62, 126, 254
@@ -307,25 +307,9 @@ struct DeviceSettings
     // Retry timeout 500-12000 ms
     int retryTimeout;
 
-    // Number of message that keep connection. Above that value, the connection is closed.
-    // If set to 0, connection will remain online
-//    int keepOnline;
-
     // The timeout before closing an idle acoustic connection
     // 0-3600 s
     int idleTimeout;
-
-    // Channel of current input-output interface
-    // Data transferring among different channel is impossible.
-    // 0..7
-//    int currentChannel;
-
-    // Time (s) since the device is powered on
-    // Can be synchronized by NTP. Need check
-//    base::Time systemTime;
-
-    // System Clock. Reset whem physical layer hardware of device is turned off
-//    base::Time clock;
 
     // Speed of sound 1300-1700 m/s
     int speedSound;
@@ -353,15 +337,6 @@ struct DeviceSettings
     // 8096.. 2097152
     std::vector<int> poolSize;
 
-//    // Dropped data from transmission buffer (bytes) per channel.
-//    // Set 0 for reset counter;
-//    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
-//    std::vector<int> dropCount;
-
-//    // Current Overflow count of the channel per channel.
-//    // Set 0 for reset counter;
-//    std::vector<int> overflowCounter;
-
     // True: Reset dropCount
     // False: Do not reset dropCount
     bool resetDropCount;
@@ -371,64 +346,6 @@ struct DeviceSettings
     bool resetOverflowCounter;
 
 };
-
-/** Wake-up settings
- *
- */
-//struct WakeUpSettings
-//{
-//    // Wake Up active time.
-//    // 0..3600 (s)
-//    int wuActiveTime;
-//
-//    // Wake Up period
-//    // 0..3600 (s)
-//    int wuPeriod;
-//
-//    // Wake Up hold timeout
-//    // 0..3600 (s)
-//    int wuHoldTimeout;
-//
-//    // Awake Remote Mode
-//    // Local device awake a remote device in wake-up module
-//    // True: Try to awake
-//    bool awake;
-//
-//    // Remote Active Time
-//    // Set in order to cover wuActiveTime of remote device
-//    // 0..3600 (s)
-//    int awakeTime;
-//};
-
-/** Data Channel settings
- *
- */
-//struct DataChannel
-//{
-//    // Channel of current input-output interface
-//    // Data transferring among different channel is impossible.
-//    // 0..7
-//    int channelNumber;
-//
-//    // Transmission buffer size (bytes)
-//    // 8096.. 2097152
-//    int poolSize;
-//
-//    // Dropped data from transmission buffer (bytes)
-//    // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
-//    int dropCount;
-//
-//    // Current Overflow count of the channel.
-//    int overflowCounter;
-//
-//    // TRUE: generate pose for every Instant Message
-//    bool poseEnable;
-//
-//    // TRUE: enables extended notification. Extra set of informations. Default FALSE
-//    bool extendedControl;
-//
-//    base::Time time;
-//};
 
 /** Multipath propagation of acoustic signal, from transmitter to receiver.
  *

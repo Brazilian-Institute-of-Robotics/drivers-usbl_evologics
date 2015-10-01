@@ -58,20 +58,6 @@ CommandResponse UsblParser::findResponse(string const &buffer)
         return VALUE_REQUESTED;
 }
 
-// Validate a Notification buffer in DATA mode.
-void UsblParser::validateNotification(string const &buffer)
-{
-    vector<string> splitted;
-    boost::split( splitted, buffer, boost::algorithm::is_any_of( ":" ) );
-    if(splitted.at(0) != "+++AT" )
-        throw ValidationError("UsblParser.cpp validateNotification: In DATA mode, could note find \"+++AT\" \" in buffer \"" + buffer + "\" ");
-
-    string::size_type length = stoi(splitted.at(1), &length);
-    if(length != splitted.at(2).size()-2)
-        // <end-of-line> = \r\n; size=2
-        throw ValidationError("UsblParser.cpp validateNotification: In DATA mode, the indicated length \"" + to_string(length) + "\", doesn't match the size of notification \""+ to_string(splitted.at(2).size()-2) +"\", in: \"" + buffer + "\"");
-}
-
 // Validate the number of field of a Notification.
 void UsblParser::splitValidateNotification(string const &buffer, Notification const &notification)
 {
@@ -88,62 +74,6 @@ void UsblParser::splitValidateNotification(string const &buffer, Notification co
 
     // Analysis of number of fields in <notification>
     splitValidate(aux_string, ",", getNumberFields(notification));
-}
-
-// Validate a Response buffer in DATA mode.
-void UsblParser::validateResponse(string const &buffer, string const &command)
-{
-    // Check for the answer of command AT&V (Get Current Set) that isn't like the general case
-    if(command.find("AT&V") != string::npos)
-        validateParticularResponse(buffer);
-
-    else
-    {
-        // Check for general case
-        vector<string> splitted = splitValidate(buffer, ":", 3);
-
-        // Check if <ATcommand> is in the command string
-        // Remove +++ from splitted[0]
-        splitted[0].erase(remove(splitted[0].begin(), splitted[0].end(), '+'), splitted[0].end());
-        // Found <ATcommmad> in the command string
-        if(command.find(splitted.at(0)) == string::npos )
-            throw ValidationError("UsblParser.cpp validateResponse: In DATA mode, could not find command \"" + splitted.at(0) + "\" in the command buffer \"" + command + "\" ");
-
-        // Check the indicated <length> with the <command response>.size()
-        string::size_type length = stoi(splitted.at(1), &length);
-        if(length != splitted.at(2).size()-2)
-            // <end-of-line> = \n\r; size=2
-            throw ValidationError("UsblParser.cpp validateResponse: In DATA mode, the indicated length \"" + to_string(length) + "\", doesn't match the size of notification \"" + to_string(splitted.at(2).size()-2) + "\", in: \"" + buffer + "\"");
-    }
-}
-
-// Validate a Particular Response in DATA mode.
-void UsblParser::validateParticularResponse(string const &buffer)
-{
-    string msg = buffer;
-
-    if(msg.find("AT&V") != string::npos)
-    {
-        string::size_type npos = string::npos;
-        if ((npos = msg.find(":")) != string::npos)
-        {
-            //Remove +++<ATcommand>:
-            msg = msg.substr(npos+1, msg.size()-npos);
-            if ((npos = msg.find(":")) != string::npos)
-            {
-                //Convert <length> to int
-                string::size_type length;
-                length = stoi(msg.substr(0, npos),&npos);
-                //Remove <length>:
-                msg = msg.substr(npos+1, msg.size()-npos);
-                // <end-of-line> = \n\r; size=2
-                if(length != msg.size()-2)
-                    throw ValidationError("UsblParser.cpp validateParticularResponse: In DATA mode, the indicated length \"" + to_string(length) + "\", doesn't match the size of notification \"" + to_string(msg.size()-2) + "\", in: \"" + buffer + "\"");
-            }
-            else
-                throw ValidationError("UsblParser.cpp validateParticularResponse: In DATA mode, could not find \":\" in \"" + msg + "\", from buffer \"" + buffer +"\"");
-        }
-    }
 }
 
 // Get response or notification content in DATA mode.

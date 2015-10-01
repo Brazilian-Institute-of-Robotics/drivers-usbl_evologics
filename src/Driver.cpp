@@ -277,7 +277,6 @@ string Driver::waitResponse(string const &command, CommandResponse expected)
     if(mode == DATA)
     {   // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
-//        validResponse(response_info.buffer, command);
         return usblParser.getAnswerContent(response_info.buffer);
     }
     return response_info.buffer;
@@ -339,8 +338,6 @@ Notification Driver::isNotification(string const &buffer)
     {
         // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
-//        if(mode == DATA)
-//            validNotification(buffer);
         fullValidation(buffer, notification);
     }
     return notification;
@@ -355,40 +352,10 @@ CommandResponse Driver::isResponse(string const &buffer)
     return usblParser.findResponse(buffer);
 }
 
-// Check a valid notification in DATA mode.
-void Driver::validNotification(string const &buffer)
-{
-    if(mode == DATA)
-    {
-        usblParser.validateNotification(buffer);
-    }
-    // Not possible to use UsblParser::validateNotification() in COMMAND mode.
-    else
-    {
-        stringstream error_string;
-        error_string << "USBL Driver.cpp validNotification: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<flush;
-        throw ModeError(error_string.str());
-    }
-}
-
 // Check a valid notification.
 void Driver::fullValidation(string const &buffer, Notification const &notification)
 {
     usblParser.splitValidateNotification(buffer, notification);
-}
-
-// Check for a valid response in DATA mode.
-void Driver::validResponse(string const &buffer, string const &command)
-{
-    if(mode == DATA)
-        usblParser.validateResponse(buffer, command);
-    // Not possible to use UsblParser::validateResponse() in COMMAND mode.
-    else
-    {
-        stringstream error_string;
-        error_string << "USBL Driver.cpp validResponse: Function only can be called in DATA mode, not in COMMAND mode. Actual mode: \"" << mode << "\"" <<flush;
-        throw ModeError(error_string.str());
-    }
 }
 
 // Manage mode operation according command sent.

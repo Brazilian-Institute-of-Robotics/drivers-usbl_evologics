@@ -536,15 +536,6 @@ private:
      */
     CommandResponse isResponse(string const &buffer);
 
-    /** Check for a valid response in DATA mode.
-     *
-     *  Used by waitResponse().
-     *  Throw ValidationError or ModeError in case of failure.
-     *  @param buffer to be analyzed.
-     *  @param command sent to device.
-     */
-    void validResponse(string const &buffer, string const &command);
-
     /** Check kind of notification.
      *
      * In DATA mode: +++AT:<length>:<notification><end-of-line>
@@ -554,14 +545,6 @@ private:
      * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
      */
     Notification isNotification(string const &buffer);
-
-    /** Check a valid notification in DATA mode.
-     *
-     * Used by isNotification().
-     * Throw ValidationError or ModeError in case of failure.
-     * @param buffer to be analyzed.
-     */
-    void validNotification(string const &buffer);
 
     /** Check a valid notification.
      *
