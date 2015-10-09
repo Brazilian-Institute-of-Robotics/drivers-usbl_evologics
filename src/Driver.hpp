@@ -190,6 +190,14 @@ public:
      */
     Position getPose(string const &buffer);
 
+    /** Converts from euler angles to quaternions.
+     *
+     * euler = [roll, pitch, yaw]
+     * @param eulerAngles - Euler angles vector
+     * @return quaternion - Quaternion variable
+     */
+    base::Quaterniond eulerToQuaternion(const base::Vector3d &eulerAngles);
+
     /** Helper method to separate AT and raw packets in a data stream
      */
     int extractRawFromATPackets(string const& buffer) const;
@@ -280,6 +288,40 @@ public:
     * @param value
     */
    void setLocalAddress(int value);
+
+   /** Set address of remote device
+    *
+    * 0-highest_address
+    * @param value
+    */
+   void setRemoteAddress(int value);
+
+   /** Get address of remote device
+    *
+    * 0-highest_address
+    * @return address
+    */
+   int getRemoteAddress(void);
+
+   /** Get highest address
+    *
+    * @return highest address
+    */
+   int getHighestAddress(void);
+
+   /** Automatic positioning output
+    *
+    * @return 0 fro disable, 1 for enable
+    */
+   int getPositioningDataOutput(void);
+
+   /** Enable or disable automatic positioning output
+    *
+    * TRUE: Enable automatic position output
+    * FALSE: Disable
+    * @param pose_on
+    */
+   void setPositioningDataOutput(bool pose_on);
 
    /** Set input amplifier gain
     *
@@ -464,6 +506,23 @@ public:
     */
    int getChannelNumber(void);
 
+   /** Set System Time for current time
+    *
+    * Default System Time value is the number of seconds elapsed since the device has been powered on.
+    * Is possible to syncronize the System Time with a Network Time Protocol (NTP) server. Not implemented.
+    */
+   void setSystemTimeNow(void);
+
+   /** Set operation mode of device
+    *
+    * Operation mode impact in
+    * DATA, all data is interpreted as raw_data. Command are send through TIES string.
+    * COMMAND, all data is interpreted as command. Raw_data is NOT transmitted.
+    * @param mode, DATA or COMMAND mode
+    */
+   void setOperationMode(OperationMode const &new_mode);
+
+
 private:
     UsblParser	usblParser;
 
@@ -588,13 +647,6 @@ private:
      */
     void modeMsgManager(string const &command);
 
-    /** Converts from euler angles to quaternions.
-     *
-     * euler = [roll, pitch, yaw]
-     * @param eulerAngles - Euler angles vector
-     * @return quaternion - Quaternion variable
-     */
-    base::Quaterniond eulerToQuaternion(const base::Vector3d &eulerAngles);
 
 protected:
 

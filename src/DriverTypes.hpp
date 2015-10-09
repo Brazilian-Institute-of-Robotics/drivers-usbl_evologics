@@ -177,6 +177,22 @@ enum SourceLevel
     IN_AIR = 3
 };
 
+/** Pre-defined Address of devices
+ *
+ */
+enum DeviceAddress
+{
+    // For sending a message in broadcast mode, to all devices.
+    BROADCAST = 255,
+    // Default value of auv's address
+    AUV = 1,
+    // Default value of dock's address
+    DOCK = 2,
+    // Case Remote Address is set to 0, local device would accept connection/data from any device, but could not initiate a connection.
+    // After accept connection/data, it will adopt remote address of remote device.
+    UNSET = 0
+};
+
 /** Notification information
  *
  * Kind of notification and its content.
@@ -336,15 +352,6 @@ struct DeviceSettings
     // Transmission buffer size (bytes) per channel.
     // 8096.. 2097152
     std::vector<int> poolSize;
-
-    // True: Reset dropCount
-    // False: Do not reset dropCount
-    bool resetDropCount;
-
-    // True: Reset overflowCounter
-    // Flase: Do not reset overflowCounter
-    bool resetOverflowCounter;
-
 };
 
 /** Multipath propagation of acoustic signal, from transmitter to receiver.
@@ -429,7 +436,7 @@ struct Position
     double x;
     double y;
     double z;
-    // Coordinates in local world frame, if apply. (in m)
+    // Coordinates, motion-compensated. (in m)
     double E;
     double N;
     double U;
@@ -454,10 +461,10 @@ struct Direction
     base::Time time;
     base::Time measurementTime;
     int remoteAddress;
-    // Coordinates in local device's reference frame (in rad)
+    // Coordinates in local device's reference frame. (in rad)
     double lBearing;
     double lElevation;
-    // Coordinates in world frame (in rad)
+    // Coordinates, motion-compensated  (in rad)
     double bearing;
     double elevation;
     // Rotation angles of local device (in rad)

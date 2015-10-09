@@ -128,7 +128,7 @@ int Driver::extractATPacket(string const& buffer) const
                 return 0;
             }
             // Check the presence of end-of-line (\r\n).
-            if (buffer.substr(length-2, length) != "\r\n")
+            if (buffer.substr(length-2, 2) != "\r\n")
                 throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + buffer + "\"");
             return length;
         }
@@ -513,7 +513,7 @@ void Driver::switchToCommandMode(void)
 // Switch to DATA mode.
 void Driver::switchToDataMode(void)
 {
-    string command = "AT0";
+    string command = "ATO";
     sendCommand(command);
     modeMsgManager(command);
 }
@@ -631,6 +631,51 @@ void Driver::setLocalAddress(int value)
 {
     string command = "AT!AL";
     command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Address of remote device
+void Driver::setRemoteAddress(int value)
+{
+    string command = "AT!AR";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Get address of remote device
+int Driver::getRemoteAddress(void)
+{
+    string command = "AT?AR";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get highest address
+int Driver::getHighestAddress(void)
+{
+    string command = "AT?AM";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Automatic positioning output
+int Driver::getPositioningDataOutput(void)
+{
+    string command = "AT?ZU";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Enable or disable automatic positioning output
+void Driver::setPositioningDataOutput(bool pose_on)
+{
+    string command = "AT!ZU";
+    if(pose_on)
+        command.append(to_string(1));
+    else
+        command.append(to_string(0));
     sendCommand(command);
     waitResponseOK(command);
 }
@@ -875,4 +920,34 @@ int Driver::getChannelNumber(void)
     string command = "AT?ZS";
     sendCommand(command);
     return waitResponseInt(command);
+}
+
+// Set System Time for current time
+void Driver::setSystemTimeNow(void)
+{
+    string command = "AT!UT";
+    double time_now = base::Time::now().toSeconds();
+    cout << "time_now "<< time_now <<endl;
+    command.append(to_string(time_now));
+    cout << "command string: " << command << endl;
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set operation mode of device
+void Driver::setOperationMode(OperationMode const &new_mode)
+{
+    if(mode != new_mode)
+    {
+        if(new_mode == DATA)
+            switchToDataMode();
+        else if(new_mode == COMMAND)
+            switchToCommandMode();
+        else
+        {
+            stringstream ss;
+            ss << "in Driver.cpp setOperationMode, can not identify mode \"" << new_mode << "\"" << flush;
+            throw WrongInputValue(ss.str());
+        }
+    }
 }
