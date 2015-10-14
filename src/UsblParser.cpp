@@ -189,8 +189,6 @@ vector<string> UsblParser::splitValidate(string const& buffer, const char* symbo
     vector<string> splitted;
     splitted.clear();
     boost::split( splitted, buffer, boost::is_any_of( symbol ), boost::token_compress_on );
-    for (int j=0; j<splitted.size(); j++)
-        cout << "parts: "<< splitted.at(j) << endl;
     if (splitted.size() != parts)
         throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + buffer + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
     return splitted;
