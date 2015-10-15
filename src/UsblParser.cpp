@@ -188,8 +188,21 @@ vector<string> UsblParser::splitValidate(string const& buffer, const char* symbo
 {
     vector<string> splitted;
     splitted.clear();
+    
     boost::split( splitted, buffer, boost::is_any_of( symbol ), boost::token_compress_on );
-    if (splitted.size() != parts)
+    // In case there is 'symbol' in message string      
+    if (splitted.size() > parts)
+    {       
+        cout << "UsblParser.cpp splitValidate: string \""<< buffer << "\" spplited at \""<< symbol <<"\" has \""
+            << splitted.size() << "\" instead of \""<< parts << "\"" << endl;
+        for(int i=1;i<(splitted.size()-parts); i++)
+            splitted[parts-1].append(splitted[parts-1+i]);
+        for(int i=0; i<(splitted.size()-parts) ; i++)
+            splitted.pop_back();
+        cout << "UsblParser.cpp splitValidate: string \""<< buffer << "\" spplited at \""<< symbol <<"\" has now\""
+            << splitted.size() << "\", matching \""<< parts << "\"" << endl;
+    }
+    if (splitted.size() < parts)
         throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + buffer + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
     return splitted;
 
