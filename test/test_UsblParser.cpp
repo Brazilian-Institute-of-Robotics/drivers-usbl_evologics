@@ -2,6 +2,8 @@
 #include <usbl_evologics/Driver.hpp>
 #include <usbl_evologics/UsblParser.hpp>
 
+#define BOOST_TEST_MODULE "usbl_parser"
+
 using namespace usbl_evologics;
 using namespace std;
 
@@ -106,5 +108,206 @@ BOOST_AUTO_TEST_CASE(get_answer_content)
     string buffer1(peer1_5);
     BOOST_REQUIRE_EQUAL(buffer1, usblParser.getAnswerContent(buffer));
 }
+
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_corret)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,36");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    //BOOST_REQUIRE_THROW(usblParser.splitValidateNotification(buffer, RECVIM), std::runtime_error);
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_colon)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,:6");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    //BOOST_REQUIRE_THROW(usblParser.splitValidateNotification(buffer, RECVIM), std::runtime_error);
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_comma)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,,6");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    //BOOST_REQUIRE_THROW(usblParser.splitValidateNotification(buffer, RECVIM), std::runtime_error);
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_endline)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,");
+    char end_line[] = {0x0d, 0x0a};
+    char msg[] = {0x20, 0x35};
+    //ss << buffer << hex << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    ss << buffer << msg << end_line; // << 0x10 << 0x02 << 0xff ;
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(ss.str(), RECVIM));
+    //BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_corret_command)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,36");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    //BOOST_REQUIRE_THROW(usblParser.splitValidateNotification(buffer, RECVIM), std::runtime_error);
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_colon_command)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,:6");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    //BOOST_REQUIRE_THROW(usblParser.splitValidateNotification(buffer, RECVIM), std::runtime_error);
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_comma_command)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,,6");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    //BOOST_REQUIRE_THROW(usblParser.splitValidateNotification(buffer, RECVIM), std::runtime_error);
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+BOOST_AUTO_TEST_CASE(get_a_fuzzy_message_endline_command)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,");
+    char end_line[] = {0x0d, 0x0a};
+    char msg[] = {0x20, 0x35};
+    //ss << buffer << hex << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    ss << buffer << msg << end_line; // << 0x10 << 0x02 << 0xff ;
+    BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(ss.str(), RECVIM));
+    //BOOST_REQUIRE_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+}
+
+
+BOOST_AUTO_TEST_CASE(get_answer_content_corret)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,36");
+    string content("RECVIM,2,1,2,ack,312,14,11,0.03,36");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    BOOST_REQUIRE_EQUAL(content, usblParser.getAnswerContent(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_answer_content_colon)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,:6");
+    string content("RECVIM,2,1,2,ack,312,14,11,0.03,:6");
+    ss << buffer << 0x0D0A; // << 0x10 << 0x02 << 0xff ;
+    BOOST_REQUIRE_EQUAL(content, usblParser.getAnswerContent(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_answer_content_endline_command)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    stringstream ss2;
+    string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,");
+    string content("RECVIM,2,1,2,ack,312,14,11,0.03,");
+    char end_line[] = {0x0d, 0x0a};
+    char msg[] = {0x20, 0x35};
+    ss << buffer << msg << end_line; // << 0x10 << 0x02 << 0xff ;
+    ss2 << content << msg << end_line; // << 0x10 << 0x02 << 0xff ;
+    BOOST_REQUIRE_EQUAL(ss2.str(), usblParser.getAnswerContent(ss.str()));
+}
+
+BOOST_AUTO_TEST_CASE(get_validate_answer_content_endline_command)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    stringstream ss2;
+    string command("+++AT*SENDIM,8,1,ack,test1234");
+    string buffer("+++AT*SENDIM:2:OK");
+    string content("OK");
+    char end_line[] = {0x0d, 0x0a};
+    ss << buffer << end_line;
+    ss2 << content << end_line;
+    BOOST_REQUIRE_EQUAL(ss2.str(), usblParser.getAnswerContent(ss.str(),command));
+}
+
+BOOST_AUTO_TEST_CASE(get_receveid_message)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    ReceiveIM im;
+    im.buffer = ":,5:6";
+    im.deliveryReport = true;
+    im.destination = 2;
+    im.duration = base::Time::fromMicroseconds(312);
+    im.integrity = 11;
+    im.rssi = 14;
+    im.source = 1;
+    im.time = base::Time::now();
+    im.velocity = 0.03;
+
+    string buffer("+++AT:34:RECVIM,5,1,2,ack,312,14,11,0.03,");
+    char msg[] = { 0x31, 0x32, 0x01, 0x34, 0x35, 0x0d, 0x0a };
+    //char end_line[2] = {0x0d, 0x0a};
+    ss << buffer << msg;// << end_line;
+    std::cout << "ss.str()" << ss.str() <<std::endl;
+    std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
+    //ss << buffer << end_line;
+    BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(sbuffer).buffer);
+}
+
+BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    ReceiveIM im;
+    im.buffer = ":,5:6";
+    im.deliveryReport = true;
+    im.destination = 2;
+    im.duration = base::Time::fromMicroseconds(312);
+    im.integrity = 11;
+    im.rssi = 14;
+    im.source = 1;
+    im.time = base::Time::now();
+    im.velocity = 0.03;
+
+    string buffer("+++AT:34:RECVIM,5,1,2,ack,312,14,11,0.03,");
+    char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35, 0x0d, 0x0a };
+    //char end_line[2] = {0x0d, 0x0a};
+    ss << buffer << msg;// << end_line;
+    std::cout << "ss.str()" << ss.str() <<std::endl;
+    std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
+    //ss << buffer << end_line;
+    BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(sbuffer).buffer);
+}
+
+BOOST_AUTO_TEST_CASE(parse_send_message)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    SendIM im;
+    im.deliveryReport = true;
+    im.destination = 1;
+    char msg[] = { 0x31, 0x32, 0x33, 0x34, 0x35 };
+
+    ss << msg;
+    im.buffer = ss.str();
+    string buffer = "AT*SENDIM,5,1,ack";
+    stringstream ss2;
+    ss2 << buffer << msg;
+
+    BOOST_REQUIRE_EQUAL(ss2.str(), usblParser.parseSendIM(im));
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END();

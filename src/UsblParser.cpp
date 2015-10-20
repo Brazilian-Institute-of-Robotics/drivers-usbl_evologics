@@ -66,14 +66,25 @@ void UsblParser::splitValidateNotification(string const &buffer, Notification co
     if (buffer.find("+++AT:") != string::npos)
     {	// get <notification> part of string
         // <end-of-line> doesn't affect the analysis
-        vector<string> splitted = splitValidate(buffer, ":", 3);
+        // In case the notification is a message, don't let malicious string mess up the validation
+        vector<string> splitted;
+        if(notification == RECVIM || notification == RECVIMS || notification == RECVPBM)
+            splitted = splitMinimalValidate(buffer, ":", 3);
+        else
+            splitted = splitValidate(buffer, ":", 3);
+        for(int i=0; i<splitted.size(); i++)
+            cout << "splitted["<< i << "]: "<< splitted[i] << endl;
         aux_string = splitted[2];
     }
     else
         aux_string = buffer;
 
     // Analysis of number of fields in <notification>
-    splitValidate(aux_string, ",", getNumberFields(notification));
+    // In case the notification is a message, don't let malicious string mess up the validation
+    if(notification == RECVIM || notification == RECVIMS || notification == RECVPBM)
+        splitMinimalValidate(aux_string, ",", getNumberFields(notification));
+    else
+        splitValidate(aux_string, ",", getNumberFields(notification));
 }
 
 // Get response or notification content in DATA mode.
@@ -83,21 +94,19 @@ string UsblParser::getAnswerContent(string const &buffer)
     string::size_type npos = string::npos;
     if(msg.find("+++AT") == string::npos)
         throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""+ buffer +"\"");
-    if ((npos = msg.find(":")) != string::npos)
-    {
-        //Remove +++<AT >:
-        msg = msg.substr(npos+1, msg.size()-npos);
-        if ((npos = msg.find(":")) != string::npos)
-        {
-            //Remove <length>:
-            msg = msg.substr(npos+1, msg.size()-npos);
-            // <end-of-line> = \n\r; size=2
-            return msg;
-        }
-        else
-            throw ValidationError("UsblParser.cpp getAnswerContent: In DATA mode, could not find \":\" in \"" + msg + "\", from buffer \"" + buffer +"\"");
-    }
-    return msg;
+    return splitMinimalValidate(buffer, ":", 3)[2];
+}
+
+// Get notification content in DATA mode and validate with command.
+string UsblParser::getAnswerContent(string const &buffer, string const &command)
+{
+    if(buffer.find("+++AT") == string::npos)
+        throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""+ buffer +"\"");
+    vector<string> splitted = splitMinimalValidate(buffer, ":", 3);
+    boost::algorithm::trim_if(splitted[0], boost::is_any_of("+"));
+    if(command.find(splitted[0]) == string::npos)
+        throw ValidationError("USBL UsblParser getAnswerContent: string \"" + buffer +"\" is not a response for the command \"" + command +"\"");
+    return splitted[2];
 }
 
 // Parse a Instant Message into string to be sent to device.
@@ -118,8 +127,11 @@ string UsblParser::parseSendIM(SendIM const &im)
 ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
 {
     ReceiveIM im;
-    vector<string> splitted = splitValidate(buffer, ",", getNumberFields(RECVIM));
+    vector<string> splitted = splitMinimalValidate(buffer, ",", getNumberFields(RECVIM));
     string::size_type sz;     // alias of size_t
+
+    if(splitted[0].find("RECVIM") == string::npos)
+        throw ParseError("UsblParser.cpp parseReceivedIM: Received buffer \"" + buffer +"\" is not a RECVIM notification, but a \"" + splitted[0] + "\" ");
 
     im.time = base::Time::now();
     im.source = stoi(splitted[2],&sz);
@@ -134,12 +146,15 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
     im.velocity = stod(splitted[8],&sz);
 
     // Remove <end-line> (\r\n) from buffer
-    splitted[9].erase(splitted[9].end()-2, splitted[9].end());
-    im.buffer = splitted[9];
+    im.buffer = removeEndLine(splitted[9]);
+    cout << "size msg: "<< splitted[9].size() << " " << splitted[9] <<endl;
+    cout << "buffer: " << buffer <<endl;
+    for(int i=0; i<splitted.size(); i++)
+        cout << "splitted["<< i << "]: "<<splitted[i] <<endl;
 
     string::size_type size = stoi(splitted[1],&sz);
     if(size != im.buffer.size())
-        throw ParseError("UsblParser.cpp parseReceivedIM: Tried to split a receiving Instant Message, but the message \"" + splitted[9] +"\" has \"" + to_string(size) + " characters and not \"" + splitted[1] + "\" as predicted.");
+        throw ParseError("UsblParser.cpp parseReceivedIM: Tried to split a receiving Instant Message, but the message \"" + splitted[9] +"\" has \"" + to_string(im.buffer.size()) + "\" characters and not \"" + splitted[1] + "\" as predicted.");
     return im;
 }
 
@@ -149,6 +164,9 @@ Position UsblParser::parsePosition(string const &buffer)
     Position pose;
     vector<string> splitted = splitValidate(buffer, ",", getNumberFields(USBLLONG));
     string::size_type sz;     // alias of size_t
+
+    if(splitted[0].find("USBLLONG") == string::npos)
+        throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + buffer +"\" is not a USBLLONG notification, but a \"" + splitted[0] + "\" ");
 
     pose.time = base::Time::fromSeconds(stod(splitted[1],&sz));
     pose.measurementTime = base::Time::fromSeconds(stod(splitted[2],&sz));
@@ -193,6 +211,41 @@ vector<string> UsblParser::splitValidate(string const& buffer, const char* symbo
         throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + buffer + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
     return splitted;
 
+}
+
+// Check if buffer can be splitted at least in a establish amount.
+vector<string> UsblParser::splitMinimalValidate(string const &buffer,  const char* symbol, size_t const parts)
+{
+    vector<string> splitted;
+    splitted.clear();
+    string msg = buffer;
+    string::size_type npos = string::npos;
+    // The number of symbol that should be present is at least number of parts -1
+    for(int i=0; i<parts-1; i++)
+    {
+        if ((npos = msg.find(symbol)) != string::npos)
+        {
+            splitted.push_back(msg.substr(0,npos));
+            msg = msg.substr(npos+1, msg.size()-npos);
+        }
+        else
+        {
+            string error = "UsblParser.cpp splitMinimalValidate: string \"" + buffer + "\" has not \"" + to_string(parts) + "\", the minimal amount of \"" + symbol+ "\" to be splitted";
+            cout << error << endl;
+            throw ValidationError(error);
+        }
+    }
+    splitted.push_back(msg.substr(0,msg.size()));
+    return splitted;
+}
+
+// Remove <end-of-line> "\r\n" from buffer
+string UsblParser::removeEndLine(string const &buffer)
+{
+    if(buffer.substr(buffer.size()-2, 2) == "\r\n")
+        return buffer.substr(0,buffer.size()-2);
+    else
+        throw ValidationError("UsblParser.cpp removeEndLine: There is no <end-line> \"\r\n\" in string \": " + buffer +"\"" );
 }
 
 // Get the number of fields in a Notification.

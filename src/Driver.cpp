@@ -277,7 +277,8 @@ string Driver::waitResponse(string const &command, CommandResponse expected)
     if(mode == DATA)
     {   // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
-        return usblParser.getAnswerContent(response_info.buffer);
+        // Check if response and command match.
+        return usblParser.getAnswerContent(response_info.buffer, command);
     }
     return response_info.buffer;
 }

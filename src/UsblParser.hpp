@@ -21,6 +21,17 @@ private:
      */
     vector<string> splitValidate(string const &buffer,  const char* symbol, size_t const parts);
 
+    /** Check if buffer can be splitted at least in a establish amount.
+     *
+     * Ignore if buffer has more than 'parts' 'symbol'. They'd be present in the last element of vector.
+     * To be used with Instant Messages.
+     * @param buffer to be analyzezd.
+     * @param symbol of split.
+     * @param parts. minimal amount buffer can be spllited.
+     * @return vector of string with parts size.
+     */
+    vector<string> splitMinimalValidate(string const &buffer,  const char* symbol, size_t const parts);
+
 public:
     UsblParser();
     ~UsblParser();
@@ -63,6 +74,25 @@ public:
      *  @return <content><end-line> like in COMMAND mode.
      */
     string getAnswerContent(string const &buffer);
+
+    /** Get notification content in DATA mode and validate with command.
+     *
+     *  In DATA mode:
+     *  +++<AT command>:<length>:<command response><end-of-line>
+     *  Return data like in COMMAND mode.
+     *  Throy ValidationError or ModeError in case of failure.
+     *  @param buffer Response in DATA mode.
+     *  @param command to be validate.
+     *  @return <content><end-line> like in COMMAND mode.
+     */
+    string getAnswerContent(string const &buffer, string const &command);
+
+    /** Remove <end-of-line> "\r\n" from buffer
+     *
+     * @param buffer to be analyzezd.
+     * @return string without <end-of-line> if it's present in buffer.
+     */
+    string removeEndLine(string const &buffer);
 
     /** Parse a Instant Message into string to be sent to device.
      *
