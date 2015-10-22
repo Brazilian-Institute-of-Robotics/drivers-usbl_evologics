@@ -243,9 +243,11 @@ BOOST_AUTO_TEST_CASE(get_validate_answer_content_endline_command)
 BOOST_AUTO_TEST_CASE(get_receveid_message)
 {
     UsblParser usblParser;
-    stringstream ss;
+    char msg[] = { 0x31, 0x32, 0x00, 0x30, 0x35};
+    char end_line[] = { 0x0d, 0x0a};
+
     ReceiveIM im;
-    im.buffer = ":,5:6";
+    im.buffer = string(msg, msg+5); //":12,\005";
     im.deliveryReport = true;
     im.destination = 2;
     im.duration = base::Time::fromMicroseconds(312);
@@ -255,14 +257,17 @@ BOOST_AUTO_TEST_CASE(get_receveid_message)
     im.time = base::Time::now();
     im.velocity = 0.03;
 
-    string buffer("+++AT:34:RECVIM,5,1,2,ack,312,14,11,0.03,");
-    char msg[] = { 0x31, 0x32, 0x01, 0x34, 0x35, 0x0d, 0x0a };
-    //char end_line[2] = {0x0d, 0x0a};
-    ss << buffer << msg;// << end_line;
-    std::cout << "ss.str()" << ss.str() <<std::endl;
-    std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
-    //ss << buffer << end_line;
+    string buffer = "+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,";
+    //cout << "sbuffer.size() "<< buffer.size() << endl;
+    cout << "im.buffer.size() "<< im.buffer.size() << endl;
+
+    vector<uint8_t> vec_buffer(buffer.begin(), buffer.end());
+    vec_buffer.insert(vec_buffer.end(), msg, msg+5);
+    vec_buffer.insert(vec_buffer.end(), end_line, end_line+2);
+    string sbuffer(vec_buffer.begin(), vec_buffer.end());
+
     BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(sbuffer).buffer);
+    cout << "size "<< usblParser.parseReceivedIM(sbuffer).buffer.size()<< endl;
 }
 
 BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
@@ -270,7 +275,7 @@ BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
     UsblParser usblParser;
     stringstream ss;
     ReceiveIM im;
-    im.buffer = ":,5:6";
+
     im.deliveryReport = true;
     im.destination = 2;
     im.duration = base::Time::fromMicroseconds(312);
@@ -280,14 +285,16 @@ BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
     im.time = base::Time::now();
     im.velocity = 0.03;
 
-    string buffer("+++AT:34:RECVIM,5,1,2,ack,312,14,11,0.03,");
-    char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35, 0x0d, 0x0a };
+    string buffer("+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,");
+    char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35};
+    string end_line("\r\n");
+    im.buffer = string(msg, msg+5);
     //char end_line[2] = {0x0d, 0x0a};
-    ss << buffer << msg;// << end_line;
-    std::cout << "ss.str()" << ss.str() <<std::endl;
-    std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
+    ss << buffer << string(msg, msg+5) << end_line;
+    std::cout << "ss.str() " << ss.str().size() << " "<< ss.str() <<std::endl;
+    //std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
     //ss << buffer << end_line;
-    BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(sbuffer).buffer);
+    BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(ss.str()).buffer);
 }
 
 BOOST_AUTO_TEST_CASE(parse_send_message)
@@ -299,15 +306,32 @@ BOOST_AUTO_TEST_CASE(parse_send_message)
     im.destination = 1;
     char msg[] = { 0x31, 0x32, 0x33, 0x34, 0x35 };
 
-    ss << msg;
-    im.buffer = ss.str();
-    string buffer = "AT*SENDIM,5,1,ack";
-    stringstream ss2;
-    ss2 << buffer << msg;
+    im.buffer = string(msg, msg+5);
+    string buffer = "AT*SENDIM,5,1,ack,";
 
-    BOOST_REQUIRE_EQUAL(ss2.str(), usblParser.parseSendIM(im));
+    ss << buffer << string(msg, msg+5);
+
+    BOOST_REQUIRE_EQUAL(ss.str(), usblParser.parseSendIM(im));
 }
 
+BOOST_AUTO_TEST_CASE(parse_send_message_with_zero)
+{
+    UsblParser usblParser;
+    stringstream ss;
+    SendIM im;
+    im.deliveryReport = true;
+    im.destination = 1;
+    char msg[] = { 0x31, 0x00, 0x33, 0x00, 0x35 };
+
+    im.buffer = string(msg, msg+5);
+    string buffer = "AT*SENDIM,5,1,ack,";
+
+    ss << buffer << string(msg, msg+5);
+    string result = usblParser.parseSendIM(im);
+
+    BOOST_REQUIRE_EQUAL(msg[4], result.at(result.size()-1));
+    BOOST_REQUIRE_EQUAL(ss.str(), usblParser.parseSendIM(im));
+}
 
 
 BOOST_AUTO_TEST_SUITE_END();

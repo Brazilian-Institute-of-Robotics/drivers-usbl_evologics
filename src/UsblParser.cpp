@@ -147,8 +147,8 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
 
     // Remove <end-line> (\r\n) from buffer
     im.buffer = removeEndLine(splitted[9]);
-    cout << "size msg: "<< splitted[9].size() << " " << splitted[9] <<endl;
-    cout << "buffer: " << buffer <<endl;
+    cout << "size msg: "<< splitted[9].size() << " "  << im.buffer.size() << " " << splitted[9]  <<endl;
+    cout << "buffer.size(): " << buffer.size() <<endl;
     for(int i=0; i<splitted.size(); i++)
         cout << "splitted["<< i << "]: "<<splitted[i] <<endl;
 
