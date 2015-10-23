@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
     im.buffer = string(msg, msg+5);
     //char end_line[2] = {0x0d, 0x0a};
     ss << buffer << string(msg, msg+5) << end_line;
-    std::cout << "ss.str() " << ss.str().size() << " "<< ss.str() <<std::endl;
+    std::cout << "ss.str() " << ss.str().size() << " "<< usblParser.printBuffer(ss.str()) <<std::endl;
     //std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
     //ss << buffer << end_line;
     BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(ss.str()).buffer);
@@ -333,5 +333,38 @@ BOOST_AUTO_TEST_CASE(parse_send_message_with_zero)
     BOOST_REQUIRE_EQUAL(ss.str(), usblParser.parseSendIM(im));
 }
 
+BOOST_AUTO_TEST_CASE(test_splitMinimalValidate)
+{
+    UsblParser usblParser;
+    stringstream ss;
+
+    string buffer("+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,");
+    char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35};
+    string end_line("\r\n");
+    ss << buffer << string(msg, msg+5) << end_line;
+
+    vector<string> test1 = usblParser.splitMinimalValidate(ss.str(),":", 3);
+    for(int i=0; i<test1.size(); i++)
+        cout << "test1["<< i << "]: " << usblParser.printBuffer(test1[i]) << endl;
+
+    vector<string> test2 = usblParser.splitMinimalValidate(ss.str(),":", 2);
+    for(int i=0; i<test2.size(); i++)
+        cout << "test2["<< i << "]: " << usblParser.printBuffer(test2[i]) << endl;
+
+    vector<string> test3 = usblParser.splitMinimalValidate(ss.str(),",", 3);
+    for(int i=0; i<test3.size(); i++)
+        cout << "test3["<< i << "]: " << usblParser.printBuffer(test3[i]) << endl;
+
+    vector<string> test4 = usblParser.splitMinimalValidate(ss.str(),",", 1);
+    for(int i=0; i<test4.size(); i++)
+        cout << "test4["<< i << "]: " << usblParser.printBuffer(test4[i]) << endl;
+
+    vector<string> test5 = usblParser.splitMinimalValidate(ss.str(),"&", 2);
+    for(int i=0; i<test5.size(); i++)
+        cout << "test5["<< i << "]: " << usblParser.printBuffer(test5[i]) << endl;
+
+    BOOST_REQUIRE_EQUAL("5", test3[1]);
+
+}
 
 BOOST_AUTO_TEST_SUITE_END();

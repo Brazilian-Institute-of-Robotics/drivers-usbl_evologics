@@ -80,20 +80,24 @@ int Driver::checkParticularResponse(string const& buffer) const
     if(eol != string::npos)
         // Add \r\n\r\n to buffer.
         return eol+4;
-    else
-        return 0;
+    // Max observed Particular Response: AT&V (get parameters) with 345 in length
+    else if(buffer.size() > 400)
+        return -1;
+    return 0;
 }
 
 // Check the size of regular response.
 int Driver::checkRegularResponse(string const& buffer) const
 {
-
+    // Find <end-of-line>
     string::size_type eol = buffer.find("\r\n");
     if(eol != string::npos)
         // Add \r\n to buffer.
         return eol+2;
-    else
-        return 0;
+    // Max observed Response: USBLLONG (pose) with 118 in length
+    else if(buffer.size() > 150)
+        return -1;
+    return 0;
 }
 
 int Driver::extractATPacket(string const& buffer) const
@@ -129,16 +133,16 @@ int Driver::extractATPacket(string const& buffer) const
             }
             // Check the presence of end-of-line (\r\n).
             if (buffer.substr(length-2, 2) != "\r\n")
-                throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + buffer + "\"");
+                throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
             return length;
         }
         else if (buffer.size() > 16)
-            throw runtime_error("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer \"" + buffer + "\"");
+            throw runtime_error("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer \"" + usblParser.printBuffer(buffer) + "\"");
         return 0;
     }
     // Check max command size. +++AT?CLOCK:
     else if (buffer.size() > 12)
-        throw runtime_error("Could not find any \":\" before 12 bytes in buffer " + buffer);
+        throw runtime_error("Could not find any \":\" before 12 bytes in buffer " + usblParser.printBuffer(buffer));
     return 0;
 }
 
@@ -177,6 +181,7 @@ int Driver::extractRawFromATPackets(string const& buffer) const
             // Here, we have something that might be the start of a TIES header at the end of the buffer
             return extractRawDataPacket(buffer.substr(0, ties_start));
         }
+        ++ties_start;
     }
     return extractRawDataPacket(buffer.substr(0, ties_start));
 }
@@ -267,12 +272,12 @@ string Driver::waitResponse(string const &command, CommandResponse expected)
         time_now = base::Time::now();
 
         if(response_info.response == ERROR)
-            throw DeviceError("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device return the follow ERROR msg: \"" + response_info.buffer + "\"");
+            throw DeviceError("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device return the follow ERROR msg: \"" + usblParser.printBuffer(response_info.buffer) + "\"");
         if(response_info.response == BUSY)
-             throw BusyError("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device return the follow BUSY msg: \"" + response_info.buffer + "\". Try it latter.");
+             throw BusyError("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device return the follow BUSY msg: \"" + usblParser.printBuffer(response_info.buffer) + "\". Try it latter.");
     }
     if((time_now - init_time) > time_out)
-        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
+        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
     // In DATA mode, validate response and return content without header.
     if(mode == DATA)
     {   // Buffer validation of indicated length was displaced for extract packet.
@@ -312,10 +317,67 @@ int Driver::checkNotificationCommandMode(string const& buffer) const
 {
     if (buffer.size() < 4)
         return 0;
+    // All 4 letters notification
     else
-    {   // All 4 letters notification
-        if (buffer.find("RECV") !=string::npos ||
-                buffer.find("DELI") !=string::npos ||
+    {   // If Notification is a Received Message, the message part of string may contain malicious characters.
+        // RECVxxx,<length>,<source address>,<destination address>,...<data><end-line>
+        // <length> is size of <data>
+        if (buffer.substr(0,4).find("RECV") !=string::npos)
+        {
+            if(buffer.size() < 7)
+                return 0;
+            Notification notification = usblParser.findNotification(buffer);
+            if( notification == RECVIM ||
+                notification == RECVIMS ||
+                notification == RECVPBM )
+            {
+                // Get the amount of comma expected for a notification
+                int ncomma = usblParser.getNumberFields(notification)-1;
+                string::size_type npos = string::npos;
+                string::size_type comma_1;
+                int length = 0;
+                int size_buffer = 0;
+                for(int i=0; i<ncomma; i++)
+                {
+                    // A comma in the last character of buffer. Wait for more data.
+                    if(size_buffer == buffer.size())
+                        return 0;
+                    // No more comma from here in buffer. Wait for more.
+                    if((npos = buffer.substr(size_buffer,buffer.size()-size_buffer).find(",")) == string::npos)
+                    {
+                        // The biggest fields in notification is a 32bits timestamp, which max value of 2^32 has 10 digits
+                        if((buffer.size()-size_buffer) > 10)
+                            return -1;
+                        return 0;
+                    }
+                    // Increase the correct part of buffer size
+                    size_buffer += (npos+1);
+                    // Get the first comma that encapsulate <length>
+                    if(i==0)
+                        comma_1 = npos;
+                    // Get length with the second comma that encapsulate <length>
+                    if(i==1)
+                        length += stoi(buffer.substr(comma_1+1, npos-comma_1),&npos);
+                }
+                // Buffer should have the size of the last comma plus the length of <data> and <end-line>
+                length += (size_buffer+2);
+                if(length > buffer.size())
+                {
+                    LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer ", length, buffer.c_str());
+                    return 0;
+                }
+                // Check for the <end-line>
+                if(buffer.substr(length-2, 2) != "\r\n")
+                    throw runtime_error("Could not find <end-of-line> at position \""+ to_string(buffer.size()-3) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
+
+                return length;
+            }
+            else
+                // It is a extra notification that starts with RECV (RECVSTART, RECVEND, ...)
+                checkRegularResponse(buffer);
+        }
+        // All other notifications.
+        else if( buffer.find("DELI") !=string::npos ||
                 buffer.find("FAIL") !=string::npos ||
                 buffer.find("CANC") !=string::npos ||
                 buffer.find("EXPI") !=string::npos ||
@@ -334,12 +396,34 @@ int Driver::checkNotificationCommandMode(string const& buffer) const
 // Check kind of notification.
 Notification Driver::isNotification(string const &buffer)
 {
-    Notification notification = usblParser.findNotification(buffer);
+    if(buffer.size() < 4)
+        return NO_NOTIFICATION;
+    string content;
+    if(mode == DATA)
+    {
+        // in DATA mode +++AT:<length>:notification\r\n
+        if(buffer.substr(0,6) != "+++AT:")
+            return NO_NOTIFICATION;
+
+        // Get content of Notification.
+        content = usblParser.splitMinimalValidate(buffer, ":", 3)[2];
+    }
+    else
+        content = buffer;
+    // If buffer is Message Notification , the message part of buffer may contains malicious data.
+    // If notification is a received Message, First 4 letters of Notification string are 'RECV'
+    if(content.substr(0,4) == "RECV")
+        // Notification is a Received Message, so there is a comma after notification string
+        content = usblParser.splitMinimalValidate(content, ",", 2)[0];
+
+    Notification notification = usblParser.findNotification(content);
+
     if(notification != NO_NOTIFICATION)
     {
         // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
-        fullValidation(buffer, notification);
+        // Check if notification has the predicted quantity of commas.
+        notificationValidation(buffer, notification);
     }
     return notification;
 }
@@ -354,7 +438,7 @@ CommandResponse Driver::isResponse(string const &buffer)
 }
 
 // Check a valid notification.
-void Driver::fullValidation(string const &buffer, Notification const &notification)
+void Driver::notificationValidation(string const &buffer, Notification const &notification)
 {
     usblParser.splitValidateNotification(buffer, notification);
 }
@@ -440,6 +524,8 @@ base::samples::RigidBodyState Driver::getPose(Position const &pose)
     euler[1] = pose.pitch;
     euler[2] = pose.yaw;
     new_pose.orientation = eulerToQuaternion(euler);
+    new_pose.sourceFrame = "body";
+    new_pose.targetFrame = "usbl";
 
     return new_pose;
 }

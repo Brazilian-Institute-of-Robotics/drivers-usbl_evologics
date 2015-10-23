@@ -58,6 +58,54 @@ public:
      */
     ResponseInfo readResponse(void);
 
+    /** Check if a Notification string is present in buffer.
+     *
+     * Auxiliary function of extractPacket()
+     * To be used in COMMAND mode.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message, or -1 in case of no Notification.
+     */
+    int checkNotificationCommandMode(string const& buffer) const;
+
+    /** Check the size of a particular response.
+     *
+     * Auxiliary function of extractPacket().
+     * Response to command AT&V (getCurrentSetting) uses multiples '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
+     * Maybe there are other command's responses that use the same pattern.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message.
+     */
+    int checkParticularResponse(string const& buffer) const;
+
+    /** Check the size of regular response.
+     *
+     * Auxiliary function used by extractPacket().
+     * Response and Notification end by a end-of-line '\r\n'.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message.
+     */
+    int checkRegularResponse(string const& buffer) const;
+
+    /** Check kind of response.
+     *
+     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
+     * IN COMMAND mode: <response><end-of-line>
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed
+     * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
+     */
+    CommandResponse isResponse(string const &buffer);
+
+    /** Check kind of notification.
+     *
+     * In DATA mode: +++AT:<length>:<notification><end-of-line>
+     * IN COMMAND mode: <notification><end-of-line>
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed.
+     * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
+     */
+    Notification isNotification(string const &buffer);
+
     /** Read input data till get a response.
      *
      * @param command that was sent to device.
@@ -101,7 +149,7 @@ public:
 
     /** Get Current Setting parameters.
      *
-     * TODO Parse values.
+     * @return current DeviceSettings
      */
     DeviceSettings getCurrentSetting(void);
 
@@ -177,7 +225,6 @@ public:
      * Only used by devices with ETHERNET interface.
      * Convert the data from internal struct to RigidBodyState.
      * @return RigidBodyState pose.
-     * TODO implement.
      */
     base::samples::RigidBodyState getPose(Position const &pose);
 
@@ -557,54 +604,6 @@ private:
      */
     string readInternal(void);
 
-    /** Check if a Notification string is present in buffer.
-     *
-     * Auxiliary function of extractPacket()
-     * To be used in COMMAND mode.
-     * @param buffer to be analyzed
-     * @return size of buffer till end of message, or -1 in case of no Notification.
-     */
-    int checkNotificationCommandMode(string const& buffer) const;
-
-    /** Check the size of a particular response.
-     *
-     * Auxiliary function of extractPacket().
-     * Response to command AT&V (getCurrentSetting) uses multiples '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
-     * Maybe there are other command's responses that use the same pattern.
-     * @param buffer to be analyzed
-     * @return size of buffer till end of message.
-     */
-    int checkParticularResponse(string const& buffer) const;
-
-    /** Check the size of regular response.
-     *
-     * Auxiliary function used by extractPacket().
-     * Response and Notification end by a end-of-line '\r\n'.
-     * @param buffer to be analyzed
-     * @return size of buffer till end of message.
-     */
-    int checkRegularResponse(string const& buffer) const;
-
-    /** Check kind of response.
-     *
-     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
-     * IN COMMAND mode: <response><end-of-line>
-     * Throw ValidationError or ModeError in case of failure.
-     * @param buffer to be analyzed
-     * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
-     */
-    CommandResponse isResponse(string const &buffer);
-
-    /** Check kind of notification.
-     *
-     * In DATA mode: +++AT:<length>:<notification><end-of-line>
-     * IN COMMAND mode: <notification><end-of-line>
-     * Throw ValidationError or ModeError in case of failure.
-     * @param buffer to be analyzed.
-     * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
-     */
-    Notification isNotification(string const &buffer);
-
     /** Check a valid notification.
      *
      * Used by isNotification().
@@ -613,7 +612,7 @@ private:
      * @param buffer to be analyzed.
      * @param notification kind present in buffer.
      */
-    void fullValidation(string const &buffer, Notification const &notification);
+    void notificationValidation(string const &buffer, Notification const &notification);
 
     /** Filled command string to be sent to device.
      *

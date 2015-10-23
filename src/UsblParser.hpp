@@ -21,6 +21,20 @@ private:
      */
     vector<string> splitValidate(string const &buffer,  const char* symbol, size_t const parts);
 
+
+public:
+    UsblParser();
+    ~UsblParser();
+
+    /** Print a buffer string that may contain hex that is not a character.
+     *
+     * Convert data that is not a character to its hex number. Used for debug.
+     * @param buffer to be printed
+     * @return string without command escape sequence.
+     */
+    static string printBuffer(const string& buffer);
+
+
     /** Check if buffer can be splitted at least in a establish amount.
      *
      * Ignore if buffer has more than 'parts' 'symbol'. They'd be present in the last element of vector.
@@ -32,17 +46,12 @@ private:
      */
     vector<string> splitMinimalValidate(string const &buffer,  const char* symbol, size_t const parts);
 
-public:
-    UsblParser();
-    ~UsblParser();
-
-
     /** Find a Notification in a buffer.
      *
      *  @param buffer to be analyzed.
      *  @return Kind of notification. If buffer is not a Notification, returns NO_NOTIFICATION.
      */
-    Notification findNotification(string const &buffer);
+    Notification findNotification(string const &buffer) const;
 
     /** Validate the number of field of a Notification.
      *
@@ -133,7 +142,7 @@ public:
      * @param notification.
      * @return number of fields.
      */
-    int getNumberFields(Notification const &notification);
+    int getNumberFields(Notification const &notification) const;
 
     /** Get the integer from a response buffer in COMMAND mode.
      *
