@@ -114,6 +114,8 @@ enum Notification
  */
 enum DeliveryStatus
 {
+    // Instant Message has been delivered.
+    DELIVERED,
     // No messages are been delivered.
     EMPTY,
     // Message is been delivered.
@@ -501,6 +503,16 @@ struct ReceiveIM
     int integrity;
     double velocity;
     std::string buffer;
+};
+
+/** Message Delivery status
+ *
+ */
+struct MessageStatus
+{
+    base::Time time;
+    SendIM sendIm;
+    DeliveryStatus status;
 };
 
 }

@@ -1038,3 +1038,68 @@ void Driver::setOperationMode(OperationMode const &new_mode)
         }
     }
 }
+
+// Get communication parameters
+AcousticChannel Driver::getAcousticChannelparameters(void)
+{
+    AcousticChannel channel;
+    channel.time = base::Time::now();
+    channel.rssi = getRSSI();
+    channel.localBitrate = getLocalToRemoteBitrate();
+    channel.remoteBitrate = getRemoteToLocalBitrate();
+    channel.propagationTime = getPropagationTime();
+    channel.relativeVelocity = getRelativeVelocity();
+    channel.signalIntegrity = getSignalIntegrity();
+    channel.multiPath = getMultipath();
+    channel.channelNumber = getChannelNumber();
+    channel.dropCount = getDropCounter();
+    channel.overflowCounter = getOverflowCounter();
+    return channel;
+}
+
+// Update parameters on device.
+void Driver::updateDeviceParameters(DeviceSettings const &desired_setting, DeviceSettings const &actual_setting)
+{
+    if(desired_setting.carrierWaveformId != actual_setting.carrierWaveformId)
+         setCarrierWaveformID(desired_setting.carrierWaveformId);
+     if(desired_setting.clusterSize != actual_setting.clusterSize)
+         setClusterSize(desired_setting.clusterSize);
+     if(desired_setting.highestAddress != actual_setting.highestAddress)
+         setHighestAddress(desired_setting.highestAddress);
+     if(desired_setting.idleTimeout != actual_setting.idleTimeout)
+         setIdleTimeout(desired_setting.idleTimeout);
+     if(desired_setting.imRetry != actual_setting.imRetry)
+         setIMRetry(desired_setting.imRetry);
+     if(desired_setting.localAddress != actual_setting.localAddress)
+         setLocalAddress(desired_setting.localAddress);
+     if(desired_setting.lowGain != actual_setting.lowGain)
+         setLowGain(desired_setting.lowGain);
+     if(desired_setting.packetTime != actual_setting.packetTime)
+         setPacketTime(desired_setting.packetTime);
+     if(desired_setting.promiscuosMode != actual_setting.promiscuosMode)
+         setPromiscuosMode(desired_setting.promiscuosMode);
+     if(desired_setting.remoteAddress != actual_setting.remoteAddress)
+         setRemoteAddress(desired_setting.remoteAddress);
+     if(desired_setting.retryCount != actual_setting.retryCount)
+         setRetryCount(desired_setting.retryCount);
+     if(desired_setting.retryTimeout != actual_setting.retryTimeout)
+         setRetryTimeout(desired_setting.retryTimeout);
+     if(desired_setting.sourceLevel != actual_setting.sourceLevel)
+         setSourceLevel(desired_setting.sourceLevel);
+     if(desired_setting.sourceLevelControl != actual_setting.sourceLevelControl)
+         setSourceLevelcontrol(desired_setting.sourceLevelControl);
+     if(desired_setting.speedSound != actual_setting.speedSound)
+         setSpeedSound(desired_setting.speedSound);
+     if(desired_setting.wuActiveTime != actual_setting.wuActiveTime)
+         setWakeUpActiveTime(desired_setting.wuActiveTime);
+     if(desired_setting.wuHoldTimeout != actual_setting.wuHoldTimeout)
+         setWakeUpHoldTimeout(desired_setting.wuHoldTimeout);
+     if(desired_setting.wuPeriod != actual_setting.wuPeriod)
+         setWakeUpPeriod(desired_setting.wuPeriod);
+     if(!actual_setting.poolSize.empty() && !desired_setting.poolSize.empty())
+     {
+         // Only takes in account the first and actual channel
+         if(desired_setting.poolSize.at(0) != actual_setting.poolSize.at(0))
+             setPoolSize(desired_setting.poolSize.at(0));
+     }
+}
