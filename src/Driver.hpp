@@ -569,6 +569,16 @@ public:
     */
    void setOperationMode(OperationMode const &new_mode);
 
+   /** Store current setting profile
+    *
+    */
+   void storeCurrentSettings(void);
+
+   /** Restore factory settings and reset device.
+    *
+    */
+   void RestoreFactorySettings(void);
+
    /** Get communication parameters
     *
     *  @return AcousticChannel with performance.

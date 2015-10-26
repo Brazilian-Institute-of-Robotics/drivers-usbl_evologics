@@ -611,6 +611,9 @@ void Driver::resetDevice(ResetType const &type)
     stringstream command;
     command << "ATZ" << type;
     sendCommand(command.str());
+    // No command response
+    if(type == DEVICE)
+        return
     waitResponseOK(command.str());
 }
 
@@ -1037,6 +1040,24 @@ void Driver::setOperationMode(OperationMode const &new_mode)
             throw WrongInputValue(ss.str());
         }
     }
+}
+
+// Store current setting profile
+void Driver::storeCurrentSettings(void)
+{
+    string command = "AT&W";
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Restore factory settings and reset device.
+void Driver::RestoreFactorySettings(void)
+{
+    string command = "AT&F";
+    sendCommand(command);
+    if(mode == COMMAND)
+        switchToDataMode();
+    return;
 }
 
 // Get communication parameters
