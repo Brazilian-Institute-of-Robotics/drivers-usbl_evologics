@@ -67,6 +67,15 @@ public:
      */
     int checkNotificationCommandMode(string const& buffer) const;
 
+    /** Check if am Instant Message Notification string is present in buffer.
+     *
+     * Auxiliary function of checkNotificationCommandMode() and extractPacket()
+     * To be used in COMMAND mode.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message, or -1 in case of no Notification.
+     */
+    int checkIMNotification(string const& buffer) const;
+
     /** Check the size of a particular response.
      *
      * Auxiliary function of extractPacket().

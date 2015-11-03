@@ -190,6 +190,17 @@ BOOST_AUTO_TEST_CASE(it_should_get_a_Message_Notification_in_command_mode_in_inc
     BOOST_REQUIRE_EQUAL(ss.str().size(), driver.checkNotificationCommandMode(ss.str()));
 }
 
+BOOST_AUTO_TEST_CASE(it_ready_a_Notification_from_a_Message)
+{
+    Driver driver;
+    string buffer("RECVEND,3349740869,182272,-40,120,0.1000");
+    //char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35};
+    string end_line("\r\n");
+    stringstream ss;
+    ss << buffer << end_line;
+    BOOST_REQUIRE_EQUAL(ss.str().size(), driver.checkNotificationCommandMode(ss.str()));
+}
+
 
 
 BOOST_AUTO_TEST_SUITE_END();

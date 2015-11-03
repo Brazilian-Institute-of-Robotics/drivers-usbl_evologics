@@ -317,80 +317,88 @@ int Driver::checkNotificationCommandMode(string const& buffer) const
 {
     if (buffer.size() < 4)
         return 0;
+
     // All 4 letters notification
-    else
-    {   // If Notification is a Received Message, the message part of string may contain malicious characters.
-        // RECVxxx,<length>,<source address>,<destination address>,...<data><end-line>
-        // <length> is size of <data>
-        if (buffer.substr(0,4).find("RECV") !=string::npos)
-        {
-            if(buffer.size() < 7)
-                return 0;
-            Notification notification = usblParser.findNotification(buffer);
-            if( notification == RECVIM ||
+    // If Notification is a Received Message, the message part of string may contain malicious characters.
+    // RECVxxx,<length>,<source address>,<destination address>,...<data><end-line>
+    // <length> is size of <data>
+    if (buffer.substr(0,4).find("RECV") !=string::npos)
+    {
+        if(buffer.size() < 7)
+            return 0;
+        Notification notification = usblParser.findNotification(buffer);
+        if( notification == RECVIM ||
                 notification == RECVIMS ||
                 notification == RECVPBM )
-            {
-                // Get the amount of comma expected for a notification
-                int ncomma = usblParser.getNumberFields(notification)-1;
-                string::size_type npos = string::npos;
-                string::size_type comma_1;
-                int length = 0;
-                int size_buffer = 0;
-                for(int i=0; i<ncomma; i++)
-                {
-                    // A comma in the last character of buffer. Wait for more data.
-                    if(size_buffer == buffer.size())
-                        return 0;
-                    // No more comma from here in buffer. Wait for more.
-                    if((npos = buffer.substr(size_buffer,buffer.size()-size_buffer).find(",")) == string::npos)
-                    {
-                        // The biggest fields in notification is a 32bits timestamp, which max value of 2^32 has 10 digits
-                        if((buffer.size()-size_buffer) > 10)
-                            return -1;
-                        return 0;
-                    }
-                    // Increase the correct part of buffer size
-                    size_buffer += (npos+1);
-                    // Get the first comma that encapsulate <length>
-                    if(i==0)
-                        comma_1 = npos;
-                    // Get length with the second comma that encapsulate <length>
-                    if(i==1)
-                        length += stoi(buffer.substr(comma_1+1, npos-comma_1),&npos);
-                }
-                // Buffer should have the size of the last comma plus the length of <data> and <end-line>
-                length += (size_buffer+2);
-                if(length > buffer.size())
-                {
-                    LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer ", length, buffer.c_str());
-                    return 0;
-                }
-                // Check for the <end-line>
-                if(buffer.substr(length-2, 2) != "\r\n")
-                    throw runtime_error("Could not find <end-of-line> at position \""+ to_string(buffer.size()-3) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
-
-                return length;
-            }
-            else
-                // It is a extra notification that starts with RECV (RECVSTART, RECVEND, ...)
-                checkRegularResponse(buffer);
-        }
-        // All other notifications.
-        else if( buffer.find("DELI") !=string::npos ||
-                buffer.find("FAIL") !=string::npos ||
-                buffer.find("CANC") !=string::npos ||
-                buffer.find("EXPI") !=string::npos ||
-                buffer.find("SEND") !=string::npos ||
-                buffer.find("USBL") !=string::npos ||
-                buffer.find("BITR") !=string::npos ||
-                buffer.find("SRCL") !=string::npos ||
-                buffer.find("PHYO") !=string::npos ||
-                buffer.find("RADD") !=string::npos )
-            return checkRegularResponse(buffer);
+            return checkIMNotification(buffer);
         else
-            return -1;
+            // It is a extra notification that starts with RECV (RECVSTART, RECVEND, ...)
+            return checkRegularResponse(buffer);
     }
+    // All other notifications.
+    else if( buffer.find("DELI") !=string::npos ||
+            buffer.find("FAIL") !=string::npos ||
+            buffer.find("CANC") !=string::npos ||
+            buffer.find("EXPI") !=string::npos ||
+            buffer.find("SEND") !=string::npos ||
+            buffer.find("USBL") !=string::npos ||
+            buffer.find("BITR") !=string::npos ||
+            buffer.find("SRCL") !=string::npos ||
+            buffer.find("PHYO") !=string::npos ||
+            buffer.find("RADD") !=string::npos )
+        return checkRegularResponse(buffer);
+    else
+        return -1;
+}
+
+// Check if am Instant Message Notification string is present in buffer.
+int Driver::checkIMNotification(string const& buffer) const
+{
+    if(buffer.size() < 7)
+        return 0;
+    Notification notification = usblParser.findNotification(buffer);
+    if( notification != RECVIM && notification != RECVIMS && notification != RECVPBM )
+        throw runtime_error("usbl Driver.cpp checkIMNotification: Notification should be a message, instead got \"" + usblParser.printBuffer(buffer) + "\"");
+
+    // Get the amount of comma expected for a notification
+    int ncomma = usblParser.getNumberFields(notification)-1;
+    string::size_type npos = string::npos;
+    string::size_type comma_1;
+    int length = 0;
+    int size_buffer = 0;
+    for(int i=0; i<ncomma; i++)
+    {
+        // A comma in the last character of buffer. Wait for more data.
+        if(size_buffer == buffer.size())
+            return 0;
+        // No more comma from here in buffer. Wait for more.
+        if((npos = buffer.substr(size_buffer,buffer.size()-size_buffer).find(",")) == string::npos)
+        {
+            // The biggest fields in notification is a 32bits timestamp, which max value of 2^32 has 10 digits
+            if((buffer.size()-size_buffer) > 10)
+                return -1;
+            return 0;
+        }
+        // Increase the correct part of buffer size
+        size_buffer += (npos+1);
+        // Get the first comma that encapsulate <length>
+        if(i==0)
+            comma_1 = npos;
+        // Get length with the second comma that encapsulate <length>
+        if(i==1)
+            length += stoi(buffer.substr(comma_1+1, npos-comma_1),&npos);
+    }
+    // Buffer should have the size of the last comma plus the length of <data> and <end-line>
+    length += (size_buffer+2);
+    if(length > buffer.size())
+    {
+        LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer ", length, buffer.c_str());
+        return 0;
+    }
+    // Check for the <end-line>
+    if(buffer.substr(length-2, 2) != "\r\n")
+        throw runtime_error("Could not find <end-of-line> at position \""+ to_string(buffer.size()-3) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
+    return length;
 }
 
 // Check kind of notification.
@@ -524,8 +532,6 @@ base::samples::RigidBodyState Driver::getPose(Position const &pose)
     euler[1] = pose.pitch;
     euler[2] = pose.yaw;
     new_pose.orientation = eulerToQuaternion(euler);
-    new_pose.sourceFrame = "body";
-    new_pose.targetFrame = "usbl";
 
     return new_pose;
 }
