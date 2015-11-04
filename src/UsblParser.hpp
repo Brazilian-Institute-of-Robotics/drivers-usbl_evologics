@@ -34,6 +34,14 @@ public:
      */
     static string printBuffer(const string& buffer);
 
+    /** Print a buffer vector<uint8_t> that may contain hex that is not a character.
+     *
+     * Convert data that is not a character to its hex number. Used for debug.
+     * @param buffer to be printed
+     * @return string without command escape sequence.
+     */
+    static string printBuffer(const vector<uint8_t>& buffer);
+
 
     /** Check if buffer can be splitted at least in a establish amount.
      *

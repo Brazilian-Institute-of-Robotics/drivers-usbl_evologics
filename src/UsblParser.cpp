@@ -37,6 +37,13 @@ string UsblParser::printBuffer(const string& buffer)
     return ss.str();
 }
 
+// Print a buffer vector<uint8_t> that may contain hex that is not a character.
+string UsblParser::printBuffer(const vector<uint8_t>& buffer)
+{
+    string string_buffer(buffer.begin(), buffer.end());
+    return printBuffer(string_buffer);
+}
+
 // Find a Notification in a buffer.
 Notification UsblParser::findNotification(string const &buffer) const
 {
@@ -124,7 +131,7 @@ string UsblParser::parseSendIM(SendIM const &im)
         ss << "ack,";
     else
         ss << "noack,";
-    ss << im.buffer;
+    ss << string(im.buffer.begin(), im.buffer.end());
 
     return ss.str();
 }
@@ -152,7 +159,8 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
     im.velocity = stod(splitted[8],&sz);
 
     // Remove <end-line> (\r\n) from buffer
-    im.buffer = removeEndLine(splitted[9]);
+    string string_buffer = removeEndLine(splitted[9]);
+    im.buffer = vector<uint8_t>(string_buffer.begin(), string_buffer.end());
 
     string::size_type size = stoi(splitted[1],&sz);
     if(size != im.buffer.size())
