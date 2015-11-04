@@ -23,13 +23,13 @@ string UsblParser::printBuffer(const string& buffer)
         if((int)buffer[i] < 33 || (int)buffer[i] > 126 || !hex_init)
         {
             char byte[4];
-            sprintf(byte, "%02X", buffer[i]);
+            sprintf(byte, "%02X", (unsigned char)buffer[i]);
             if(hex_init)
             {
                 ss << " 0X";
                 hex_init = false;
             }
-            ss << byte;
+            ss << " "<< byte;
         }
         else
             ss << buffer[i];
