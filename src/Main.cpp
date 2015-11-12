@@ -118,7 +118,7 @@ int main(int argc, char** argv)
     SendIM im;
     im.destination = 1;
     im.deliveryReport = true;
-    std::string s = "test12345";
+    std::string s = "test1234";
     std::copy( s.begin(), s.end(), std::back_inserter(im.buffer));
     //    im.buffer.resize(5);
     //    im.buffer[0] = 0xAA;
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
         driver->getConnectionStatus();
         driver->sendInstantMessage(im);
         driver->getIMDeliveryStatus();
-        driver->getMultipath();
+//        driver->getMultipath();
 //        driver->sendInstantMessage(im);
         driver->getCurrentSetting();
 //        driver->sendInstantMessage(im);
@@ -143,6 +143,12 @@ int main(int argc, char** argv)
     }
     catch (std::exception &error){
         std::cout << "Exception Error: "<< error.what() << std::endl;
+    }
+    while(1)
+    {
+        driver->getConnectionStatus();
+        if(driver->getIMDeliveryStatus() == EMPTY)
+            driver->sendInstantMessage(im);
     }
 
 

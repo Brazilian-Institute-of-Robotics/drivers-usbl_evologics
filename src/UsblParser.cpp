@@ -14,8 +14,38 @@ UsblParser::UsblParser(){
 UsblParser::~UsblParser(){
 }
 
+string UsblParser::printBuffer(const string& buffer)
+{
+    stringstream ss;
+    bool hex_init = true;
+    for (int i = 0; i < buffer.size(); i++)
+    {
+        if((int)buffer[i] < 33 || (int)buffer[i] > 126 || !hex_init)
+        {
+            char byte[4];
+            sprintf(byte, "%02X", (unsigned char)buffer[i]);
+            if(hex_init)
+            {
+                ss << " 0X";
+                hex_init = false;
+            }
+            ss << " "<< byte;
+        }
+        else
+            ss << buffer[i];
+    }
+    return ss.str();
+}
+
+// Print a buffer vector<uint8_t> that may contain hex that is not a character.
+string UsblParser::printBuffer(const vector<uint8_t>& buffer)
+{
+    string string_buffer(buffer.begin(), buffer.end());
+    return printBuffer(string_buffer);
+}
+
 // Find a Notification in a buffer.
-Notification UsblParser::findNotification(string const &buffer)
+Notification UsblParser::findNotification(string const &buffer) const
 {
     if (buffer.find("USBLLONG")!=string::npos)
         return USBLLONG;
@@ -61,19 +91,13 @@ CommandResponse UsblParser::findResponse(string const &buffer)
 // Validate the number of field of a Notification.
 void UsblParser::splitValidateNotification(string const &buffer, Notification const &notification)
 {
-    string aux_string;
-    // DATA mode
-    if (buffer.find("+++AT:") != string::npos)
-    {	// get <notification> part of string
-        // <end-of-line> doesn't affect the analysis
-        vector<string> splitted = splitValidate(buffer, ":", 3);
-        aux_string = splitted[2];
-    }
-    else
-        aux_string = buffer;
-
+    // No need to separate from DATA to COMMAND mode
     // Analysis of number of fields in <notification>
-    splitValidate(aux_string, ",", getNumberFields(notification));
+    // In case the notification is a message, don't let malicious string mess up the validation
+    if(notification == RECVIM || notification == RECVIMS || notification == RECVPBM)
+        splitMinimalValidate(buffer, ",", getNumberFields(notification));
+    else
+        splitValidate(buffer, ",", getNumberFields(notification));
 }
 
 // Get response or notification content in DATA mode.
@@ -82,22 +106,20 @@ string UsblParser::getAnswerContent(string const &buffer)
     string msg = buffer;
     string::size_type npos = string::npos;
     if(msg.find("+++AT") == string::npos)
-        throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""+ buffer +"\"");
-    if ((npos = msg.find(":")) != string::npos)
-    {
-        //Remove +++<AT >:
-        msg = msg.substr(npos+1, msg.size()-npos);
-        if ((npos = msg.find(":")) != string::npos)
-        {
-            //Remove <length>:
-            msg = msg.substr(npos+1, msg.size()-npos);
-            // <end-of-line> = \n\r; size=2
-            return msg;
-        }
-        else
-            throw ValidationError("UsblParser.cpp getAnswerContent: In DATA mode, could not find \":\" in \"" + msg + "\", from buffer \"" + buffer +"\"");
-    }
-    return msg;
+        throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""+ printBuffer(buffer) +"\"");
+    return splitMinimalValidate(buffer, ":", 3)[2];
+}
+
+// Get notification content in DATA mode and validate with command.
+string UsblParser::getAnswerContent(string const &buffer, string const &command)
+{
+    if(buffer.find("+++AT") == string::npos)
+        throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""+ printBuffer(buffer) +"\"");
+    vector<string> splitted = splitMinimalValidate(buffer, ":", 3);
+    boost::algorithm::trim_if(splitted[0], boost::is_any_of("+"));
+    if(command.find(splitted[0]) == string::npos)
+        throw ValidationError("USBL UsblParser getAnswerContent: string \"" + printBuffer(buffer) +"\" is not a response for the command \"" + printBuffer(command) +"\"");
+    return splitted[2];
 }
 
 // Parse a Instant Message into string to be sent to device.
@@ -109,7 +131,7 @@ string UsblParser::parseSendIM(SendIM const &im)
         ss << "ack,";
     else
         ss << "noack,";
-    ss << im.buffer;
+    ss << string(im.buffer.begin(), im.buffer.end());
 
     return ss.str();
 }
@@ -118,8 +140,11 @@ string UsblParser::parseSendIM(SendIM const &im)
 ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
 {
     ReceiveIM im;
-    vector<string> splitted = splitValidate(buffer, ",", getNumberFields(RECVIM));
+    vector<string> splitted = splitMinimalValidate(buffer, ",", getNumberFields(RECVIM));
     string::size_type sz;     // alias of size_t
+
+    if(splitted[0].find("RECVIM") == string::npos)
+        throw ParseError("UsblParser.cpp parseReceivedIM: Received buffer \"" + printBuffer(buffer) +"\" is not a RECVIM notification, but a \"" + printBuffer(splitted[0]) + "\" ");
 
     im.time = base::Time::now();
     im.source = stoi(splitted[2],&sz);
@@ -134,12 +159,12 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
     im.velocity = stod(splitted[8],&sz);
 
     // Remove <end-line> (\r\n) from buffer
-    splitted[9].erase(splitted[9].end()-2, splitted[9].end());
-    im.buffer = splitted[9];
+    string string_buffer = removeEndLine(splitted[9]);
+    im.buffer = vector<uint8_t>(string_buffer.begin(), string_buffer.end());
 
     string::size_type size = stoi(splitted[1],&sz);
     if(size != im.buffer.size())
-        throw ParseError("UsblParser.cpp parseReceivedIM: Tried to split a receiving Instant Message, but the message \"" + splitted[9] +"\" has \"" + to_string(size) + " characters and not \"" + splitted[1] + "\" as predicted.");
+        throw ParseError("UsblParser.cpp parseReceivedIM: Tried to split a receiving Instant Message, but the message \"" + printBuffer(splitted[9]) +"\" has \"" + to_string(im.buffer.size()) + "\" characters and not \"" + printBuffer(splitted[1]) + "\" as predicted.");
     return im;
 }
 
@@ -149,6 +174,9 @@ Position UsblParser::parsePosition(string const &buffer)
     Position pose;
     vector<string> splitted = splitValidate(buffer, ",", getNumberFields(USBLLONG));
     string::size_type sz;     // alias of size_t
+
+    if(splitted[0].find("USBLLONG") == string::npos)
+        throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + printBuffer(buffer) +"\" is not a USBLLONG notification, but a \"" + printBuffer(splitted[0]) + "\" ");
 
     pose.time = base::Time::fromSeconds(stod(splitted[1],&sz));
     pose.measurementTime = base::Time::fromSeconds(stod(splitted[2],&sz));
@@ -180,7 +208,7 @@ bool UsblParser::parseIMReport(string const &buffer)
     else if (splitted[0].find("FAILEDIM") != string::npos)
         return false;
     else
-        throw ParseError("UsblParser.cpp parseIMReport: DELIVERY_REPORT not as expected: \""+ splitted[0] + "\"");
+        throw ParseError("UsblParser.cpp parseIMReport: DELIVERY_REPORT not as expected: \""+ printBuffer(splitted[0]) + "\"");
 }
 
 // Check if buffer can be splitted in an establish amount.
@@ -188,17 +216,51 @@ vector<string> UsblParser::splitValidate(string const& buffer, const char* symbo
 {
     vector<string> splitted;
     splitted.clear();
+    
     boost::split( splitted, buffer, boost::is_any_of( symbol ), boost::token_compress_on );
-    for (int j=0; j<splitted.size(); j++)
-        cout << "parts: "<< splitted.at(j) << endl;
     if (splitted.size() != parts)
-        throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + buffer + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
+        throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + printBuffer(buffer) + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
     return splitted;
 
 }
 
+// Check if buffer can be splitted at least in a establish amount.
+vector<string> UsblParser::splitMinimalValidate(string const &buffer,  const char* symbol, size_t const parts)
+{
+    vector<string> splitted;
+    splitted.clear();
+    string msg = buffer;
+    string::size_type npos = string::npos;
+    // The number of symbol that should be present is at least number of parts -1
+    for(int i=0; i<parts-1; i++)
+    {
+        if ((npos = msg.find(symbol)) != string::npos)
+        {
+            splitted.push_back(msg.substr(0,npos));
+            msg = msg.substr(npos+1, msg.size()-npos);
+        }
+        else
+        {
+            string error = "UsblParser.cpp splitMinimalValidate: string \"" + printBuffer(buffer) + "\" has not \"" + to_string(parts) + "\" symbol \"" + symbol+ "\" to be splitted in.";
+            cout << error << endl;
+            throw ValidationError(error);
+        }
+    }
+    splitted.push_back(msg.substr(0,msg.size()));
+    return splitted;
+}
+
+// Remove <end-of-line> "\r\n" from buffer
+string UsblParser::removeEndLine(string const &buffer)
+{
+    if(buffer.substr(buffer.size()-2, 2) == "\r\n")
+        return buffer.substr(0,buffer.size()-2);
+    else
+        throw ValidationError("UsblParser.cpp removeEndLine: There is no <end-line> \"\r\n\" in string \": " + printBuffer(buffer) +"\"" );
+}
+
 // Get the number of fields in a Notification.
-int UsblParser::getNumberFields(Notification const & notification)
+int UsblParser::getNumberFields(Notification const & notification) const
 {
     switch (notification) {
     case RECVIM:
@@ -230,7 +292,6 @@ int UsblParser::getNumberFields(Notification const & notification)
     stringstream error_string;
     error_string << "UsblParser.cpp getNumberFields: \""<< notification <<"\" is not determined" << flush;
     throw ValidationError(error_string.str());
-
 }
 
 // Get the integer from a response buffer in COMMAND mode.
@@ -241,7 +302,7 @@ int UsblParser::getNumber(string const &buffer)
     boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
     stringstream ss(buffer_tmp);
     if (!(ss >> value))
-        throw ParseError("UsblParser.cpp getNumber. Expected an integer response, but read \"" + buffer + "\"");
+        throw ParseError("UsblParser.cpp getNumber. Expected an integer response, but read \"" + printBuffer(buffer) + "\"");
     return value;
 }
 
@@ -288,7 +349,7 @@ AcousticConnection UsblParser::parseConnectionStatus (string const &buffer)
     else if (buffer.find("DEAF")!= string::npos)
         connection.status = DEAF;
     else
-        throw ParseError("UsblParser.cpp parseConnectionStatus. Waiting for Connection Status but read \"" + buffer + "\"");
+        throw ParseError("UsblParser.cpp parseConnectionStatus. Waiting for Connection Status but read \"" + printBuffer(buffer) + "\"");
     // Get amount of free buffer of channels
     vector<string> splitted;
     boost::split( splitted, buffer, boost::algorithm::is_any_of( " " ) );
@@ -313,7 +374,7 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
     else if (buffer.find("EXPIRED") != string::npos)
         return EXPIRED;
 
-    throw ParseError("UsblParser.cpp parseDeliveryStatus. Waiting for Delivery Status but read \"" + buffer + "\"");
+    throw ParseError("UsblParser.cpp parseDeliveryStatus. Waiting for Delivery Status but read \"" + printBuffer(buffer) + "\"");
 }
 
 // Parse current settings.
@@ -394,13 +455,12 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
             }
         }
         else
-            throw ParseError("UsblParser.cpp parseCurrentSettings. Waiting for attribute to set but read \"" + splitted2.at(0) + "\" in buffer \"" + buffer +"\"");
+            throw ParseError("UsblParser.cpp parseCurrentSettings. Waiting for attribute to set but read \"" + printBuffer(splitted2.at(0)) + "\" in buffer \"" + printBuffer(buffer) +"\"");
     }
     return settings;
 }
 
 // Parse Multipath structure
-// TODO need implementation
 vector<MultiPath> UsblParser::parseMultipath (string const &buffer)
 {
     vector<MultiPath> vec_multipath;

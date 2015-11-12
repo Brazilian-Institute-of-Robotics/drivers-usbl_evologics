@@ -58,6 +58,63 @@ public:
      */
     ResponseInfo readResponse(void);
 
+    /** Check if a Notification string is present in buffer.
+     *
+     * Auxiliary function of extractPacket()
+     * To be used in COMMAND mode.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message, or -1 in case of no Notification.
+     */
+    int checkNotificationCommandMode(string const& buffer) const;
+
+    /** Check if am Instant Message Notification string is present in buffer.
+     *
+     * Auxiliary function of checkNotificationCommandMode() and extractPacket()
+     * To be used in COMMAND mode.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message, or -1 in case of no Notification.
+     */
+    int checkIMNotification(string const& buffer) const;
+
+    /** Check the size of a particular response.
+     *
+     * Auxiliary function of extractPacket().
+     * Response to command AT&V (getCurrentSetting) uses multiples '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
+     * Maybe there are other command's responses that use the same pattern.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message.
+     */
+    int checkParticularResponse(string const& buffer) const;
+
+    /** Check the size of regular response.
+     *
+     * Auxiliary function used by extractPacket().
+     * Response and Notification end by a end-of-line '\r\n'.
+     * @param buffer to be analyzed
+     * @return size of buffer till end of message.
+     */
+    int checkRegularResponse(string const& buffer) const;
+
+    /** Check kind of response.
+     *
+     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
+     * IN COMMAND mode: <response><end-of-line>
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed
+     * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
+     */
+    CommandResponse isResponse(string const &buffer);
+
+    /** Check kind of notification.
+     *
+     * In DATA mode: +++AT:<length>:<notification><end-of-line>
+     * IN COMMAND mode: <notification><end-of-line>
+     * Throw ValidationError or ModeError in case of failure.
+     * @param buffer to be analyzed.
+     * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
+     */
+    Notification isNotification(string const &buffer);
+
     /** Read input data till get a response.
      *
      * @param command that was sent to device.
@@ -101,7 +158,7 @@ public:
 
     /** Get Current Setting parameters.
      *
-     * TODO Parse values.
+     * @return current DeviceSettings
      */
     DeviceSettings getCurrentSetting(void);
 
@@ -177,7 +234,6 @@ public:
      * Only used by devices with ETHERNET interface.
      * Convert the data from internal struct to RigidBodyState.
      * @return RigidBodyState pose.
-     * TODO implement.
      */
     base::samples::RigidBodyState getPose(Position const &pose);
 
@@ -189,6 +245,14 @@ public:
      * @return Position pose.
      */
     Position getPose(string const &buffer);
+
+    /** Converts from euler angles to quaternions.
+     *
+     * euler = [roll, pitch, yaw]
+     * @param eulerAngles - Euler angles vector
+     * @return quaternion - Quaternion variable
+     */
+    base::Quaterniond eulerToQuaternion(const base::Vector3d &eulerAngles);
 
     /** Helper method to separate AT and raw packets in a data stream
      */
@@ -280,6 +344,40 @@ public:
     * @param value
     */
    void setLocalAddress(int value);
+
+   /** Set address of remote device
+    *
+    * 0-highest_address
+    * @param value
+    */
+   void setRemoteAddress(int value);
+
+   /** Get address of remote device
+    *
+    * 0-highest_address
+    * @return address
+    */
+   int getRemoteAddress(void);
+
+   /** Get highest address
+    *
+    * @return highest address
+    */
+   int getHighestAddress(void);
+
+   /** Automatic positioning output
+    *
+    * @return 0 fro disable, 1 for enable
+    */
+   int getPositioningDataOutput(void);
+
+   /** Enable or disable automatic positioning output
+    *
+    * TRUE: Enable automatic position output
+    * FALSE: Disable
+    * @param pose_on
+    */
+   void setPositioningDataOutput(bool pose_on);
 
    /** Set input amplifier gain
     *
@@ -464,6 +562,47 @@ public:
     */
    int getChannelNumber(void);
 
+   /** Set System Time for current time
+    *
+    * Default System Time value is the number of seconds elapsed since the device has been powered on.
+    * Is possible to syncronize the System Time with a Network Time Protocol (NTP) server. Not implemented.
+    */
+   void setSystemTimeNow(void);
+
+   /** Set operation mode of device
+    *
+    * Operation mode impact in
+    * DATA, all data is interpreted as raw_data. Command are send through TIES string.
+    * COMMAND, all data is interpreted as command. Raw_data is NOT transmitted.
+    * @param mode, DATA or COMMAND mode
+    */
+   void setOperationMode(OperationMode const &new_mode);
+
+   /** Store current setting profile
+    *
+    */
+   void storeCurrentSettings(void);
+
+   /** Restore factory settings and reset device.
+    *
+    */
+   void RestoreFactorySettings(void);
+
+   /** Get communication parameters
+    *
+    *  @return AcousticChannel with performance.
+    */
+   AcousticChannel getAcousticChannelparameters(void);
+
+   /** Update parameters on device.
+    *
+    * Compare actual with desired settings before update.
+    * @param desired_setting, parameters that should be applied on device.
+    * @param actual_setting, parameters present in device that will be used for compare.
+    */
+   void updateDeviceParameters(DeviceSettings const &desired_setting, DeviceSettings const &actual_setting);
+
+
 private:
     UsblParser	usblParser;
 
@@ -498,54 +637,6 @@ private:
      */
     string readInternal(void);
 
-    /** Check if a Notification string is present in buffer.
-     *
-     * Auxiliary function of extractPacket()
-     * To be used in COMMAND mode.
-     * @param buffer to be analyzed
-     * @return size of buffer till end of message, or -1 in case of no Notification.
-     */
-    int checkNotificationCommandMode(string const& buffer) const;
-
-    /** Check the size of a particular response.
-     *
-     * Auxiliary function of extractPacket().
-     * Response to command AT&V (getCurrentSetting) uses multiples '\r\n' and a final '\r\n\r\n'. Damn EvoLogics.
-     * Maybe there are other command's responses that use the same pattern.
-     * @param buffer to be analyzed
-     * @return size of buffer till end of message.
-     */
-    int checkParticularResponse(string const& buffer) const;
-
-    /** Check the size of regular response.
-     *
-     * Auxiliary function used by extractPacket().
-     * Response and Notification end by a end-of-line '\r\n'.
-     * @param buffer to be analyzed
-     * @return size of buffer till end of message.
-     */
-    int checkRegularResponse(string const& buffer) const;
-
-    /** Check kind of response.
-     *
-     * In DATA mode: +++<AT command>:<length>:<command response><end-of-line>
-     * IN COMMAND mode: <response><end-of-line>
-     * Throw ValidationError or ModeError in case of failure.
-     * @param buffer to be analyzed
-     * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
-     */
-    CommandResponse isResponse(string const &buffer);
-
-    /** Check kind of notification.
-     *
-     * In DATA mode: +++AT:<length>:<notification><end-of-line>
-     * IN COMMAND mode: <notification><end-of-line>
-     * Throw ValidationError or ModeError in case of failure.
-     * @param buffer to be analyzed.
-     * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
-     */
-    Notification isNotification(string const &buffer);
-
     /** Check a valid notification.
      *
      * Used by isNotification().
@@ -554,7 +645,7 @@ private:
      * @param buffer to be analyzed.
      * @param notification kind present in buffer.
      */
-    void fullValidation(string const &buffer, Notification const &notification);
+    void notificationValidation(string const &buffer, Notification const &notification);
 
     /** Filled command string to be sent to device.
      *
@@ -588,13 +679,6 @@ private:
      */
     void modeMsgManager(string const &command);
 
-    /** Converts from euler angles to quaternions.
-     *
-     * euler = [roll, pitch, yaw]
-     * @param eulerAngles - Euler angles vector
-     * @return quaternion - Quaternion variable
-     */
-    base::Quaterniond eulerToQuaternion(const base::Vector3d &eulerAngles);
 
 protected:
 

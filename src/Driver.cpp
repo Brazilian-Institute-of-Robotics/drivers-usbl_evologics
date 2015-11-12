@@ -80,20 +80,24 @@ int Driver::checkParticularResponse(string const& buffer) const
     if(eol != string::npos)
         // Add \r\n\r\n to buffer.
         return eol+4;
-    else
-        return 0;
+    // Max observed Particular Response: AT&V (get parameters) with 345 in length
+    else if(buffer.size() > 400)
+        return -1;
+    return 0;
 }
 
 // Check the size of regular response.
 int Driver::checkRegularResponse(string const& buffer) const
 {
-
+    // Find <end-of-line>
     string::size_type eol = buffer.find("\r\n");
     if(eol != string::npos)
         // Add \r\n to buffer.
         return eol+2;
-    else
-        return 0;
+    // Max observed Response: USBLLONG (pose) with 118 in length
+    else if(buffer.size() > 150)
+        return -1;
+    return 0;
 }
 
 int Driver::extractATPacket(string const& buffer) const
@@ -128,17 +132,17 @@ int Driver::extractATPacket(string const& buffer) const
                 return 0;
             }
             // Check the presence of end-of-line (\r\n).
-            if (buffer.substr(length-2, length) != "\r\n")
-                throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + buffer + "\"");
+            if (buffer.substr(length-2, 2) != "\r\n")
+                throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
             return length;
         }
         else if (buffer.size() > 16)
-            throw runtime_error("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer \"" + buffer + "\"");
+            throw runtime_error("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer \"" + usblParser.printBuffer(buffer) + "\"");
         return 0;
     }
     // Check max command size. +++AT?CLOCK:
     else if (buffer.size() > 12)
-        throw runtime_error("Could not find any \":\" before 12 bytes in buffer " + buffer);
+        throw runtime_error("Could not find any \":\" before 12 bytes in buffer " + usblParser.printBuffer(buffer));
     return 0;
 }
 
@@ -177,6 +181,7 @@ int Driver::extractRawFromATPackets(string const& buffer) const
             // Here, we have something that might be the start of a TIES header at the end of the buffer
             return extractRawDataPacket(buffer.substr(0, ties_start));
         }
+        ++ties_start;
     }
     return extractRawDataPacket(buffer.substr(0, ties_start));
 }
@@ -267,17 +272,18 @@ string Driver::waitResponse(string const &command, CommandResponse expected)
         time_now = base::Time::now();
 
         if(response_info.response == ERROR)
-            throw DeviceError("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device return the follow ERROR msg: \"" + response_info.buffer + "\"");
+            throw DeviceError("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device return the follow ERROR msg: \"" + usblParser.printBuffer(response_info.buffer) + "\"");
         if(response_info.response == BUSY)
-             throw BusyError("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device return the follow BUSY msg: \"" + response_info.buffer + "\". Try it latter.");
+             throw BusyError("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device return the follow BUSY msg: \"" + usblParser.printBuffer(response_info.buffer) + "\". Try it latter.");
     }
     if((time_now - init_time) > time_out)
-        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ command +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
+        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
     // In DATA mode, validate response and return content without header.
     if(mode == DATA)
     {   // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
-        return usblParser.getAnswerContent(response_info.buffer);
+        // Check if response and command match.
+        return usblParser.getAnswerContent(response_info.buffer, command);
     }
     return response_info.buffer;
 }
@@ -311,34 +317,121 @@ int Driver::checkNotificationCommandMode(string const& buffer) const
 {
     if (buffer.size() < 4)
         return 0;
-    else
-    {   // All 4 letters notification
-        if (buffer.find("RECV") !=string::npos ||
-                buffer.find("DELI") !=string::npos ||
-                buffer.find("FAIL") !=string::npos ||
-                buffer.find("CANC") !=string::npos ||
-                buffer.find("EXPI") !=string::npos ||
-                buffer.find("SEND") !=string::npos ||
-                buffer.find("USBL") !=string::npos ||
-                buffer.find("BITR") !=string::npos ||
-                buffer.find("SRCL") !=string::npos ||
-                buffer.find("PHYO") !=string::npos ||
-                buffer.find("RADD") !=string::npos )
-            return checkRegularResponse(buffer);
+
+    // All 4 letters notification
+    // If Notification is a Received Message, the message part of string may contain malicious characters.
+    // RECVxxx,<length>,<source address>,<destination address>,...<data><end-line>
+    // <length> is size of <data>
+    if (buffer.substr(0,4).find("RECV") !=string::npos)
+    {
+        if(buffer.size() < 7)
+            return 0;
+        Notification notification = usblParser.findNotification(buffer);
+        if( notification == RECVIM ||
+                notification == RECVIMS ||
+                notification == RECVPBM )
+            return checkIMNotification(buffer);
         else
-            return -1;
+            // It is a extra notification that starts with RECV (RECVSTART, RECVEND, ...)
+            return checkRegularResponse(buffer);
     }
+    // All other notifications.
+    else if( buffer.find("DELI") !=string::npos ||
+            buffer.find("FAIL") !=string::npos ||
+            buffer.find("CANC") !=string::npos ||
+            buffer.find("EXPI") !=string::npos ||
+            buffer.find("SEND") !=string::npos ||
+            buffer.find("USBL") !=string::npos ||
+            buffer.find("BITR") !=string::npos ||
+            buffer.find("SRCL") !=string::npos ||
+            buffer.find("PHYO") !=string::npos ||
+            buffer.find("RADD") !=string::npos )
+        return checkRegularResponse(buffer);
+    else
+        return -1;
+}
+
+// Check if am Instant Message Notification string is present in buffer.
+int Driver::checkIMNotification(string const& buffer) const
+{
+    if(buffer.size() < 7)
+        return 0;
+    Notification notification = usblParser.findNotification(buffer);
+    if( notification != RECVIM && notification != RECVIMS && notification != RECVPBM )
+        throw runtime_error("usbl Driver.cpp checkIMNotification: Notification should be a message, instead got \"" + usblParser.printBuffer(buffer) + "\"");
+
+    // Get the amount of comma expected for a notification
+    int ncomma = usblParser.getNumberFields(notification)-1;
+    string::size_type npos = string::npos;
+    string::size_type comma_1;
+    int length = 0;
+    int size_buffer = 0;
+    for(int i=0; i<ncomma; i++)
+    {
+        // A comma in the last character of buffer. Wait for more data.
+        if(size_buffer == buffer.size())
+            return 0;
+        // No more comma from here in buffer. Wait for more.
+        if((npos = buffer.substr(size_buffer,buffer.size()-size_buffer).find(",")) == string::npos)
+        {
+            // The biggest fields in notification is a 32bits timestamp, which max value of 2^32 has 10 digits
+            if((buffer.size()-size_buffer) > 10)
+                return -1;
+            return 0;
+        }
+        // Increase the correct part of buffer size
+        size_buffer += (npos+1);
+        // Get the first comma that encapsulate <length>
+        if(i==0)
+            comma_1 = npos;
+        // Get length with the second comma that encapsulate <length>
+        if(i==1)
+            length += stoi(buffer.substr(comma_1+1, npos-comma_1),&npos);
+    }
+    // Buffer should have the size of the last comma plus the length of <data> and <end-line>
+    length += (size_buffer+2);
+    if(length > buffer.size())
+    {
+        LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer ", length, buffer.c_str());
+        return 0;
+    }
+    // Check for the <end-line>
+    if(buffer.substr(length-2, 2) != "\r\n")
+        throw runtime_error("Could not find <end-of-line> at position \""+ to_string(buffer.size()-3) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
+    return length;
 }
 
 // Check kind of notification.
 Notification Driver::isNotification(string const &buffer)
 {
-    Notification notification = usblParser.findNotification(buffer);
+    if(buffer.size() < 4)
+        return NO_NOTIFICATION;
+    string content;
+    if(mode == DATA)
+    {
+        // in DATA mode +++AT:<length>:notification\r\n
+        if(buffer.substr(0,6) != "+++AT:")
+            return NO_NOTIFICATION;
+
+        // Get content of Notification.
+        content = usblParser.splitMinimalValidate(buffer, ":", 3)[2];
+    }
+    else
+        content = buffer;
+    // If buffer is Message Notification , the message part of buffer may contains malicious data.
+    // If notification is a received Message, First 4 letters of Notification string are 'RECV'
+    if(content.substr(0,4) == "RECV")
+        // Notification is a Received Message, so there is a comma after notification string
+        content = usblParser.splitMinimalValidate(content, ",", 2)[0];
+
+    Notification notification = usblParser.findNotification(content);
+
     if(notification != NO_NOTIFICATION)
     {
         // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
-        fullValidation(buffer, notification);
+        // Check if notification has the predicted quantity of commas.
+        notificationValidation(buffer, notification);
     }
     return notification;
 }
@@ -353,7 +446,7 @@ CommandResponse Driver::isResponse(string const &buffer)
 }
 
 // Check a valid notification.
-void Driver::fullValidation(string const &buffer, Notification const &notification)
+void Driver::notificationValidation(string const &buffer, Notification const &notification)
 {
     usblParser.splitValidateNotification(buffer, notification);
 }
@@ -513,7 +606,7 @@ void Driver::switchToCommandMode(void)
 // Switch to DATA mode.
 void Driver::switchToDataMode(void)
 {
-    string command = "AT0";
+    string command = "ATO";
     sendCommand(command);
     modeMsgManager(command);
 }
@@ -524,6 +617,9 @@ void Driver::resetDevice(ResetType const &type)
     stringstream command;
     command << "ATZ" << type;
     sendCommand(command.str());
+    // No command response
+    if(type == DEVICE)
+        return
     waitResponseOK(command.str());
 }
 
@@ -631,6 +727,51 @@ void Driver::setLocalAddress(int value)
 {
     string command = "AT!AL";
     command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Address of remote device
+void Driver::setRemoteAddress(int value)
+{
+    string command = "AT!AR";
+    command.append(to_string(value));
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Get address of remote device
+int Driver::getRemoteAddress(void)
+{
+    string command = "AT?AR";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Get highest address
+int Driver::getHighestAddress(void)
+{
+    string command = "AT?AM";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Automatic positioning output
+int Driver::getPositioningDataOutput(void)
+{
+    string command = "AT?ZU";
+    sendCommand(command);
+    return waitResponseInt(command);
+}
+
+// Enable or disable automatic positioning output
+void Driver::setPositioningDataOutput(bool pose_on)
+{
+    string command = "AT!ZU";
+    if(pose_on)
+        command.append(to_string(1));
+    else
+        command.append(to_string(0));
     sendCommand(command);
     waitResponseOK(command);
 }
@@ -875,4 +1016,117 @@ int Driver::getChannelNumber(void)
     string command = "AT?ZS";
     sendCommand(command);
     return waitResponseInt(command);
+}
+
+// Set System Time for current time
+void Driver::setSystemTimeNow(void)
+{
+    string command = "AT!UT";
+    double time_now = base::Time::now().toSeconds();
+    cout << "time_now "<< time_now <<endl;
+    command.append(to_string(time_now));
+    cout << "command string: " << command << endl;
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Set operation mode of device
+void Driver::setOperationMode(OperationMode const &new_mode)
+{
+    if(mode != new_mode)
+    {
+        if(new_mode == DATA)
+            switchToDataMode();
+        else if(new_mode == COMMAND)
+            switchToCommandMode();
+        else
+        {
+            stringstream ss;
+            ss << "in Driver.cpp setOperationMode, can not identify mode \"" << new_mode << "\"" << flush;
+            throw WrongInputValue(ss.str());
+        }
+    }
+}
+
+// Store current setting profile
+void Driver::storeCurrentSettings(void)
+{
+    string command = "AT&W";
+    sendCommand(command);
+    waitResponseOK(command);
+}
+
+// Restore factory settings and reset device.
+void Driver::RestoreFactorySettings(void)
+{
+    string command = "AT&F";
+    sendCommand(command);
+    if(mode == COMMAND)
+        switchToDataMode();
+    return;
+}
+
+// Get communication parameters
+AcousticChannel Driver::getAcousticChannelparameters(void)
+{
+    AcousticChannel channel;
+    channel.time = base::Time::now();
+    channel.rssi = getRSSI();
+    channel.localBitrate = getLocalToRemoteBitrate();
+    channel.remoteBitrate = getRemoteToLocalBitrate();
+    channel.propagationTime = getPropagationTime();
+    channel.relativeVelocity = getRelativeVelocity();
+    channel.signalIntegrity = getSignalIntegrity();
+    channel.multiPath = getMultipath();
+    channel.channelNumber = getChannelNumber();
+    channel.dropCount = getDropCounter();
+    channel.overflowCounter = getOverflowCounter();
+    return channel;
+}
+
+// Update parameters on device.
+void Driver::updateDeviceParameters(DeviceSettings const &desired_setting, DeviceSettings const &actual_setting)
+{
+    if(desired_setting.carrierWaveformId != actual_setting.carrierWaveformId)
+         setCarrierWaveformID(desired_setting.carrierWaveformId);
+     if(desired_setting.clusterSize != actual_setting.clusterSize)
+         setClusterSize(desired_setting.clusterSize);
+     if(desired_setting.highestAddress != actual_setting.highestAddress)
+         setHighestAddress(desired_setting.highestAddress);
+     if(desired_setting.idleTimeout != actual_setting.idleTimeout)
+         setIdleTimeout(desired_setting.idleTimeout);
+     if(desired_setting.imRetry != actual_setting.imRetry)
+         setIMRetry(desired_setting.imRetry);
+     if(desired_setting.localAddress != actual_setting.localAddress)
+         setLocalAddress(desired_setting.localAddress);
+     if(desired_setting.lowGain != actual_setting.lowGain)
+         setLowGain(desired_setting.lowGain);
+     if(desired_setting.packetTime != actual_setting.packetTime)
+         setPacketTime(desired_setting.packetTime);
+     if(desired_setting.promiscuosMode != actual_setting.promiscuosMode)
+         setPromiscuosMode(desired_setting.promiscuosMode);
+     if(desired_setting.remoteAddress != actual_setting.remoteAddress)
+         setRemoteAddress(desired_setting.remoteAddress);
+     if(desired_setting.retryCount != actual_setting.retryCount)
+         setRetryCount(desired_setting.retryCount);
+     if(desired_setting.retryTimeout != actual_setting.retryTimeout)
+         setRetryTimeout(desired_setting.retryTimeout);
+     if(desired_setting.sourceLevel != actual_setting.sourceLevel)
+         setSourceLevel(desired_setting.sourceLevel);
+     if(desired_setting.sourceLevelControl != actual_setting.sourceLevelControl)
+         setSourceLevelcontrol(desired_setting.sourceLevelControl);
+     if(desired_setting.speedSound != actual_setting.speedSound)
+         setSpeedSound(desired_setting.speedSound);
+     if(desired_setting.wuActiveTime != actual_setting.wuActiveTime)
+         setWakeUpActiveTime(desired_setting.wuActiveTime);
+     if(desired_setting.wuHoldTimeout != actual_setting.wuHoldTimeout)
+         setWakeUpHoldTimeout(desired_setting.wuHoldTimeout);
+     if(desired_setting.wuPeriod != actual_setting.wuPeriod)
+         setWakeUpPeriod(desired_setting.wuPeriod);
+     if(!actual_setting.poolSize.empty() && !desired_setting.poolSize.empty())
+     {
+         // Only takes in account the first and actual channel
+         if(desired_setting.poolSize.at(0) != actual_setting.poolSize.at(0))
+             setPoolSize(desired_setting.poolSize.at(0));
+     }
 }

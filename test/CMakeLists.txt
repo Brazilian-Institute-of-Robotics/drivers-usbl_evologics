@@ -1,3 +1,3 @@
 rock_testsuite(test_suite suite.cpp
-   test_UsblParser.cpp
+   test_Driver.cpp
    DEPS usbl_evologics)
