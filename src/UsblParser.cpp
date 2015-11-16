@@ -390,59 +390,57 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
     for( int i=0; i < splitted.size(); i++ )
     {
         vector<string> splitted2 = splitValidate(splitted.at(i), ":", 2);
-        if(splitted2.at(0).find("Source Level Control") != string::npos)
+        if(splitted2.at(0) == "Source Level Control")
         {
             if(atoi(splitted2.at(1).c_str()) == 0)
                 settings.sourceLevelControl = false;
             else
                 settings.sourceLevelControl = true;
         }
-        else if(splitted2.at(0).find("Source Level") != string::npos)
+        else if(splitted2.at(0) == "Source Level")
             settings.sourceLevel = (SourceLevel) atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Gain") != string::npos)
+        else if(splitted2.at(0) == "Gain")
         {
             if(atoi(splitted2.at(1).c_str()) == 0)
                 settings.lowGain = false;
             else
                 settings.lowGain = true;
         }
-        else if(splitted2.at(0).find("Carrier Waveform ID") != string::npos)
+        else if(splitted2.at(0) == "Carrier Waveform ID")
             settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Local Address") != string::npos)
+        else if(splitted2.at(0) == "Local Address")
             settings.localAddress = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Cluster Size") != string::npos)
-            settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Highest Address") != string::npos)
+        else if(splitted2.at(0) == "Highest Address")
             settings.highestAddress = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Cluster Size") != string::npos)
+        else if(splitted2.at(0) == "Cluster Size")
             settings.clusterSize = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Packet Time") != string::npos)
+        else if(splitted2.at(0) == "Packet Time")
             settings.packetTime = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Retry Timeout") != string::npos)
+        else if(splitted2.at(0) == "Retry Timeout")
             settings.retryTimeout = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Wake Up Active Time") != string::npos)
+        else if(splitted2.at(0) == "Wake Up Active Time")
             settings.wuActiveTime = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Wake Up Period") != string::npos)
+        else if(splitted2.at(0) == "Wake Up Period")
             settings.wuPeriod = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Promiscuous Mode") != string::npos)
+        else if(splitted2.at(0) == "Promiscuous Mode")
         {
             if(atoi(splitted2.at(1).c_str()) == 0)
                 settings.promiscuosMode = false;
             else
                 settings.promiscuosMode = true;
         }
-        else if(splitted2.at(0).find("Sound Speed") != string::npos)
+        else if(splitted2.at(0) == "Sound Speed")
             settings.speedSound = atoi(splitted2.at(1).c_str());
         // "Rerty". That is exactly what BIR's usbl send.
-        else if(splitted2.at(0).find("IM Rerty Count") != string::npos)
+        else if(splitted2.at(0) == "IM Rerty Count")
             settings.imRetry = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Retry Count") != string::npos)
-            settings.packetTime = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Idle Timeout") != string::npos)
+        else if(splitted2.at(0) == "Retry Count")
+            settings.retryCount = atoi(splitted2.at(1).c_str());
+        else if(splitted2.at(0) == "Idle Timeout")
             settings.idleTimeout = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Hold Timeout") != string::npos)
+        else if(splitted2.at(0) == "Hold Timeout")
             settings.wuHoldTimeout = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Pool Size") != string::npos)
+        else if(splitted2.at(0) == "Pool Size")
         {
             // Get values for each channels available
             vector<string> splitted3;
