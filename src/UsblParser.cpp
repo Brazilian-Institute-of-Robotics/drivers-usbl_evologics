@@ -410,8 +410,6 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
             settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0).find("Local Address") != string::npos)
             settings.localAddress = atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0).find("Cluster Size") != string::npos)
-            settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0).find("Highest Address") != string::npos)
             settings.highestAddress = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0).find("Cluster Size") != string::npos)
@@ -437,7 +435,7 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
         else if(splitted2.at(0).find("IM Rerty Count") != string::npos)
             settings.imRetry = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0).find("Retry Count") != string::npos)
-            settings.packetTime = atoi(splitted2.at(1).c_str());
+            settings.retryCount = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0).find("Idle Timeout") != string::npos)
             settings.idleTimeout = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0).find("Hold Timeout") != string::npos)

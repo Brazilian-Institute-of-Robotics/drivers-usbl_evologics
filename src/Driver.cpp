@@ -1023,9 +1023,7 @@ void Driver::setSystemTimeNow(void)
 {
     string command = "AT!UT";
     double time_now = base::Time::now().toSeconds();
-    cout << "time_now "<< time_now <<endl;
     command.append(to_string(time_now));
-    cout << "command string: " << command << endl;
     sendCommand(command);
     waitResponseOK(command);
 }
