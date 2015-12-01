@@ -274,7 +274,7 @@ struct AcousticConnection
  */
 struct DeviceSettings
 {
-    base::Time time;
+//    base::Time time;
 
     // Defines Sound Pressure Level (SPL)
     // 0: Maximum SPL. To be set carefully
@@ -513,6 +513,16 @@ struct MessageStatus
     base::Time time;
     SendIM sendIm;
     DeliveryStatus status;
+    // The statement below should happen
+    // messageSent = messageDelivered + messageFailed
+    // Total of messages sent to remote device
+    unsigned long long int   messageSent;
+    // Total of message successfully delivered
+    unsigned long long int   messageDelivered;
+    // Total of messages failed.
+    unsigned long long int   messageFailed;
+    // Total of messages received.
+    unsigned long long int   messageReceived;
 };
 
 }

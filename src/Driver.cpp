@@ -542,6 +542,12 @@ Position Driver::getPose(string const &buffer)
     return usblParser.parsePosition(buffer);
 }
 
+// Get the Direction of remote device.
+Direction Driver::getDirection(string const &buffer)
+{
+    return usblParser.parseDirection(buffer);
+}
+
 // Get interface type.
 InterfaceType Driver::getInterface(void)
 {

@@ -134,6 +134,14 @@ public:
      */
     Position parsePosition(string const &buffer);
 
+    /** Parse a received direction from buffer to Direction.
+     *
+     * Throw ValidationError in case of failure.
+     * @param buffer with direction.
+     * @return Direction.
+     */
+    Direction parseDirection(string const &buffer);
+
     /** Check if Instant Message was delivered.
      *
      * Throw ParseError in case of failure.

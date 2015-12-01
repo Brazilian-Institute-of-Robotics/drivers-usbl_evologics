@@ -246,6 +246,15 @@ public:
      */
     Position getPose(string const &buffer);
 
+    /** Get the Direction of remote device.
+     *
+     * Only used by devices with ETHERNET interface, in case the device is not able to compute the pose.
+     * Convert the received buffer from USBLANGLE notification to Direction.
+     * It may have some data of interest.
+     * @return Direction direc.
+     */
+    Direction getDirection(string const &buffer);
+
     /** Converts from euler angles to quaternions.
      *
      * euler = [roll, pitch, yaw]
