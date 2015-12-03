@@ -408,7 +408,6 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
 DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
 {
     DeviceSettings settings;
-//    settings.time = base::Time::now();
     vector<string> splitted;
     boost::split( splitted, buffer, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
     // Remove last empty string from vector
