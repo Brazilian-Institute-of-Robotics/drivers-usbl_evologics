@@ -181,7 +181,9 @@ enum SourceLevel
     // MINIMAL. In air test.
     // Maximum-20dB.
     // SPL = 164
-    MINIMAL = 3
+    MINIMAL = 3,
+    // Alias of above. For in air test.
+    IN_AIR = 3
 };
 
 /** Pre-defined Address of devices
