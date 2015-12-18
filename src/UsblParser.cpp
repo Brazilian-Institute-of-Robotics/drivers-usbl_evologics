@@ -198,6 +198,33 @@ Position UsblParser::parsePosition(string const &buffer)
     return pose;
 }
 
+// Parse a received direction from buffer to Direction.
+Direction UsblParser::parseDirection(string const &buffer)
+{
+    Direction direc;
+    vector<string> splitted = splitValidate(buffer, ",", getNumberFields(USBLANGLE));
+    string::size_type sz;     // alias of size_t
+
+    if(splitted[0].find("USBLANGLE") == string::npos)
+        throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + printBuffer(buffer) +"\" is not a USBLANGLE notification, but a \"" + printBuffer(splitted[0]) + "\" ");
+
+    direc.time = base::Time::fromSeconds(stod(splitted[1],&sz));
+    direc.measurementTime = base::Time::fromSeconds(stod(splitted[2],&sz));
+    direc.remoteAddress = stoi(splitted[3],&sz);
+    direc.lBearing = stod(splitted[4],&sz);
+    direc.lElevation = stod(splitted[5],&sz);
+    direc.bearing = stod(splitted[6],&sz);
+    direc.elevation = stod(splitted[7],&sz);
+    direc.roll = stod(splitted[8],&sz);
+    direc.pitch = stod(splitted[9],&sz);
+    direc.yaw = stod(splitted[10],&sz);
+    direc.rssi = stod(splitted[11],&sz);
+    direc.integrity = stod(splitted[12],&sz);
+    direc.accuracy = stoi(splitted[13],&sz);
+
+    return direc;
+}
+
 // Check if Instant Message was delivered.
 bool UsblParser::parseIMReport(string const &buffer)
 {
@@ -381,7 +408,6 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
 DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
 {
     DeviceSettings settings;
-    settings.time = base::Time::now();
     vector<string> splitted;
     boost::split( splitted, buffer, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
     // Remove last empty string from vector

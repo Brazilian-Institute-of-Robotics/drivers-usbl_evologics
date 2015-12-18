@@ -162,20 +162,27 @@ enum FirmwareInformation
 
 /** Sound Pressure Level (SPL) in transmission mode
  *
- *  Default value is 3 (IN_AIR).
- *  For test in air, use ONLY value IN_AIR.
+ *  Default value is 3 (MINIMAL).
+ *  For test in air, use ONLY value MINIMAL.
  */
 enum SourceLevel
 {
-    // Maximum SPL.
+    // Maximum Sound Pressure Level (SPL).
     // See The Factory Certificate value for further information.
+    // For S2CR 48/78, Max SPL = 184 dB re 1uPa
+    // SPL = 184
     MAXIMUM = 0,
-    // Maximum - 6dB.
-    MEDIUM = 1,
-    // Maximum - 12bB.
+    // Maximum-6dB.
+    // SPL = 178
+    HIGH = 1,
+    // Maximum-12bB.
+    // SPL = 172
     LOW = 2,
-    // In AIR test.
-    // Maximum - 20dB.
+    // MINIMAL. In air test.
+    // Maximum-20dB.
+    // SPL = 164
+    MINIMAL = 3,
+    // Alias of above. For in air test.
     IN_AIR = 3
 };
 
@@ -274,13 +281,11 @@ struct AcousticConnection
  */
 struct DeviceSettings
 {
-    base::Time time;
-
     // Defines Sound Pressure Level (SPL)
-    // 0: Maximum SPL. To be set carefully
-    // 1: Maximum - 6dB
-    // 2: Maximum - 12dB
-    // 3: Maximum - 20dB. Test IN AIR
+    // MAXIMUM = 0: Maximum SPL = 184 dB. To be set carefully
+    // MEDIUM = 1: SPL = 178db
+    // LOW = 2: SPL = 172 dB
+    // MINIMAL = 3: SPL = 164 dB. For test IN AIR
     SourceLevel sourceLevel;
 
     // True: local sourceLevel can be changed by remote device.
@@ -513,6 +518,16 @@ struct MessageStatus
     base::Time time;
     SendIM sendIm;
     DeliveryStatus status;
+    // The statement below should happen
+    // messageSent = messageDelivered + messageFailed
+    // Total of messages sent to remote device
+    unsigned long long int   messageSent;
+    // Total of message successfully delivered
+    unsigned long long int   messageDelivered;
+    // Total of messages failed.
+    unsigned long long int   messageFailed;
+    // Total of messages received.
+    unsigned long long int   messageReceived;
 };
 
 }
