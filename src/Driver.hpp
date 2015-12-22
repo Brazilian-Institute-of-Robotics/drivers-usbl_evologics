@@ -143,6 +143,13 @@ public:
      */
     double waitResponseDouble(string const &command);
 
+    /** Wait for a integer (that may be very long) response.
+     *
+     * @param command sent to device.
+     * @return long long unsigned integer requested.
+     */
+    long long unsigned int waitResponseULLongInt(string const &command);
+
     /** Wait for string response.
      *
      * @param command sent to device.
@@ -570,6 +577,13 @@ public:
     * @return value in bytes
     */
    int getChannelNumber(void);
+
+   /** Get overall delivered raw data
+    *
+    * Usbl documentation doesn't say the max size neither a way to reset it, so a ullong_int was chosen.
+    * @return counter of raw data bytes delivered to remote device.
+    */
+   long long unsigned int getRawDataDeliveryCounter(void);
 
    /** Set System Time for current time
     *
