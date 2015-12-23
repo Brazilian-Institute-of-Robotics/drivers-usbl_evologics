@@ -342,6 +342,18 @@ double UsblParser::getDouble(string const &buffer)
     return stod(buffer_tmp, &sz);
 }
 
+// Get a long long unsigned int from a response buffer in COMMAND mode.
+long long unsigned int UsblParser::getULLongInt(string const &buffer)
+{
+    long long unsigned int value;
+    string buffer_tmp = buffer;
+    boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
+    stringstream ss(buffer_tmp);
+    if (!(ss >> value))
+        throw ParseError("UsblParser.cpp getULLongInt. Expected an long long unsigned integer response, but read \"" + printBuffer(buffer) + "\"");
+    return value;
+}
+
 // Parse AcousticConnection Status of underwater link.
 AcousticConnection UsblParser::parseConnectionStatus (string const &buffer)
 {

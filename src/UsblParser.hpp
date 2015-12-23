@@ -176,6 +176,14 @@ public:
      */
     double getDouble(string const &buffer);
 
+    /** Get a long long unsigned int from a response buffer in COMMAND mode.
+     *
+     * Throw ou_of_range in case of failure.
+     * @param buffer with a counter number as response.
+     * @return long long unsigned int number.
+     */
+    long long unsigned int getULLongInt(string const &buffer);
+
     /** Parse AcousticConnection Status of underwater link.
      *
      * Throw ParseError in case of failure.

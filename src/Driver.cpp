@@ -306,6 +306,12 @@ double Driver::waitResponseDouble(string const &command)
     return usblParser.getDouble(waitResponseString(command));
 }
 
+// Wait for a integer (that may be very long) response.
+long long unsigned int Driver::waitResponseULLongInt(string const &command)
+{
+    return usblParser.getULLongInt(waitResponseString(command));
+}
+
 // Wait for string response.
 string Driver::waitResponseString(string const &command)
 {
@@ -1024,6 +1030,14 @@ int Driver::getChannelNumber(void)
     return waitResponseInt(command);
 }
 
+// Get overall delivered raw data
+long long unsigned int Driver::getRawDataDeliveryCounter(void)
+{
+    string command = "AT?ZE";
+    sendCommand(command);
+    return waitResponseULLongInt(command);
+}
+
 // Set System Time for current time
 void Driver::setSystemTimeNow(void)
 {
@@ -1085,6 +1099,7 @@ AcousticChannel Driver::getAcousticChannelparameters(void)
     channel.channelNumber = getChannelNumber();
     channel.dropCount = getDropCounter();
     channel.overflowCounter = getOverflowCounter();
+    channel.delivered_raw_data = getRawDataDeliveryCounter();
     return channel;
 }
 

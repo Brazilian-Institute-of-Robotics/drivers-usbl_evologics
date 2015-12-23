@@ -273,7 +273,6 @@ struct AcousticConnection
 
     // Free transmission buffer space (in bytes)
     std::vector<int> freeBuffer;
-
 };
 
 /** Major device settings
@@ -380,6 +379,8 @@ struct MultiPath
  */
 struct AcousticChannel
 {
+    base::Time time;
+
     // Channel of current input-output interface
     // Data transferring among different channel is impossible.
     // 0..7
@@ -415,7 +416,13 @@ struct AcousticChannel
 
     std::vector<MultiPath> multiPath;
 
-    base::Time time;
+    // Data sent to remote device.
+    long long unsigned int sent_raw_data;
+    // Data sent with receipt acknowledgment from remote side
+    // Got from usbl. How to reset it is unknown.
+    long long unsigned int delivered_raw_data;
+    // Data received from remote device.
+    long long unsigned int received_raw_data;
 };
 
 /** IN NOISE state
