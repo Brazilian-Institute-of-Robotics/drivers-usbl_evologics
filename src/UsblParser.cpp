@@ -428,16 +428,7 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
     for( int i=0; i < splitted.size(); i++ )
     {
         vector<string> splitted2 = splitValidate(splitted.at(i), ":", 2);
-        if(splitted2.at(0) == "Source Level Control")
-        {
-            if(atoi(splitted2.at(1).c_str()) == 0)
-                settings.sourceLevelControl = false;
-            else
-                settings.sourceLevelControl = true;
-        }
-        else if(splitted2.at(0) == "Source Level")
-            settings.sourceLevel = (SourceLevel) atoi(splitted2.at(1).c_str());
-        else if(splitted2.at(0) == "Gain")
+        if(splitted2.at(0) == "Gain")
         {
             if(atoi(splitted2.at(1).c_str()) == 0)
                 settings.lowGain = false;

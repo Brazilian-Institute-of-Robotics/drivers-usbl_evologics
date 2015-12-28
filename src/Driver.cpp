@@ -849,7 +849,7 @@ void Driver::setSourceLevel(SourceLevel source_level)
 }
 
 // Set if source level of local device can be changed remotely over a acoustic connection.
-void Driver::setSourceLevelcontrol(bool source_level_control)
+void Driver::setSourceLevelControl(bool source_level_control)
 {
     string command = "AT!LC";
     if(source_level_control)
@@ -858,6 +858,24 @@ void Driver::setSourceLevelcontrol(bool source_level_control)
         command.append(to_string(0));
     sendCommand(command);
     waitResponseOK(command);
+}
+
+// Get source level of device
+SourceLevel Driver::getSourceLevel(void)
+{
+    string command = "AT?L";
+    sendCommand(command);
+    return (SourceLevel)waitResponseInt(command);
+}
+
+// Get source level control of device
+bool Driver::getSourceLevelControl(void)
+{
+    string command = "AT?LC";
+    sendCommand(command);
+    if(waitResponseInt(command) == 1)
+        return true;
+    return false;
 }
 
 // Set speed of sound on water
@@ -1130,10 +1148,6 @@ void Driver::updateDeviceParameters(DeviceSettings const &desired_setting, Devic
          setRetryCount(desired_setting.retryCount);
      if(desired_setting.retryTimeout != actual_setting.retryTimeout)
          setRetryTimeout(desired_setting.retryTimeout);
-     if(desired_setting.sourceLevel != actual_setting.sourceLevel)
-         setSourceLevel(desired_setting.sourceLevel);
-     if(desired_setting.sourceLevelControl != actual_setting.sourceLevelControl)
-         setSourceLevelcontrol(desired_setting.sourceLevelControl);
      if(desired_setting.speedSound != actual_setting.speedSound)
          setSpeedSound(desired_setting.speedSound);
      if(desired_setting.wuActiveTime != actual_setting.wuActiveTime)
