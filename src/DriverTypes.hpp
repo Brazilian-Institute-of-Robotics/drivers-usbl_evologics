@@ -280,18 +280,6 @@ struct AcousticConnection
  */
 struct DeviceSettings
 {
-    // Defines Sound Pressure Level (SPL)
-    // MAXIMUM = 0: Maximum SPL = 184 dB. To be set carefully
-    // MEDIUM = 1: SPL = 178db
-    // LOW = 2: SPL = 172 dB
-    // MINIMAL = 3: SPL = 164 dB. For test IN AIR
-    SourceLevel sourceLevel;
-
-    // True: local sourceLevel can be changed by remote device.
-    //		  Matching of sourceLevel during connection. 1
-    // False: local sourceLevel cannot be changed by remote device. 0
-    bool sourceLevelControl;
-
     // True: low gain, reduced sensitivity. For short distance and test. 1
     // False: Normal gain, high sensitivity. 0
     bool lowGain;

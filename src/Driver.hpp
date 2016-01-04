@@ -450,7 +450,22 @@ public:
     * FALSE: local sourceLevel cannot be changed by remote device. 0
     * @param source_level_control
     */
-   void setSourceLevelcontrol(bool source_level_control);
+   void setSourceLevelControl(bool source_level_control);
+
+   /** Get source level of device
+    *
+    * @return source level
+    */
+   SourceLevel getSourceLevel(void);
+
+   /** Get source level control of device
+    *
+    * True: local sourceLevel can be changed by remote device.
+    *   Matching of sourceLevel during connection. 1
+    * False: local sourceLevel cannot be changed by remote device. 0
+    * @return source level control
+    */
+   bool getSourceLevelControl(void);
 
    /** Set speed of sound on water
     *
@@ -620,6 +635,7 @@ public:
    /** Update parameters on device.
     *
     * Compare actual with desired settings before update.
+    * Source level and source level control are not set here. They must be set in component according device's placement.
     * @param desired_setting, parameters that should be applied on device.
     * @param actual_setting, parameters present in device that will be used for compare.
     */
