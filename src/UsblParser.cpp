@@ -18,7 +18,7 @@ string UsblParser::printBuffer(const string& buffer)
 {
     stringstream ss;
     bool hex_init = true;
-    for (int i = 0; i < buffer.size(); i++)
+    for (size_t i = 0; i < buffer.size(); i++)
     {
         if((int)buffer[i] < 33 || (int)buffer[i] > 126 || !hex_init)
         {
@@ -259,7 +259,7 @@ vector<string> UsblParser::splitMinimalValidate(string const &buffer,  const cha
     string msg = buffer;
     string::size_type npos = string::npos;
     // The number of symbol that should be present is at least number of parts -1
-    for(int i=0; i<parts-1; i++)
+    for(size_t i=0; i<parts-1; i++)
     {
         if ((npos = msg.find(symbol)) != string::npos)
         {
@@ -393,7 +393,7 @@ AcousticConnection UsblParser::parseConnectionStatus (string const &buffer)
     vector<string> splitted;
     boost::split( splitted, buffer, boost::algorithm::is_any_of( " " ) );
     connection.freeBuffer.clear();
-    for(int i=0; i<splitted.size(); i++)
+    for(size_t i=0; i<splitted.size(); i++)
     {
         if(isdigit(splitted.at(i)[0]))
             connection.freeBuffer.push_back(atoi(splitted.at(i).c_str()));
@@ -425,7 +425,7 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
     // Remove last empty string from vector
     splitted.pop_back();
 
-    for( int i=0; i < splitted.size(); i++ )
+    for(size_t i=0; i < splitted.size(); i++ )
     {
         vector<string> splitted2 = splitValidate(splitted.at(i), ":", 2);
         if(splitted2.at(0) == "Gain")
@@ -475,7 +475,7 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
             vector<string> splitted3;
             boost::split( splitted3, splitted2.at(1), boost::algorithm::is_any_of( " " ) );
             settings.poolSize.clear();
-            for(int i=0; i<splitted3.size(); i++)
+            for(size_t i=0; i<splitted3.size(); i++)
             {
                 if(isdigit(splitted3.at(i)[0]))
                     settings.poolSize.push_back(atoi(splitted3.at(i).c_str()));
@@ -494,7 +494,7 @@ vector<MultiPath> UsblParser::parseMultipath (string const &buffer)
     // Ignore last "\n\r\n" from buffer.
     vector<string> splitted = splitValidate(buffer.substr(0,buffer.size()-3), "\n", 8);
 
-    for( int i=0; i < splitted.size(); i++ )
+    for(size_t i=0; i < splitted.size(); i++ )
     {
         string msg = splitted.at(i);
         string::size_type npos = string::npos;

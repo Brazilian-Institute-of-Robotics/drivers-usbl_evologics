@@ -370,8 +370,8 @@ int Driver::checkIMNotification(string const& buffer) const
     int ncomma = usblParser.getNumberFields(notification)-1;
     string::size_type npos = string::npos;
     string::size_type comma_1;
-    int length = 0;
-    int size_buffer = 0;
+    size_t length = 0;
+    size_t size_buffer = 0;
     for(int i=0; i<ncomma; i++)
     {
         // A comma in the last character of buffer. Wait for more data.
