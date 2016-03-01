@@ -14,7 +14,6 @@
 #include "base/Pose.hpp"
 #include "base/Logging.hpp"
 
-using namespace std;
 namespace usbl_evologics
 {
 
@@ -39,7 +38,14 @@ public:
      * Manage the mode of operation according to command.
      * @param command to be sent.
      */
-    void sendCommand(string const &command);
+    void sendCommand(std::string const &command);
+
+    /** Send a command to device and wait for the corresponding OK
+     *
+     * @param command prefix
+     * @param the command parameters, if any
+     */
+    void sendCommandAndACK(std::string const &command, std::string const &parameters = "");
 
     /** Send raw data to remote device.
      *
@@ -65,7 +71,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message, or -1 in case of no Notification.
      */
-    int checkNotificationCommandMode(string const& buffer) const;
+    int checkNotificationCommandMode(std::string const& buffer) const;
 
     /** Check if am Instant Message Notification string is present in buffer.
      *
@@ -74,7 +80,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message, or -1 in case of no Notification.
      */
-    int checkIMNotification(string const& buffer) const;
+    int checkIMNotification(std::string const& buffer) const;
 
     /** Check the size of a particular response.
      *
@@ -84,7 +90,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message.
      */
-    int checkParticularResponse(string const& buffer) const;
+    int checkParticularResponse(std::string const& buffer) const;
 
     /** Check the size of regular response.
      *
@@ -93,7 +99,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message.
      */
-    int checkRegularResponse(string const& buffer) const;
+    int checkRegularResponse(std::string const& buffer) const;
 
     /** Check kind of response.
      *
@@ -103,7 +109,7 @@ public:
      * @param buffer to be analyzed
      * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
      */
-    CommandResponse isResponse(string const &buffer);
+    CommandResponse isResponse(std::string const &buffer);
 
     /** Check kind of notification.
      *
@@ -113,7 +119,7 @@ public:
      * @param buffer to be analyzed.
      * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
      */
-    Notification isNotification(string const &buffer);
+    Notification isNotification(std::string const &buffer);
 
     /** Read input data till get a response.
      *
@@ -121,41 +127,41 @@ public:
      * @param expected response from device.
      * @return string with response content, in COMMAND mode
      */
-    string waitResponse(string const &command, CommandResponse expected);
+    std::string waitResponse(std::string const &expected_prefix, std::string const &command, CommandResponse expected, bool ignore_unexpected_responses = false);
 
     /** Wait for a OK response
      *
      * @param command sent to device.
      */
-    void waitResponseOK(string const &command);
+    void waitResponseOK(std::string const &expected_prefix, std::string const &command);
 
     /** Wait for a integer response.
      *
      * @param command sent to device.
      * @return integer requested.
      */
-    int waitResponseInt(string const &command);
+    int waitResponseInt(std::string const &expected_prefix, std::string const &command);
 
     /** Wait for a floating point response.
      *
      * @param command sent to device.
      * @return double requested.
      */
-    double waitResponseDouble(string const &command);
+    double waitResponseDouble(std::string const &expected_prefix, std::string const &command);
 
     /** Wait for a integer (that may be very long) response.
      *
      * @param command sent to device.
      * @return long long unsigned integer requested.
      */
-    long long unsigned int waitResponseULLongInt(string const &command);
+    long long unsigned int waitResponseULLongInt(std::string const &expected_prefix, std::string const &command);
 
     /** Wait for string response.
      *
      * @param command sent to device.
      * @return string requested.
      */
-    string waitResponseString(string const &command);
+    std::string waitResponseString(std::string const &expected_prefix, std::string const &command);
 
     /** Get Underwater Connection Status.
      *
@@ -183,7 +189,7 @@ public:
      *  (a false means the local device did not receive a delivered acknowledgment. The IM may actually be delivered).
      *  throw a exception if
      */
-    bool getIMDeliveryReport(string const &buffer);
+    bool getIMDeliveryReport(std::string const &buffer);
 
     /** Switch to COMMAND mode.
      *
@@ -208,7 +214,7 @@ public:
      *
      * @param type define what will be reset in device
      */
-    void resetDevice(ResetType const &type);
+    void resetDevice(ResetType const &type, bool ignore_unexpected_responses = false);
 
     /** Get interface type.
      *
@@ -227,14 +233,14 @@ public:
      * @param im Instant Message to be sent.
      * @return string parsed of im.
      */
-    string getStringOfIM(SendIM const &im);
+    std::string getStringOfIM(SendIM const &im);
 
     /** Parse a received Instant Message.
      *
      * @param buffer that contains the IM
      * @return Received Instant Message
      */
-    ReceiveIM receiveInstantMessage(string const &buffer);
+    ReceiveIM receiveInstantMessage(std::string const &buffer);
 
     /** Get the RigidBodyState pose of remote device.
      *
@@ -251,7 +257,7 @@ public:
      * It may have some data of interest.
      * @return Position pose.
      */
-    Position getPose(string const &buffer);
+    Position getPose(std::string const &buffer);
 
     /** Get the Direction of remote device.
      *
@@ -260,7 +266,7 @@ public:
      * It may have some data of interest.
      * @return Direction direc.
      */
-    Direction getDirection(string const &buffer);
+    Direction getDirection(std::string const &buffer);
 
     /** Converts from euler angles to quaternions.
      *
@@ -272,7 +278,7 @@ public:
 
     /** Helper method to separate AT and raw packets in a data stream
      */
-    int extractRawFromATPackets(string const& buffer) const;
+    int extractRawFromATPackets(std::string const& buffer) const;
 
     /** Helper method to extract packets from raw data
      *
@@ -280,12 +286,12 @@ public:
      * has a packet-based protocol. The default implementation will
      * just interpret any amount of raw data as a packet
      */
-    virtual int extractRawDataPacket(string const& buffer) const;
+    virtual int extractRawDataPacket(std::string const& buffer) const;
 
     /** Given a buffer that starts with a TIE header (+++), return whether it
      * could be a AT command
      */
-    int extractATPacket(string const& buffer) const;
+    int extractATPacket(std::string const& buffer) const;
 
     /** Pop out RawData from queueRawData.
      *
@@ -660,12 +666,12 @@ private:
     /**
      * Queue of received Raw Data
      */
-    queue<string> queueRawData;
+    std::queue<std::string> queueRawData;
 
     /**
      * Queue of received Notification
      */
-    queue<NotificationInfo> queueNotification;
+    std::queue<NotificationInfo> queueNotification;
 
 
     static const int max_packet_size = 20000;
@@ -674,7 +680,7 @@ private:
      *
      * @return string with data (response, notification or raw data).
      */
-    string readInternal(void);
+    std::string readInternal(void);
 
     /** Check a valid notification.
      *
@@ -684,7 +690,7 @@ private:
      * @param buffer to be analyzed.
      * @param notification kind present in buffer.
      */
-    void notificationValidation(string const &buffer, Notification const &notification);
+    void notificationValidation(std::string const &buffer, Notification const &notification);
 
     /** Filled command string to be sent to device.
      *
@@ -692,7 +698,7 @@ private:
      *  @param command to be sent.
      *  @return string filled.
      */
-    string fillCommand(string const &command);
+    std::string fillCommand(std::string const &command);
 
     /** Add a end line, according interface type.
      *
@@ -702,21 +708,21 @@ private:
      * @param command to be sent.
      * @return string command with end line.
      */
-    string addEndLine (string const &command);
+    std::string addEndLine (std::string const &command);
 
     /** Manage mode operation according command sent.
      *
      * Act before get a response.
      * @param command sent to device.
      */
-    void modeManager(string const &command);
+    void modeManager(std::string const &command);
 
     /** Manage mode operation according command sent and response obtained.
      *
      * Act after get a response.
      * @param command sent to device.
      */
-    void modeMsgManager(string const &command);
+    void modeMsgManager(std::string const &command);
 
 
 protected:
