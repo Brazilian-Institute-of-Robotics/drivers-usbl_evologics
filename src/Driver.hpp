@@ -54,7 +54,7 @@ public:
      * @param raw_data string to be sent to remote device.
      *
      */
-    void sendRawData(vector<uint8_t> const &raw_data);
+    void sendRawData(std::vector<uint8_t> const &raw_data);
 
     /** Read response from device.
      *

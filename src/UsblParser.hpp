@@ -6,7 +6,6 @@
 #include <string.h>
 #include <iostream>
 
-using namespace std;
 namespace usbl_evologics
 {
 class UsblParser
@@ -19,7 +18,7 @@ private:
      * @param parts of splitted buffer.
      * @return vector of string with parts size.
      */
-    vector<string> splitValidate(string const &buffer,  const char* symbol, size_t const parts);
+    std::vector<std::string> splitValidate(std::string const &buffer,  const char* symbol, size_t const parts);
 
 
 public:
@@ -32,7 +31,7 @@ public:
      * @param buffer to be printed
      * @return string without command escape sequence.
      */
-    static string printBuffer(const string& buffer);
+    static std::string printBuffer(const std::string& buffer);
 
     /** Print a buffer vector<uint8_t> that may contain hex that is not a character.
      *
@@ -40,7 +39,7 @@ public:
      * @param buffer to be printed
      * @return string without command escape sequence.
      */
-    static string printBuffer(const vector<uint8_t>& buffer);
+    static std::string printBuffer(const std::vector<uint8_t>& buffer);
 
 
     /** Check if buffer can be splitted at least in a establish amount.
@@ -52,14 +51,14 @@ public:
      * @param parts. minimal amount buffer can be spllited.
      * @return vector of string with parts size.
      */
-    vector<string> splitMinimalValidate(string const &buffer,  const char* symbol, size_t const parts);
+    std::vector<std::string> splitMinimalValidate(std::string const &buffer,  const char* symbol, size_t const parts);
 
     /** Find a Notification in a buffer.
      *
      *  @param buffer to be analyzed.
      *  @return Kind of notification. If buffer is not a Notification, returns NO_NOTIFICATION.
      */
-    Notification findNotification(string const &buffer) const;
+    Notification findNotification(std::string const &buffer) const;
 
     /** Validate the number of field of a Notification.
      *
@@ -70,7 +69,7 @@ public:
      * @param buffer Notification in DATA or COMMAND mode.
      * @param notification Kind of Notification in buffer.
      */
-    void splitValidateNotification(string const &buffer, Notification const &notification);
+    void splitValidateNotification(std::string const &buffer, Notification const &notification);
 
     /** Check for a Response in buffer.
      *
@@ -78,7 +77,7 @@ public:
      * @param buffer to be analyzed.
      * @return Kind of response.
      */
-    CommandResponse findResponse(string const &buffer);
+    CommandResponse findResponse(std::string const &buffer);
 
     /** Get response or notification content in DATA mode.
      *
@@ -90,7 +89,7 @@ public:
      *  @param buffer Notification or Response in DATA mode.
      *  @return <content><end-line> like in COMMAND mode.
      */
-    string getAnswerContent(string const &buffer);
+    std::string getAnswerContent(std::string const &buffer);
 
     /** Get notification content in DATA mode and validate with command.
      *
@@ -102,21 +101,21 @@ public:
      *  @param command to be validate.
      *  @return <content><end-line> like in COMMAND mode.
      */
-    string getAnswerContent(string const &buffer, string const &command);
+    std::string getAnswerContent(std::string const &buffer, std::string const &command);
 
     /** Remove <end-of-line> "\r\n" from buffer
      *
      * @param buffer to be analyzezd.
      * @return string without <end-of-line> if it's present in buffer.
      */
-    string removeEndLine(string const &buffer);
+    std::string removeEndLine(std::string const &buffer);
 
     /** Parse a Instant Message into string to be sent to device.
      *
      * @param im Instant Message.
      * @return string to be sent to device.
      */
-    string parseSendIM(SendIM const &im);
+    std::string parseSendIM(SendIM const &im);
 
     /** Parse a received Instant Message from buffer to ReceiveIM.
      *
@@ -124,7 +123,7 @@ public:
      * @param buffer with Instant Message.
      * @return Received Instant Message.
      */
-    ReceiveIM parseReceivedIM(string const &buffer);
+    ReceiveIM parseReceivedIM(std::string const &buffer);
 
     /** Parse a received pose from buffer to Position.
      *
@@ -132,7 +131,7 @@ public:
      * @param buffer with Pose.
      * @return Position.
      */
-    Position parsePosition(string const &buffer);
+    Position parsePosition(std::string const &buffer);
 
     /** Parse a received direction from buffer to Direction.
      *
@@ -140,7 +139,7 @@ public:
      * @param buffer with direction.
      * @return Direction.
      */
-    Direction parseDirection(string const &buffer);
+    Direction parseDirection(std::string const &buffer);
 
     /** Check if Instant Message was delivered.
      *
@@ -148,7 +147,7 @@ public:
      * @param buffer from device.
      * @return TRUE if delivery was successful, FALSE if remote device doesn't confirm receipt.
      */
-    bool parseIMReport(string const &buffer);
+    bool parseIMReport(std::string const &buffer);
 
     /** Get the number of fields in a Notification.
      *
@@ -166,7 +165,7 @@ public:
      * @param buffer with integer as response.
      * @return integer number.
      */
-    int getNumber(string const &buffer);
+    int getNumber(std::string const &buffer);
 
     /** Get the double from a response buffer in COMMAND mode.
      *
@@ -174,7 +173,7 @@ public:
      * @param buffer with floating point number as response.
      * @return double number.
      */
-    double getDouble(string const &buffer);
+    double getDouble(std::string const &buffer);
 
     /** Get a long long unsigned int from a response buffer in COMMAND mode.
      *
@@ -182,7 +181,7 @@ public:
      * @param buffer with a counter number as response.
      * @return long long unsigned int number.
      */
-    long long unsigned int getULLongInt(string const &buffer);
+    long long unsigned int getULLongInt(std::string const &buffer);
 
     /** Parse AcousticConnection Status of underwater link.
      *
@@ -190,7 +189,7 @@ public:
      * @param buffer with Connection Status
      * @return AcousticConnection of underwater link
      */
-    AcousticConnection parseConnectionStatus (string const &buffer);
+    AcousticConnection parseConnectionStatus (std::string const &buffer);
 
     /** Parse Delivery Status of a Message.
      *
@@ -198,7 +197,7 @@ public:
      * @param buffer with Delivery Status.
      * @return DeleviryStatus.
      */
-    DeliveryStatus parseDeliveryStatus (string const &buffer);
+    DeliveryStatus parseDeliveryStatus (std::string const &buffer);
 
     /** Parse current settings.
      *
@@ -206,14 +205,14 @@ public:
      * @param buffer with list of current device settings.
      * @return
      */
-    DeviceSettings parseCurrentSettings (string const &buffer);
+    DeviceSettings parseCurrentSettings (std::string const &buffer);
 
     /** Parse Multipath structure
      *
      * @param buffer with list of last received acoustic signal's propagation.
      * @return vector of Multipath.
      */
-    vector<MultiPath> parseMultipath (string const &buffer);
+    std::vector<MultiPath> parseMultipath (std::string const &buffer);
 
 
 };
