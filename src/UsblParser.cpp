@@ -20,7 +20,7 @@ string UsblParser::printBuffer(const string& buffer)
     bool hex_init = true;
     for (size_t i = 0; i < buffer.size(); i++)
     {
-        if((int)buffer[i] < 33 || (int)buffer[i] > 126 || !hex_init)
+        if((int)buffer[i] < 32 || (int)buffer[i] > 126 || !hex_init)
         {
             char byte[4];
             sprintf(byte, "%02X", (unsigned char)buffer[i]);
