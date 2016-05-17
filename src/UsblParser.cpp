@@ -243,7 +243,7 @@ vector<string> UsblParser::splitValidate(string const& buffer, const char* symbo
 {
     vector<string> splitted;
     splitted.clear();
-    
+
     boost::split( splitted, buffer, boost::is_any_of( symbol ), boost::token_compress_on );
     if (splitted.size() != parts)
         throw ValidationError("UsblParser.cpp splitValidate: Tried to split the string \"" + printBuffer(buffer) + "\" at \"" + symbol + "\" in " + to_string(parts) + " parts, but get " + to_string(splitted.size()) + " parts");
@@ -419,9 +419,12 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
 // Parse current settings.
 DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
 {
+    string buffer_tmp = buffer;
+    boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
+
     DeviceSettings settings;
     vector<string> splitted;
-    boost::split( splitted, buffer, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
+    boost::split( splitted, buffer_tmp, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
     // Remove last empty string from vector
     splitted.pop_back();
 
