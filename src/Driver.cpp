@@ -128,21 +128,30 @@ int Driver::extractATPacket(string const& buffer) const
             length += 2;
             if(length > buffer.size())
             {
-                LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer ", length, buffer.c_str());
+                LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer", length, buffer.c_str());
                 return 0;
             }
             // Check the presence of end-of-line (\r\n).
             if (buffer.substr(length-2, 2) != "\r\n")
-                throw runtime_error("Could not find <end-of-line> at position \""+ to_string(length-2) + "\"of the end of buffer  \"" + usblParser.printBuffer(buffer) + "\"");
+            {
+                LOG_WARN("Could not find <end-of-line> at position \"%u\" of the end of buffer  \"%s\"", length-2, buffer.c_str());
+                return -1;
+            }
             return length;
         }
         else if (buffer.size() > 16)
-            throw runtime_error("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer \"" + usblParser.printBuffer(buffer) + "\"");
+        {
+            LOG_WARN("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer, \"%s\"", buffer.c_str());
+            return -1;
+        }
         return 0;
     }
     // Check max command size. +++AT?CLOCK:
     else if (buffer.size() > 12)
-        throw runtime_error("Could not find any \":\" before 12 bytes in buffer " + usblParser.printBuffer(buffer));
+    {
+        LOG_WARN("Could not find any \":\" before 12 bytes in buffer \"%s\"",  buffer.c_str());
+        return -1;
+    }
     return 0;
 }
 
@@ -171,7 +180,10 @@ int Driver::extractRawFromATPackets(string const& buffer) const
 
                 int raw_data_packet = extractRawDataPacket(buffer.substr(0, ties_start));
                 if (raw_data_packet == 0)
-                    throw UnexpectedRawPacket("found beginning of raw packet without an end");
+                {
+                    LOG_WARN("found beginning of raw packet without an end");
+                    return -1;
+                }
                 else return raw_data_packet;
             }
             ++ties_start;

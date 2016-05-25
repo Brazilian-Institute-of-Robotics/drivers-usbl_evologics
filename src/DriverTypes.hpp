@@ -484,6 +484,7 @@ struct Direction
  */
 struct SendIM
 {
+    base::Time time;
     int destination;
     bool deliveryReport;
     std::vector<uint8_t> buffer;
