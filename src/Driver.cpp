@@ -297,6 +297,10 @@ string Driver::waitResponse(string const &expected_prefix, std::string const& co
         else if(response_info.response == BUSY)
              throw BusyError("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device return the follow BUSY msg: \"" + usblParser.printBuffer(response_info.buffer) + "\". Try it latter.");
     }
+    // Check for time_out
+    if(response_info.response != expected)
+        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
+
     // In DATA mode, validate response and return content without header.
     if(mode == DATA)
     {   // Buffer validation of indicated length was displaced for extract packet.
@@ -304,8 +308,6 @@ string Driver::waitResponse(string const &expected_prefix, std::string const& co
         // Check if response and command match.
         return usblParser.getAnswerContent(response_info.buffer, command);
     }
-    if((time_now - init_time) > time_out)
-        throw runtime_error("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device didn't send a response in " + to_string(time_out.toSeconds()) + " seconds time-out");
     return response_info.buffer;
 }
 

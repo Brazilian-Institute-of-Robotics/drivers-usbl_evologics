@@ -114,7 +114,7 @@ string UsblParser::getAnswerContent(string const &buffer)
 string UsblParser::getAnswerContent(string const &buffer, string const &command)
 {
     if(buffer.find("+++AT") == string::npos)
-        throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""+ printBuffer(buffer) +"\"");
+        throw ModeError("USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with command: \""+ command +"\" and  answer: \""+ printBuffer(buffer) +"\"");
     vector<string> splitted = splitMinimalValidate(buffer, ":", 3);
     boost::algorithm::trim_if(splitted[0], boost::is_any_of("+"));
     if(command.find(splitted[0]) == string::npos)
