@@ -269,7 +269,6 @@ vector<string> UsblParser::splitMinimalValidate(string const &buffer,  const cha
         else
         {
             string error = "UsblParser.cpp splitMinimalValidate: string \"" + printBuffer(buffer) + "\" has not \"" + to_string(parts) + "\" symbol \"" + symbol+ "\" to be splitted in.";
-            cout << error << endl;
             throw ValidationError(error);
         }
     }
