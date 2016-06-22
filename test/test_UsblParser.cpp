@@ -87,6 +87,7 @@ char peer1_6[] = {
 0x30, 0x30, 0x20, 0x20, 0x20, 0x32, 0x34, 0x30,
 0x20, 0x20, 0x0a, 0x0d, 0x0a };
 
+
 BOOST_AUTO_TEST_CASE(get_current_setting)
 {
     UsblParser usblParser;
@@ -94,11 +95,127 @@ BOOST_AUTO_TEST_CASE(get_current_setting)
     BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(buffer).imRetry);
 }
 
+BOOST_AUTO_TEST_CASE(get_current_setting_with_pending_sets)
+{
+    UsblParser usblParser;
+    string buffer = "[*]";
+    buffer += string(peer1_8);
+    BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(buffer).imRetry);
+}
+
+BOOST_AUTO_TEST_CASE(get_current_setting_with_pending_sets_case_2)
+{
+    UsblParser usblParser;
+    string settings = "[*]Source Level: 3\r\n";
+    settings += "[*]Source Level Control: 0\r\n";
+    settings += "[*]Gain: 1\r\n";
+    settings += "[*]Carrier Waveform ID: 1\r\n";
+    settings += "Local Address: 2\r\n";
+    settings += "[*]Highest Address: 14\r\n";
+    settings += "Cluster Size: 10\r\n";
+    settings += "Packet Time: 750\r\n";
+    settings += "[*]Retry Count: 3\r\n";
+    settings += "Retry Timeout: 500\r\n";
+    settings += "Wake Up Active Time: 12\r\n";
+    settings += "[*]Wake Up Period: 12\r\n";
+    settings += "Promiscuous Mode: 1\r\n";
+    settings += "[*]Sound Speed: 1500\r\n";
+    settings += "IM Rerty Count: 1\r\n";
+    settings += "[*]Pool Size: 16384\r\n";
+    settings += "[*]Hold Timeout: 0\r\n";
+    settings += "[*]Idle Timeout: 0\r\n\r\n";
+    BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(settings).imRetry);
+}
+
 BOOST_AUTO_TEST_CASE(get_multipath)
 {
     UsblParser usblParser;
     string buffer(peer1_5);
     BOOST_REQUIRE_EQUAL(10, usblParser.parseMultipath(buffer).at(0).signalIntegrity);
+}
+
+BOOST_AUTO_TEST_CASE(get_number)
+{
+    UsblParser usblParser;
+    string buffer = "65";
+    BOOST_REQUIRE_EQUAL(65, usblParser.getNumber(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_number_with_text)
+{
+    UsblParser usblParser;
+    string buffer = "65ABC";
+    BOOST_REQUIRE_EQUAL(65, usblParser.getNumber(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(try_to_get_text_instead_of_number)
+{
+    UsblParser usblParser;
+    string buffer = "ABC";
+    BOOST_REQUIRE_THROW(usblParser.getNumber(buffer),runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(get_number_with_pending_set)
+{
+    UsblParser usblParser;
+    string buffer = "[*]765";
+    BOOST_REQUIRE_EQUAL(765, usblParser.getNumber(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_double)
+{
+    UsblParser usblParser;
+    string buffer = "65.76";
+    BOOST_REQUIRE_EQUAL(65.76, usblParser.getDouble(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_double_with_text)
+{
+    UsblParser usblParser;
+    string buffer = "65.51ABC";
+    BOOST_REQUIRE_EQUAL(65.51, usblParser.getDouble(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(try_to_get_text_instead_of_double)
+{
+    UsblParser usblParser;
+    string buffer = "ABC";
+    BOOST_REQUIRE_THROW(usblParser.getDouble(buffer),invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(get_double_with_pending_set)
+{
+    UsblParser usblParser;
+    string buffer = "[*]7.65";
+    BOOST_REQUIRE_EQUAL(7.65, usblParser.getDouble(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_uLLongInt)
+{
+    UsblParser usblParser;
+    string buffer = "65876786";
+    BOOST_REQUIRE_EQUAL(65876786, usblParser.getULLongInt(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_uLLongInt_with_text)
+{
+    UsblParser usblParser;
+    string buffer = "65876786ABC";
+    BOOST_REQUIRE_EQUAL(65876786, usblParser.getULLongInt(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(try_to_get_text_instead_of_uLLongInt)
+{
+    UsblParser usblParser;
+    string buffer = "ABC";
+    BOOST_REQUIRE_THROW(usblParser.getULLongInt(buffer),runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(get_uLLongInt_with_pending_set)
+{
+    UsblParser usblParser;
+    string buffer = "[*]65876786";
+    BOOST_REQUIRE_EQUAL(65876786, usblParser.getULLongInt(buffer));
 }
 
 BOOST_AUTO_TEST_CASE(get_answer_content)
