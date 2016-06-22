@@ -419,17 +419,15 @@ DeliveryStatus UsblParser::parseDeliveryStatus (string const &buffer)
 // Parse current settings.
 DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
 {
-    string buffer_tmp = buffer;
-    boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
-
     DeviceSettings settings;
     vector<string> splitted;
-    boost::split( splitted, buffer_tmp, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
+    boost::split( splitted, buffer, boost::algorithm::is_any_of( "\r\n" ), boost::token_compress_on );
     // Remove last empty string from vector
     splitted.pop_back();
 
     for(size_t i=0; i < splitted.size(); i++ )
     {
+        boost::algorithm::trim_if(splitted.at(i), boost::is_any_of("[*]"));
         vector<string> splitted2 = splitValidate(splitted.at(i), ":", 2);
         if(splitted2.at(0) == "Source Level Control")
             // This setting is dealt separately.
