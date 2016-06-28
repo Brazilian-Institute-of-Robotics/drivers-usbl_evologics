@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE(no_end_of_line_present)
 {
     Driver driver;
     string buffer("+++AT:5:12345ab\r\n");
-    BOOST_REQUIRE_THROW(driver.extractRawFromATPackets(buffer), runtime_error);
+    BOOST_REQUIRE_EQUAL(driver.extractRawFromATPackets(buffer), -1);
 }
 
 BOOST_AUTO_TEST_CASE(AT_packet_with_wrong_length)
@@ -186,7 +186,6 @@ BOOST_AUTO_TEST_CASE(it_should_get_a_Message_Notification_in_command_mode_in_inc
     message << notification << "5" << parameters << string(msg, msg+5) << end_line;
     stringstream ss;
     ss << notification << to_string(message.str().size()) << parameters << message.str() << end_line;
-    cout <<"test print:  " << UsblParser::printBuffer(ss.str()) << endl;
     BOOST_REQUIRE_EQUAL(ss.str().size(), driver.checkNotificationCommandMode(ss.str()));
 }
 

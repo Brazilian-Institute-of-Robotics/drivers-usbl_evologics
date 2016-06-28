@@ -87,6 +87,7 @@ char peer1_6[] = {
 0x30, 0x30, 0x20, 0x20, 0x20, 0x32, 0x34, 0x30,
 0x20, 0x20, 0x0a, 0x0d, 0x0a };
 
+
 BOOST_AUTO_TEST_CASE(get_current_setting)
 {
     UsblParser usblParser;
@@ -94,11 +95,127 @@ BOOST_AUTO_TEST_CASE(get_current_setting)
     BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(buffer).imRetry);
 }
 
+BOOST_AUTO_TEST_CASE(get_current_setting_with_pending_sets)
+{
+    UsblParser usblParser;
+    string buffer = "[*]";
+    buffer += string(peer1_8);
+    BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(buffer).imRetry);
+}
+
+BOOST_AUTO_TEST_CASE(get_current_setting_with_pending_sets_case_2)
+{
+    UsblParser usblParser;
+    string settings = "[*]Source Level: 3\r\n";
+    settings += "[*]Source Level Control: 0\r\n";
+    settings += "[*]Gain: 1\r\n";
+    settings += "[*]Carrier Waveform ID: 1\r\n";
+    settings += "Local Address: 2\r\n";
+    settings += "[*]Highest Address: 14\r\n";
+    settings += "Cluster Size: 10\r\n";
+    settings += "Packet Time: 750\r\n";
+    settings += "[*]Retry Count: 3\r\n";
+    settings += "Retry Timeout: 500\r\n";
+    settings += "Wake Up Active Time: 12\r\n";
+    settings += "[*]Wake Up Period: 12\r\n";
+    settings += "Promiscuous Mode: 1\r\n";
+    settings += "[*]Sound Speed: 1500\r\n";
+    settings += "IM Rerty Count: 1\r\n";
+    settings += "[*]Pool Size: 16384\r\n";
+    settings += "[*]Hold Timeout: 0\r\n";
+    settings += "[*]Idle Timeout: 0\r\n\r\n";
+    BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(settings).imRetry);
+}
+
 BOOST_AUTO_TEST_CASE(get_multipath)
 {
     UsblParser usblParser;
     string buffer(peer1_5);
     BOOST_REQUIRE_EQUAL(10, usblParser.parseMultipath(buffer).at(0).signalIntegrity);
+}
+
+BOOST_AUTO_TEST_CASE(get_number)
+{
+    UsblParser usblParser;
+    string buffer = "65";
+    BOOST_REQUIRE_EQUAL(65, usblParser.getNumber(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_number_with_text)
+{
+    UsblParser usblParser;
+    string buffer = "65ABC";
+    BOOST_REQUIRE_EQUAL(65, usblParser.getNumber(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(try_to_get_text_instead_of_number)
+{
+    UsblParser usblParser;
+    string buffer = "ABC";
+    BOOST_REQUIRE_THROW(usblParser.getNumber(buffer),runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(get_number_with_pending_set)
+{
+    UsblParser usblParser;
+    string buffer = "[*]765";
+    BOOST_REQUIRE_EQUAL(765, usblParser.getNumber(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_double)
+{
+    UsblParser usblParser;
+    string buffer = "65.76";
+    BOOST_REQUIRE_EQUAL(65.76, usblParser.getDouble(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_double_with_text)
+{
+    UsblParser usblParser;
+    string buffer = "65.51ABC";
+    BOOST_REQUIRE_EQUAL(65.51, usblParser.getDouble(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(try_to_get_text_instead_of_double)
+{
+    UsblParser usblParser;
+    string buffer = "ABC";
+    BOOST_REQUIRE_THROW(usblParser.getDouble(buffer),invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(get_double_with_pending_set)
+{
+    UsblParser usblParser;
+    string buffer = "[*]7.65";
+    BOOST_REQUIRE_EQUAL(7.65, usblParser.getDouble(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_uLLongInt)
+{
+    UsblParser usblParser;
+    string buffer = "65876786";
+    BOOST_REQUIRE_EQUAL(65876786, usblParser.getULLongInt(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(get_uLLongInt_with_text)
+{
+    UsblParser usblParser;
+    string buffer = "65876786ABC";
+    BOOST_REQUIRE_EQUAL(65876786, usblParser.getULLongInt(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(try_to_get_text_instead_of_uLLongInt)
+{
+    UsblParser usblParser;
+    string buffer = "ABC";
+    BOOST_REQUIRE_THROW(usblParser.getULLongInt(buffer),runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(get_uLLongInt_with_pending_set)
+{
+    UsblParser usblParser;
+    string buffer = "[*]65876786";
+    BOOST_REQUIRE_EQUAL(65876786, usblParser.getULLongInt(buffer));
 }
 
 BOOST_AUTO_TEST_CASE(get_answer_content)
@@ -247,7 +364,7 @@ BOOST_AUTO_TEST_CASE(get_receveid_message)
     char end_line[] = { 0x0d, 0x0a};
 
     ReceiveIM im;
-    im.buffer = string(msg, msg+5); //":12,\005";
+    im.buffer = vector<uint8_t>(msg, msg+5);
     im.deliveryReport = true;
     im.destination = 2;
     im.duration = base::Time::fromMicroseconds(312);
@@ -258,16 +375,16 @@ BOOST_AUTO_TEST_CASE(get_receveid_message)
     im.velocity = 0.03;
 
     string buffer = "+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,";
-    //cout << "sbuffer.size() "<< buffer.size() << endl;
-    cout << "im.buffer.size() "<< im.buffer.size() << endl;
 
     vector<uint8_t> vec_buffer(buffer.begin(), buffer.end());
     vec_buffer.insert(vec_buffer.end(), msg, msg+5);
     vec_buffer.insert(vec_buffer.end(), end_line, end_line+2);
     string sbuffer(vec_buffer.begin(), vec_buffer.end());
 
-    BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(sbuffer).buffer);
-    cout << "size "<< usblParser.parseReceivedIM(sbuffer).buffer.size()<< endl;
+    vector<uint8_t> got_im = usblParser.parseReceivedIM(sbuffer).buffer;
+    BOOST_REQUIRE_EQUAL(im.buffer.size(), got_im.size());
+    for( size_t i=0; i<im.buffer.size(); i++)
+        BOOST_REQUIRE_EQUAL(im.buffer[i], got_im[i]);
 }
 
 BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
@@ -288,13 +405,14 @@ BOOST_AUTO_TEST_CASE(get_receveid_message_zero)
     string buffer("+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,");
     char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35};
     string end_line("\r\n");
-    im.buffer = string(msg, msg+5);
+    im.buffer = vector<uint8_t>(msg, msg+5);
     //char end_line[2] = {0x0d, 0x0a};
     ss << buffer << string(msg, msg+5) << end_line;
-    std::cout << "ss.str() " << ss.str().size() << " "<< usblParser.printBuffer(ss.str()) <<std::endl;
-    //std::string sbuffer(ss.str(), (sizeof(ss.str())/sizeof(ss.str()[0])));
-    //ss << buffer << end_line;
-    BOOST_REQUIRE_EQUAL(im.buffer, usblParser.parseReceivedIM(ss.str()).buffer);
+
+    vector<uint8_t> got_im = usblParser.parseReceivedIM(ss.str()).buffer;
+    BOOST_REQUIRE_EQUAL(im.buffer.size(), got_im.size());
+    for( size_t i=0; i<im.buffer.size(); i++)
+        BOOST_REQUIRE_EQUAL(im.buffer[i], got_im[i]);
 }
 
 BOOST_AUTO_TEST_CASE(parse_send_message)
@@ -306,7 +424,7 @@ BOOST_AUTO_TEST_CASE(parse_send_message)
     im.destination = 1;
     char msg[] = { 0x31, 0x32, 0x33, 0x34, 0x35 };
 
-    im.buffer = string(msg, msg+5);
+    im.buffer = vector<uint8_t>(msg, msg+5);
     string buffer = "AT*SENDIM,5,1,ack,";
 
     ss << buffer << string(msg, msg+5);
@@ -323,7 +441,7 @@ BOOST_AUTO_TEST_CASE(parse_send_message_with_zero)
     im.destination = 1;
     char msg[] = { 0x31, 0x00, 0x33, 0x00, 0x35 };
 
-    im.buffer = string(msg, msg+5);
+    im.buffer = vector<uint8_t>(msg, msg+5);
     string buffer = "AT*SENDIM,5,1,ack,";
 
     ss << buffer << string(msg, msg+5);
@@ -344,26 +462,27 @@ BOOST_AUTO_TEST_CASE(test_splitMinimalValidate)
     ss << buffer << string(msg, msg+5) << end_line;
 
     vector<string> test1 = usblParser.splitMinimalValidate(ss.str(),":", 3);
-    for(int i=0; i<test1.size(); i++)
-        cout << "test1["<< i << "]: " << usblParser.printBuffer(test1[i]) << endl;
+    BOOST_REQUIRE_EQUAL(test1.size(), 3);
+    BOOST_REQUIRE_EQUAL(test1[0], "+++AT");
+    BOOST_REQUIRE_EQUAL(test1[1], "37");
+    BOOST_REQUIRE_EQUAL(test1[2], "RECVIM,5,1,2,ack,312,14,11,0.03," + string(msg, msg+5) + end_line);
 
     vector<string> test2 = usblParser.splitMinimalValidate(ss.str(),":", 2);
-    for(int i=0; i<test2.size(); i++)
-        cout << "test2["<< i << "]: " << usblParser.printBuffer(test2[i]) << endl;
+    BOOST_REQUIRE_EQUAL(test2.size(), 2);
+    BOOST_REQUIRE_EQUAL(test2[0], "+++AT");
+    BOOST_REQUIRE_EQUAL(test2[1], "37:RECVIM,5,1,2,ack,312,14,11,0.03," + string(msg, msg+5) + end_line);
 
     vector<string> test3 = usblParser.splitMinimalValidate(ss.str(),",", 3);
-    for(int i=0; i<test3.size(); i++)
-        cout << "test3["<< i << "]: " << usblParser.printBuffer(test3[i]) << endl;
+    BOOST_REQUIRE_EQUAL(test3.size(), 3);
+    BOOST_REQUIRE_EQUAL(test3[0], "+++AT:37:RECVIM");
+    BOOST_REQUIRE_EQUAL(test3[1], "5");
+    BOOST_REQUIRE_EQUAL(test3[2], "1,2,ack,312,14,11,0.03," + string(msg, msg+5) + end_line);
 
     vector<string> test4 = usblParser.splitMinimalValidate(ss.str(),",", 1);
-    for(int i=0; i<test4.size(); i++)
-        cout << "test4["<< i << "]: " << usblParser.printBuffer(test4[i]) << endl;
+    BOOST_REQUIRE_EQUAL(test4.size(), 1);
+    BOOST_REQUIRE_EQUAL(test4[0], ss.str());
 
-    vector<string> test5 = usblParser.splitMinimalValidate(ss.str(),"&", 2);
-    for(int i=0; i<test5.size(); i++)
-        cout << "test5["<< i << "]: " << usblParser.printBuffer(test5[i]) << endl;
-
-    BOOST_REQUIRE_EQUAL("5", test3[1]);
+    BOOST_REQUIRE_THROW(usblParser.splitMinimalValidate(ss.str(),"&", 2), runtime_error);
 
 }
 

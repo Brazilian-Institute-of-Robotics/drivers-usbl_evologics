@@ -12,7 +12,7 @@
 #include "base/samples/RigidBodyState.hpp"
 #include <base/Eigen.hpp>
 #include "base/Pose.hpp"
-#include "base/Logging.hpp"
+#include "base-logging/Logging.hpp"
 
 namespace usbl_evologics
 {
