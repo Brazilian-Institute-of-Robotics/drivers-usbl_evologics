@@ -192,8 +192,8 @@ Position UsblParser::parsePosition(string const &buffer)
     pose.yaw = stod(splitted[12],&sz);
     pose.propagationTime = base::Time::fromSeconds(stod(splitted[13],&sz));
     pose.rssi = stoi(splitted[14],&sz);
-    pose.integrity = stoi(splitted[14],&sz);
-    pose.accuracy = stoi(splitted[14],&sz);
+    pose.integrity = stoi(splitted[15],&sz);
+    pose.accuracy = stod(splitted[16],&sz);
 
     return pose;
 }
@@ -218,9 +218,9 @@ Direction UsblParser::parseDirection(string const &buffer)
     direc.roll = stod(splitted[8],&sz);
     direc.pitch = stod(splitted[9],&sz);
     direc.yaw = stod(splitted[10],&sz);
-    direc.rssi = stod(splitted[11],&sz);
-    direc.integrity = stod(splitted[12],&sz);
-    direc.accuracy = stoi(splitted[13],&sz);
+    direc.rssi = stoi(splitted[11],&sz);
+    direc.integrity = stoi(splitted[12],&sz);
+    direc.accuracy = stod(splitted[13],&sz);
 
     return direc;
 }
