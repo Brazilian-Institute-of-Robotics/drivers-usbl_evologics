@@ -153,7 +153,7 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
         im.deliveryReport = true;
     else
         im.deliveryReport = false;
-    im.duration = base::Time::fromMicroseconds(stod(splitted[5],&sz));
+    im.duration = base::Time::fromMicroseconds(stoi(splitted[5],&sz));
     im.rssi = stoi(splitted[6],&sz);
     im.integrity = stoi(splitted[7],&sz);
     im.velocity = stod(splitted[8],&sz);
@@ -190,7 +190,7 @@ Position UsblParser::parsePosition(string const &buffer)
     pose.roll = stod(splitted[10],&sz);
     pose.pitch = stod(splitted[11],&sz);
     pose.yaw = stod(splitted[12],&sz);
-    pose.propagationTime = base::Time::fromSeconds(stod(splitted[13],&sz));
+    pose.propagationTime = base::Time::fromMicroseconds(stoi(splitted[13],&sz));
     pose.rssi = stoi(splitted[14],&sz);
     pose.integrity = stoi(splitted[15],&sz);
     pose.accuracy = stod(splitted[16],&sz);

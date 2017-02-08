@@ -127,6 +127,23 @@ BOOST_AUTO_TEST_CASE(get_current_setting_with_pending_sets_case_2)
     BOOST_REQUIRE_EQUAL(1, usblParser.parseCurrentSettings(settings).imRetry);
 }
 
+BOOST_AUTO_TEST_CASE(get_position)
+{
+    UsblParser usblParser;
+    string position = "USBLLONG,1464207778.381274,1464207778.075953,2,13.6015,3.1369,1.7311,13.6015,3.1369,1.7311,0.0000,-0.0000,0.0000,9377,-54,106,0.1698\r\n";
+    Position pose = usblParser.parsePosition(position);
+    BOOST_REQUIRE_EQUAL(pose.rssi, -54 );
+    BOOST_REQUIRE_EQUAL(pose.integrity, 106 );
+    BOOST_REQUIRE_EQUAL(pose.accuracy, 0.1698 );
+    BOOST_REQUIRE_EQUAL(pose.propagationTime.toMicroseconds(), 9377 );
+    BOOST_REQUIRE_EQUAL(pose.time.toMicroseconds(), 1464207778.381274 );
+    BOOST_REQUIRE_EQUAL(pose.measurementTime.toMicroseconds(), 1464207778.075953 );
+    BOOST_REQUIRE_EQUAL(pose.remoteAddress, 2 );
+    BOOST_REQUIRE_EQUAL(pose.x, 13.6015);
+    BOOST_REQUIRE_EQUAL(pose.y, 3.1369);
+    BOOST_REQUIRE_EQUAL(pose.z, 1.7311);
+}
+
 BOOST_AUTO_TEST_CASE(get_multipath)
 {
     UsblParser usblParser;
