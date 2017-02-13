@@ -23,6 +23,7 @@ class Driver : public iodrivers_base::Driver
 public:
 
     Driver();
+    Driver(const OperationMode &init_mode);
     ~Driver();
 
 

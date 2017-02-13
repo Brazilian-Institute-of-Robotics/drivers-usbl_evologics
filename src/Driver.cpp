@@ -5,10 +5,14 @@
 using namespace std;
 using namespace usbl_evologics;
 
-Driver::Driver()
-: iodrivers_base::Driver(max_packet_size)
+Driver::Driver(const OperationMode &init_mode)
+: iodrivers_base::Driver(max_packet_size), mode(init_mode)
 {
-    mode = DATA;
+}
+
+Driver::Driver()
+: Driver(DATA)
+{
 }
 
 Driver::~Driver()
