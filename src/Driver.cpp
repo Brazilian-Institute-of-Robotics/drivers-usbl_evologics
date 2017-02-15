@@ -1,6 +1,7 @@
 #include "Driver.hpp"
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 
 using namespace std;
 using namespace usbl_evologics;
@@ -646,6 +647,7 @@ void Driver::switchToDataMode(void)
 {
     string command = "ATO";
     sendCommand(command);
+    usleep(1.5e6);
     modeMsgManager(command);
 }
 
