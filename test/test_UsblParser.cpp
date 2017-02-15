@@ -136,8 +136,8 @@ BOOST_AUTO_TEST_CASE(get_position)
     BOOST_REQUIRE_EQUAL(pose.integrity, 106 );
     BOOST_REQUIRE_EQUAL(pose.accuracy, 0.1698 );
     BOOST_REQUIRE_EQUAL(pose.propagationTime.toMicroseconds(), 9377 );
-    BOOST_REQUIRE_EQUAL(pose.time.toMicroseconds(), 1464207778.381274 );
-    BOOST_REQUIRE_EQUAL(pose.measurementTime.toMicroseconds(), 1464207778.075953 );
+    BOOST_REQUIRE_EQUAL(pose.time.toSeconds(), 1464207778.381274 );
+    BOOST_REQUIRE_EQUAL(pose.measurementTime.toSeconds(), 1464207778.075953 );
     BOOST_REQUIRE_EQUAL(pose.remoteAddress, 2 );
     BOOST_REQUIRE_EQUAL(pose.x, 13.6015);
     BOOST_REQUIRE_EQUAL(pose.y, 3.1369);
