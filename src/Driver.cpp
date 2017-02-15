@@ -1,14 +1,19 @@
 #include "Driver.hpp"
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 
 using namespace std;
 using namespace usbl_evologics;
 
-Driver::Driver()
-: iodrivers_base::Driver(max_packet_size)
+Driver::Driver(const OperationMode &init_mode)
+: iodrivers_base::Driver(max_packet_size), mode(init_mode)
 {
-    mode = DATA;
+}
+
+Driver::Driver()
+: Driver(DATA)
+{
 }
 
 Driver::~Driver()
@@ -642,6 +647,7 @@ void Driver::switchToDataMode(void)
 {
     string command = "ATO";
     sendCommand(command);
+    usleep(1.5e6);
     modeMsgManager(command);
 }
 
