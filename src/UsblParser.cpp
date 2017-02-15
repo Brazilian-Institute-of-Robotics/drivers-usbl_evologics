@@ -141,28 +141,27 @@ ReceiveIM UsblParser::parseReceivedIM(string const &buffer)
 {
     ReceiveIM im;
     vector<string> splitted = splitMinimalValidate(buffer, ",", getNumberFields(RECVIM));
-    string::size_type sz;     // alias of size_t
 
     if(splitted[0].find("RECVIM") == string::npos)
         throw ParseError("UsblParser.cpp parseReceivedIM: Received buffer \"" + printBuffer(buffer) +"\" is not a RECVIM notification, but a \"" + printBuffer(splitted[0]) + "\" ");
 
     im.time = base::Time::now();
-    im.source = stoi(splitted[2],&sz);
-    im.destination = stoi(splitted[3],&sz);
+    im.source = stoi(splitted[2]);
+    im.destination = stoi(splitted[3]);
     if(splitted[4] == "ack")
         im.deliveryReport = true;
     else
         im.deliveryReport = false;
-    im.duration = base::Time::fromMicroseconds(stod(splitted[5],&sz));
-    im.rssi = stoi(splitted[6],&sz);
-    im.integrity = stoi(splitted[7],&sz);
-    im.velocity = stod(splitted[8],&sz);
+    im.duration = base::Time::fromMicroseconds(stoi(splitted[5]));
+    im.rssi = stoi(splitted[6]);
+    im.integrity = stoi(splitted[7]);
+    im.velocity = stod(splitted[8]);
 
     // Remove <end-line> (\r\n) from buffer
     string string_buffer = removeEndLine(splitted[9]);
     im.buffer = vector<uint8_t>(string_buffer.begin(), string_buffer.end());
 
-    string::size_type size = stoi(splitted[1],&sz);
+    string::size_type size = stoi(splitted[1]);
     if(size != im.buffer.size())
         throw ParseError("UsblParser.cpp parseReceivedIM: Tried to split a receiving Instant Message, but the message \"" + printBuffer(splitted[9]) +"\" has \"" + to_string(im.buffer.size()) + "\" characters and not \"" + printBuffer(splitted[1]) + "\" as predicted.");
     return im;
@@ -173,27 +172,26 @@ Position UsblParser::parsePosition(string const &buffer)
 {
     Position pose;
     vector<string> splitted = splitValidate(buffer, ",", getNumberFields(USBLLONG));
-    string::size_type sz;     // alias of size_t
 
     if(splitted[0].find("USBLLONG") == string::npos)
         throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + printBuffer(buffer) +"\" is not a USBLLONG notification, but a \"" + printBuffer(splitted[0]) + "\" ");
 
-    pose.time = base::Time::fromSeconds(stod(splitted[1],&sz));
-    pose.measurementTime = base::Time::fromSeconds(stod(splitted[2],&sz));
-    pose.remoteAddress = stoi(splitted[3],&sz);
-    pose.x = stod(splitted[4],&sz);
-    pose.y = stod(splitted[5],&sz);
-    pose.z = stod(splitted[6],&sz);
-    pose.E = stod(splitted[7],&sz);
-    pose.N = stod(splitted[8],&sz);
-    pose.U = stod(splitted[9],&sz);
-    pose.roll = stod(splitted[10],&sz);
-    pose.pitch = stod(splitted[11],&sz);
-    pose.yaw = stod(splitted[12],&sz);
-    pose.propagationTime = base::Time::fromSeconds(stod(splitted[13],&sz));
-    pose.rssi = stoi(splitted[14],&sz);
-    pose.integrity = stoi(splitted[14],&sz);
-    pose.accuracy = stoi(splitted[14],&sz);
+    pose.time = base::Time::fromSeconds(stod(splitted[1]));
+    pose.measurementTime = base::Time::fromSeconds(stod(splitted[2]));
+    pose.remoteAddress = stoi(splitted[3]);
+    pose.x = stod(splitted[4]);
+    pose.y = stod(splitted[5]);
+    pose.z = stod(splitted[6]);
+    pose.E = stod(splitted[7]);
+    pose.N = stod(splitted[8]);
+    pose.U = stod(splitted[9]);
+    pose.roll = stod(splitted[10]);
+    pose.pitch = stod(splitted[11]);
+    pose.yaw = stod(splitted[12]);
+    pose.propagationTime = base::Time::fromMicroseconds(stoi(splitted[13]));
+    pose.rssi = stoi(splitted[14]);
+    pose.integrity = stoi(splitted[15]);
+    pose.accuracy = stod(splitted[16]);
 
     return pose;
 }
@@ -203,24 +201,23 @@ Direction UsblParser::parseDirection(string const &buffer)
 {
     Direction direc;
     vector<string> splitted = splitValidate(buffer, ",", getNumberFields(USBLANGLE));
-    string::size_type sz;     // alias of size_t
 
     if(splitted[0].find("USBLANGLE") == string::npos)
         throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + printBuffer(buffer) +"\" is not a USBLANGLE notification, but a \"" + printBuffer(splitted[0]) + "\" ");
 
-    direc.time = base::Time::fromSeconds(stod(splitted[1],&sz));
-    direc.measurementTime = base::Time::fromSeconds(stod(splitted[2],&sz));
-    direc.remoteAddress = stoi(splitted[3],&sz);
-    direc.lBearing = stod(splitted[4],&sz);
-    direc.lElevation = stod(splitted[5],&sz);
-    direc.bearing = stod(splitted[6],&sz);
-    direc.elevation = stod(splitted[7],&sz);
-    direc.roll = stod(splitted[8],&sz);
-    direc.pitch = stod(splitted[9],&sz);
-    direc.yaw = stod(splitted[10],&sz);
-    direc.rssi = stod(splitted[11],&sz);
-    direc.integrity = stod(splitted[12],&sz);
-    direc.accuracy = stoi(splitted[13],&sz);
+    direc.time = base::Time::fromSeconds(stod(splitted[1]));
+    direc.measurementTime = base::Time::fromSeconds(stod(splitted[2]));
+    direc.remoteAddress = stoi(splitted[3]);
+    direc.lBearing = stod(splitted[4]);
+    direc.lElevation = stod(splitted[5]);
+    direc.bearing = stod(splitted[6]);
+    direc.elevation = stod(splitted[7]);
+    direc.roll = stod(splitted[8]);
+    direc.pitch = stod(splitted[9]);
+    direc.yaw = stod(splitted[10]);
+    direc.rssi = stoi(splitted[11]);
+    direc.integrity = stoi(splitted[12]);
+    direc.accuracy = stod(splitted[13]);
 
     return direc;
 }
@@ -337,8 +334,7 @@ double UsblParser::getDouble(string const &buffer)
 {
     string buffer_tmp = buffer;
     boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
-    std::string::size_type sz;     // alias of size_t
-    return stod(buffer_tmp, &sz);
+    return stod(buffer_tmp);
 }
 
 // Get a long long unsigned int from a response buffer in COMMAND mode.
