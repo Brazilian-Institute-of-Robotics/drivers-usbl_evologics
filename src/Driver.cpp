@@ -293,7 +293,7 @@ string Driver::waitResponse(string const &expected_prefix, std::string const& co
 	    if (ignore_unexpected_responses)
 		continue;
 	    else
-	    	throw DeviceError("USB Driver.cpp waitResponse: Expected response " + usblParser.printBuffer(response_info.buffer) + " to start with " + expected_prefix);
+	        throw DeviceError("USBL Driver.cpp waitResponse: Expected response " + usblParser.printBuffer(response_info.buffer) + " to start with " + expected_prefix);
 	}
         else if(response_info.response == ERROR)
             throw DeviceError("USBL Driver.cpp waitResponse: For the command: \""+ usblParser.printBuffer(command) +"\", device return the follow ERROR msg: \"" + usblParser.printBuffer(response_info.buffer) + "\"");
