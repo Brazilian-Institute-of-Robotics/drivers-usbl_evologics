@@ -54,9 +54,9 @@ Notification UsblParser::findNotification(string const &buffer) const
     else if (buffer.find("DELIVEREDIM")!=string::npos ||
             buffer.find("FAILEDIM")!=string::npos )
         return DELIVERY_REPORT;
-    else if (buffer.find("CANCELEDIM")!=string::npos ||
-            buffer.find("CANCELEDIMS")!=string::npos  ||
-            buffer.find("CANCELEDPBM")!=string::npos )
+    else if (buffer.find("CANCELLEDIM")!=string::npos ||
+            buffer.find("CANCELLEDIMS")!=string::npos  ||
+            buffer.find("CANCELLEDPBM")!=string::npos )
         return CANCELED_IM;
     else if (buffer.find("RECVIM")!=string::npos)
         return RECVIM;
