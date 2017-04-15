@@ -619,7 +619,7 @@ DeliveryStatus Driver::getIMDeliveryStatus(void)
 }
 
 // Delivery report notification for Instant Message.
-bool Driver::getIMDeliveryReport(string const &buffer)
+DeliveryStatus Driver::getIMDeliveryReport(string const &buffer)
 {
    return usblParser.parseIMReport(buffer);
 }

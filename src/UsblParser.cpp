@@ -52,12 +52,11 @@ Notification UsblParser::findNotification(string const &buffer) const
     else if (buffer.find("USBLANGLES")!=string::npos)
         return USBLANGLE;
     else if (buffer.find("DELIVEREDIM")!=string::npos ||
-            buffer.find("FAILEDIM")!=string::npos )
-        return DELIVERY_REPORT;
-    else if (buffer.find("CANCELEDIM")!=string::npos ||
+            buffer.find("FAILEDIM")!=string::npos ||
+            buffer.find("CANCELEDIM")!=string::npos ||
             buffer.find("CANCELEDIMS")!=string::npos  ||
             buffer.find("CANCELEDPBM")!=string::npos )
-        return CANCELED_IM;
+        return DELIVERY_REPORT;
     else if (buffer.find("RECVIM")!=string::npos)
         return RECVIM;
     else if (buffer.find("RECVIMS")!=string::npos)
@@ -223,14 +222,16 @@ Direction UsblParser::parseDirection(string const &buffer)
 }
 
 // Check if Instant Message was delivered.
-bool UsblParser::parseIMReport(string const &buffer)
+DeliveryStatus UsblParser::parseIMReport(string const &buffer)
 {
     string ret;
     vector<string> splitted = splitValidate(buffer, ",", getNumberFields(DELIVERY_REPORT));
     if (splitted[0].find("DELIVEREDIM") != string::npos)
-        return true;
+        return DELIVERED;
     else if (splitted[0].find("FAILEDIM") != string::npos)
-        return false;
+        return FAILED;
+    else if (splitted[0].find("CANCELEDIM") != string::npos)
+        return CANCELED;
     else
         throw ParseError("UsblParser.cpp parseIMReport: DELIVERY_REPORT not as expected: \""+ printBuffer(splitted[0]) + "\"");
 }
@@ -294,7 +295,6 @@ int UsblParser::getNumberFields(Notification const & notification) const
         return 9;
         break;
     case DELIVERY_REPORT:
-    case CANCELED_IM:
         return 2;
         break;
     case USBLLONG:
