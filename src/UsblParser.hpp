@@ -145,9 +145,11 @@ public:
      *
      * Throw ParseError in case of failure.
      * @param buffer from device.
-     * @return TRUE if delivery was successful, FALSE if remote device doesn't confirm receipt.
+     * @return DELIVERED if delivery was successful,
+     *  FAILED if remote device doesn't confirm receipt.
+     *  CANCELED if ack is no longer waited.
      */
-    bool parseIMReport(std::string const &buffer);
+    DeliveryStatus parseIMReport(std::string const &buffer);
 
     /** Get the number of fields in a Notification.
      *

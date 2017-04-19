@@ -96,8 +96,6 @@ enum Notification
     RECVPBM,
     // Report of sending a Instant Message. Delivered or Failed.
     DELIVERY_REPORT,
-    // Transmission canceled due the wrong delivery time. Try again.
-    CANCELED_IM,
     // Pose of remote device.
     USBLLONG,
     // Orientation of remote device, in case the pose wasn't computed.
@@ -123,7 +121,9 @@ enum DeliveryStatus
     // Delivered of an Instant Message was not acknowledged.
     FAILED,
     // A synchronous Instant Message has expired.
-    EXPIRED
+    EXPIRED,
+    // An Instant Message was canceled.
+    CANCELED
 };
 
 /** Reset device or clear buffer.
@@ -524,6 +524,8 @@ struct MessageStatus
     unsigned long long int   messageFailed;
     // Total of messages received.
     unsigned long long int   messageReceived;
+    // Total of messages canceled.
+    unsigned long long int   messageCanceled;
 };
 
 }

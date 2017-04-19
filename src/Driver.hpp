@@ -186,11 +186,11 @@ public:
      *
      * If a send Instant Message requires to be acknowledge by remote device,
      * a notification is sent to device.
-     * @returns TRUE if IM delivery was successful. FALSE if IM not acknowledged
-     *  (a false means the local device did not receive a delivered acknowledgment. The IM may actually be delivered).
-     *  throw a exception if
+     * @returns DELIVERD if IM delivery was successful. CANCELED if the acknowledge is no longer take in account.
+     * FAILED if IM was not acknowledged.
+     *  (a failed means the local device did not receive a delivered acknowledgment. The IM may actually be delivered).
      */
-    bool getIMDeliveryReport(std::string const &buffer);
+    DeliveryStatus getIMDeliveryReport(std::string const &buffer);
 
     /** Switch to COMMAND mode.
      *
