@@ -172,12 +172,9 @@ int Driver::extractRawFromATPackets(string const& buffer) const
             {
                 if (ties_start == 0)
                     return extractATPacket(buffer);
-
-                int raw_data_packet = extractRawDataPacket(buffer.substr(0, ties_start));
-                if (raw_data_packet == 0)
-                    throw runtime_error("extractRawFromATPackets: found beginning of raw packet without an end");
+                // extract raw data present before the start of +++AT packet
                 else
-                    return raw_data_packet;
+                    return extractRawDataPacket(buffer.substr(0, ties_start));
             }
             ++ties_start;
         }
