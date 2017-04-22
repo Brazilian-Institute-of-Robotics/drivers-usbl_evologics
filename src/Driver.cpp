@@ -130,10 +130,7 @@ int Driver::extractATPacket(string const& buffer) const
             // add <end-of-line>
             length += 2;
             if(length > buffer.size())
-            {
-                LOG_WARN("extractATPacket: Size Error. Found length \"%u\" doesn't match with buffer size of \"%s\" . Waiting more data in buffer", length, buffer.c_str());
                 return 0;
-            }
             // Check the presence of end-of-line (\r\n).
             if (buffer.substr(length-2, 2) != "\r\n")
                 throw runtime_error("extractATPacket: Could not find <end-of-line> at position \"" +to_string((length-2))+ "\" of the end of buffer  \""+usblParser.printBuffer(buffer)+"\"");
