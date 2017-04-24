@@ -173,7 +173,6 @@ int Driver::extractRawFromATPackets(string const& buffer) const
                 else
                     return extractRawDataPacket(buffer.substr(0, ties_start));
             }
-            ++ties_start;
         }
         else if (string(TIES_HEADER, buffer_size - ties_start) == buffer.substr(ties_start, buffer_size - ties_start))
         {

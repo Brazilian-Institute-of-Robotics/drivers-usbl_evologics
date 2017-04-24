@@ -17,7 +17,8 @@ BOOST_AUTO_TEST_CASE(no_end_of_line_present)
 {
     Driver driver;
     string buffer("+++AT:5:12345ab\r\n");
-    BOOST_REQUIRE_EQUAL(driver.extractRawFromATPackets(buffer), -1);
+    BOOST_REQUIRE_THROW(driver.extractRawFromATPackets(buffer),runtime_error);
+//    BOOST_REQUIRE_EQUAL(-1, driver.extractRawFromATPackets(buffer));
 }
 
 BOOST_AUTO_TEST_CASE(AT_packet_with_wrong_length)
@@ -34,6 +35,40 @@ BOOST_AUTO_TEST_CASE(it_should_interpret_everything_up_to_the_at_packet_as_raw_d
     BOOST_REQUIRE_EQUAL(5, driver.extractRawFromATPackets(buffer));
 }
 
+BOOST_AUTO_TEST_CASE(it_should_interpret_everything_up_to_the_at_packet_as_raw_data_even_with_plus)
+{
+    Driver driver;
+    string buffer("12345++++AT:5:12345\r\n");
+    BOOST_REQUIRE_EQUAL(6, driver.extractRawFromATPackets(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(it_should_interpret_everything_up_to_the_at_packet_as_raw_data_even_with_2plus)
+{
+    Driver driver;
+    string buffer("12345+++++AT:5:12345\r\n");
+    BOOST_REQUIRE_EQUAL(7, driver.extractRawFromATPackets(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(it_should_interpret_everything_up_to_the_at_packet_as_raw_data_even_with_3plus)
+{
+    Driver driver;
+    string buffer("12345++++++AT:5:12345\r\n");
+    BOOST_REQUIRE_EQUAL(8, driver.extractRawFromATPackets(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(it_should_interpret_everything_up_to_the_at_packet_as_raw_data_of_plusA)
+{
+    Driver driver;
+    string buffer("+++A+++A++++++AT:5:12345\r\n");
+    BOOST_REQUIRE_EQUAL(11, driver.extractRawFromATPackets(buffer));
+}
+
+BOOST_AUTO_TEST_CASE(it_should_try_to_extract_a_raw_packet_before_a_possible_at_packet_at_the_end_of_buffer_even_with_plusA)
+{
+    Driver driver;
+    string buffer("+++A+++A+++.++AT+");
+    BOOST_REQUIRE_EQUAL(16, driver.extractRawFromATPackets(buffer));
+}
 BOOST_AUTO_TEST_CASE(it_should_try_to_extract_a_raw_packet_before_a_possible_at_packet_at_the_end_of_buffer)
 {
     Driver driver;
