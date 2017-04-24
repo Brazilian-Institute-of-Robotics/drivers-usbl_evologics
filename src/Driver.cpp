@@ -81,11 +81,11 @@ int Driver::checkParticularResponse(string const& buffer) const
 {
     string::size_type eol = buffer.find("\r\n\r\n");
     if(eol != string::npos)
-	// Add \r\n\r\n to buffer.
-	return eol+4;
+        // Add \r\n\r\n to buffer.
+        return eol+4;
     // Max observed Particular Response: AT&V (get parameters) with 345 in length
     else if(buffer.size() > 400)
-	return -1;
+        throw runtime_error("CheckParticularResponse: Received a too big buffer of size \"" +to_string(buffer.size())+ "\". Check buffer \"" +usblParser.printBuffer(buffer)+ "\"");
     return 0;
 }
 
@@ -95,11 +95,11 @@ int Driver::checkRegularResponse(string const& buffer) const
     // Find <end-of-line>
     string::size_type eol = buffer.find("\r\n");
     if(eol != string::npos)
-	// Add \r\n to buffer.
-	return eol+2;
+        // Add \r\n to buffer.
+        return eol+2;
     // Max observed Response: USBLLONG (pose) with 118 in length
     else if(buffer.size() > 150)
-	return -1;
+        throw runtime_error("CheckRegularResponse: Received a too big buffer of size \"" +to_string(buffer.size())+ "\". Check buffer \"" +usblParser.printBuffer(buffer)+ "\"");
     return 0;
 }
 
@@ -107,9 +107,9 @@ int Driver::extractATPacket(string const& buffer) const
 {
     // Smallest packet possible is +++AT:0:\r\n
     if (buffer.size() < 10)
-	return 0;
+        return 0;
     if (buffer.substr(0, 5) != "+++AT")
-	return -3;
+        throw runtime_error("extractATPacket: Buffer does not start with \"+++AT\". Check buffer, \"" +usblParser.printBuffer(buffer)+ "\"");
     // Get length.
     // +++<AT command>:<length>:<command response><end-of-line>
     // +++AT:<length>:<notification><end-of-line>
@@ -130,39 +130,28 @@ int Driver::extractATPacket(string const& buffer) const
             // add <end-of-line>
             length += 2;
             if(length > buffer.size())
-            {
-                LOG_WARN("Size Error. Found length %u doesn't match with buffer size of %s. Waiting more data in buffer", length, buffer.c_str());
                 return 0;
-            }
             // Check the presence of end-of-line (\r\n).
             if (buffer.substr(length-2, 2) != "\r\n")
-            {
-                LOG_WARN("Could not find <end-of-line> at position \"%u\" of the end of buffer  \"%s\"", length-2, buffer.c_str());
-                return -1;
-            }
+                throw runtime_error("extractATPacket: Could not find <end-of-line> at position \"" +to_string((length-2))+ "\" of the end of buffer  \""+usblParser.printBuffer(buffer)+"\"");
+
             return length;
         }
         else if (buffer.size() > 16)
-        {
-            LOG_WARN("Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer, \"%s\"", buffer.c_str());
-            return -1;
-        }
+            throw runtime_error("extractATPacket: Assuming max lenght of 999, could not find second \":\" before 16 bytes in buffer, \""+usblParser.printBuffer(buffer)+"\"");
         return 0;
     }
     // Check max command size. +++AT?CLOCK:
     else if (buffer.size() > 12)
-    {
-        LOG_WARN("Could not find any \":\" before 12 bytes in buffer \"%s\"",  buffer.c_str());
-        return -1;
-    }
+        throw runtime_error("extractATPacket: Could not find any \":\" before 12 bytes in buffer \""+usblParser.printBuffer(buffer)+"\"");
     return 0;
 }
 
 int Driver::extractRawFromATPackets(string const& buffer) const
 {
     // TIES: Time Independent Escape Sequence
-    const char* TIES_HEADER = "+++";
-    const int   TIES_HEADER_SIZE = 3;
+    const char* TIES_HEADER = "+++AT";
+    const int   TIES_HEADER_SIZE = 5;
 
     string::size_type buffer_size = buffer.size();
     string::size_type ties_start = 0;
@@ -180,16 +169,10 @@ int Driver::extractRawFromATPackets(string const& buffer) const
             {
                 if (ties_start == 0)
                     return extractATPacket(buffer);
-
-                int raw_data_packet = extractRawDataPacket(buffer.substr(0, ties_start));
-                if (raw_data_packet == 0)
-                {
-                    LOG_WARN("found beginning of raw packet without an end");
-                    return -1;
-                }
-                else return raw_data_packet;
+                // extract raw data present before the start of +++AT packet
+                else
+                    return extractRawDataPacket(buffer.substr(0, ties_start));
             }
-            ++ties_start;
         }
         else if (string(TIES_HEADER, buffer_size - ties_start) == buffer.substr(ties_start, buffer_size - ties_start))
         {
