@@ -462,8 +462,8 @@ DeviceSettings UsblParser::parseCurrentSettings (string const &buffer)
         }
         else if(splitted2.at(0) == "Sound Speed")
             settings.speedSound = atoi(splitted2.at(1).c_str());
-        // "Rerty". That is exactly what BIR's usbl send.
-        else if(splitted2.at(0) == "IM Rerty Count")
+        // "Rerty" in firmware v1.7. "Retry" in firmware v.1.9.
+        else if(splitted2.at(0) == "IM Rerty Count" || splitted2.at(0) == "IM Retry Count")
             settings.imRetry = atoi(splitted2.at(1).c_str());
         else if(splitted2.at(0) == "Retry Count")
             settings.retryCount = atoi(splitted2.at(1).c_str());
