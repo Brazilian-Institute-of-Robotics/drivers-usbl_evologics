@@ -7,6 +7,8 @@
 namespace usbl_evologics
 {
 
+const int BROADCAST = 255;
+
 /** Type of interface with local device.
  *
  */
@@ -184,22 +186,6 @@ enum SourceLevel
     MINIMAL = 3,
     // Alias of above. For in air test.
     IN_AIR = 3
-};
-
-/** Pre-defined Address of devices
- *
- */
-enum DeviceAddress
-{
-    // For sending a message in broadcast mode, to all devices.
-    BROADCAST = 255,
-    // Default value of auv's address
-    AUV = 1,
-    // Default value of dock's address
-    DOCK = 2,
-    // Case Remote Address is set to 0, local device would accept connection/data from any device, but could not initiate a connection.
-    // After accept connection/data, it will adopt remote address of remote device.
-    UNSET = 0
 };
 
 /** Notification information
