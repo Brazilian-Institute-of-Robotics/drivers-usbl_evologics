@@ -102,6 +102,8 @@ enum Notification
     USBLLONG,
     // Orientation of remote device, in case the pose wasn't computed.
     USBLANGLE,
+    // Drop count notification.
+    DROPCNT,
     // Extra notifications. See about Extended notification. Not implemented.
     EXTRA_NOTIFICATION,
     // No notification
