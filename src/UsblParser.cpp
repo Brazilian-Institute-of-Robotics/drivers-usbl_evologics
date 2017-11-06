@@ -63,12 +63,14 @@ Notification UsblParser::findNotification(string const &buffer) const
         return RECVIMS;
     else if (buffer.find("RECVPBM")!=string::npos)
         return RECVPBM;
+    else if (buffer.find("DROPCNT")!=string::npos)
+        return DROPCNT;
     else if (buffer.find("BITRATE")!=string::npos  || buffer.find("SRCLEVEL")!=string::npos   ||
             buffer.find("PHYON")!=string::npos     || buffer.find("PHYOFF")!=string::npos     ||
             buffer.find("RECVSTART")!=string::npos || buffer.find("RECVFAILED")!=string::npos ||
             buffer.find("RECVEND")!=string::npos 	|| buffer.find("SENDSTART")!=string::npos  ||
             buffer.find("SENDEND")!=string::npos 	|| buffer.find("RADDR")!=string::npos		||
-            buffer.find("USBLPHYD")!=string::npos 	)
+            buffer.find("USBLPHYD")!=string::npos)
         return EXTRA_NOTIFICATION;
     else
         return NO_NOTIFICATION;
@@ -302,6 +304,9 @@ int UsblParser::getNumberFields(Notification const & notification) const
         break;
     case USBLANGLE:
         return 14;
+        break;
+    case DROPCNT:
+        return 2;
         break;
     case EXTRA_NOTIFICATION:
         return 1;

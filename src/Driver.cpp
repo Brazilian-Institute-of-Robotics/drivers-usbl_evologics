@@ -360,6 +360,7 @@ int Driver::checkNotificationCommandMode(string const& buffer) const
             buffer.find("BITR") !=string::npos ||
             buffer.find("SRCL") !=string::npos ||
             buffer.find("PHYO") !=string::npos ||
+            buffer.find("DROP") !=string::npos ||
             buffer.find("RADD") !=string::npos )
         return checkRegularResponse(buffer);
     else
