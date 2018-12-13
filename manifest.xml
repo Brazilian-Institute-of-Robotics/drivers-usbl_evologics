@@ -3,7 +3,7 @@
   
   </description>
   <author>Niklas Pech/niklas.pech@dfki.de</author>
-  <license></license>
+  <license>BSD 3-Clause</license>
   <depend package="base/types" />
   <depend package="drivers/iodrivers_base" />
 </package>
