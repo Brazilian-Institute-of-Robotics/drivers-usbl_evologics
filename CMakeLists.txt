@@ -75,6 +75,7 @@ install(TARGETS evologics_usbl_driver
 
 if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
+    find_package(ament_cmake_gtest REQUIRED)
 
     set(ament_cmake_cppcheck_FOUND TRUE)
     list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_cpplint)
@@ -82,6 +83,40 @@ if(BUILD_TESTING)
 
     ament_cpplint(MAX_LINE_LENGTH "120")
     ament_lint_auto_find_test_dependencies()
+
+    ament_add_gtest(evologics_usbl_driver_test
+      test/evologics_usbl_driver_test.cpp
+    )
+
+    ament_target_dependencies(evologics_usbl_driver_test
+      ${PACKAGE_INCLUDE_DEPS}
+    )
+
+    target_link_libraries(evologics_usbl_driver_test
+      evologics_usbl_driver
+    )
+
+    target_include_directories(evologics_usbl_driver_test PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
+    )
+
+    ament_add_gtest(evologics_usbl_parser_test
+      test/evologics_usbl_parser_test.cpp
+    )
+
+    ament_target_dependencies(evologics_usbl_parser_test
+      ${PACKAGE_INCLUDE_DEPS}
+    )
+
+    target_link_libraries(evologics_usbl_parser_test
+      evologics_usbl_driver
+    )
+
+    target_include_directories(evologics_usbl_parser_test PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
+    )
 endif()
 
 if(BIR_ENABLE_DOCS)
