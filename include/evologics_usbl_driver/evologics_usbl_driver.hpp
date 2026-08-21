@@ -1,37 +1,64 @@
-#ifndef _DUMMYPROJECT_DRIVER_HPP_
-#define _DUMMYPROJECT_DRIVER_HPP_
+// Copyright (c) 2026, SENAI Cimatec
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//              http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <iodrivers_base/Driver.hpp>
-#include <vector>
-#include <string>
+#pragma once
+
 #include <map>
 #include <queue>
-#include "UsblParser.hpp"
-#include "DriverTypes.hpp"
-#include "Exceptions.hpp"
-#include "base/samples/RigidBodyState.hpp"
-#include <base/Eigen.hpp>
-#include "base/Pose.hpp"
-#include "base-logging/Logging.hpp"
+#include <string>
+#include <vector>
 
-namespace usbl_evologics
+#include <ros_driver_base/driver.hpp>
+
+#include "evologics_usbl_driver/evologics_usbl_parser.hpp"
+#include "evologics_usbl_driver/evologics_usbl_types.hpp"
+#include "evologics_usbl_driver/evologics_usbl_exceptions.hpp"
+
+namespace evologics_usbl_driver
 {
-
-class Driver : public iodrivers_base::Driver
+/**
+ * @brief Driver class for Evologics USBL devices, provides methods to communicate with the device, send commands,
+ * receive responses, and handle notifications and raw data.
+ *
+ */
+class EvologicsUsblDriver : public ros_driver_base::Driver
 {
-
 public:
+  /**
+   * @brief Construct a new Driver object with default constructor
+   *
+   */
+  EvologicsUsblDriver();
 
-    Driver();
-    Driver(const OperationMode &init_mode);
-    ~Driver();
+  /**
+   * @brief Construct a new Driver object passing the Operation Mode
+   *
+   * @param init_mode Initial operation mode
+   */
+  EvologicsUsblDriver(const OperationMode & init_mode);
 
+  /**
+   * @brief Destroy the Driver object
+   *
+   */
+  ~EvologicsUsblDriver();
 
     /** Define the interface with device. ETHERNET or SERIAL.
      *
      * @param deviceInterface, ETHERNET or SERIAL
      */
-    void setInterface(InterfaceType	deviceInterface);
+  void setInterface(InterfaceType     deviceInterface);
 
     /** Send a command to device.
      *
@@ -39,14 +66,14 @@ public:
      * Manage the mode of operation according to command.
      * @param command to be sent.
      */
-    void sendCommand(std::string const &command);
+  void sendCommand(std::string const & command);
 
     /** Send a command to device and wait for the corresponding OK
      *
      * @param command prefix
      * @param the command parameters, if any
      */
-    void sendCommandAndACK(std::string const &command, std::string const &parameters = "");
+  void sendCommandAndACK(std::string const & command, std::string const & parameters = "");
 
     /** Send raw data to remote device.
      *
@@ -55,7 +82,7 @@ public:
      * @param raw_data string to be sent to remote device.
      *
      */
-    void sendRawData(std::vector<uint8_t> const &raw_data);
+  void sendRawData(std::vector<uint8_t> const & raw_data);
 
     /** Read response from device.
      *
@@ -63,7 +90,7 @@ public:
      * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
      * ResponseInfo.response is the kind of response and ResponseInfo.buffer is the response.
      */
-    ResponseInfo readResponse(void);
+  ResponseInfo readResponse(void);
 
     /** Check if a Notification string is present in buffer.
      *
@@ -72,7 +99,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message, or -1 in case of no Notification.
      */
-    int checkNotificationCommandMode(std::string const& buffer) const;
+  int checkNotificationCommandMode(std::string const & buffer) const;
 
     /** Check if am Instant Message Notification string is present in buffer.
      *
@@ -81,7 +108,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message, or -1 in case of no Notification.
      */
-    int checkIMNotification(std::string const& buffer) const;
+  int checkIMNotification(std::string const & buffer) const;
 
     /** Check the size of a particular response.
      *
@@ -91,7 +118,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message.
      */
-    int checkParticularResponse(std::string const& buffer) const;
+  int checkParticularResponse(std::string const & buffer) const;
 
     /** Check the size of regular response.
      *
@@ -100,7 +127,7 @@ public:
      * @param buffer to be analyzed
      * @return size of buffer till end of message.
      */
-    int checkRegularResponse(std::string const& buffer) const;
+  int checkRegularResponse(std::string const & buffer) const;
 
     /** Check kind of response.
      *
@@ -110,7 +137,7 @@ public:
      * @param buffer to be analyzed
      * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
      */
-    CommandResponse isResponse(std::string const &buffer);
+  CommandResponse isResponse(std::string const & buffer);
 
     /** Check kind of notification.
      *
@@ -120,7 +147,7 @@ public:
      * @param buffer to be analyzed.
      * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
      */
-    Notification isNotification(std::string const &buffer);
+  Notification isNotification(std::string const & buffer);
 
     /** Read input data till get a response.
      *
@@ -128,59 +155,61 @@ public:
      * @param expected response from device.
      * @return string with response content, in COMMAND mode
      */
-    std::string waitResponse(std::string const &expected_prefix, std::string const &command, CommandResponse expected, bool ignore_unexpected_responses = false);
+  std::string waitResponse(
+    std::string const & expected_prefix, std::string const & command, CommandResponse expected,
+    bool ignore_unexpected_responses = false);
 
     /** Wait for a OK response
      *
      * @param command sent to device.
      */
-    void waitResponseOK(std::string const &expected_prefix, std::string const &command);
+  void waitResponseOK(std::string const & expected_prefix, std::string const & command);
 
     /** Wait for a integer response.
      *
      * @param command sent to device.
      * @return integer requested.
      */
-    int waitResponseInt(std::string const &expected_prefix, std::string const &command);
+  int waitResponseInt(std::string const & expected_prefix, std::string const & command);
 
     /** Wait for a floating point response.
      *
      * @param command sent to device.
      * @return double requested.
      */
-    double waitResponseDouble(std::string const &expected_prefix, std::string const &command);
+  double waitResponseDouble(std::string const & expected_prefix, std::string const & command);
 
     /** Wait for a integer (that may be very long) response.
      *
      * @param command sent to device.
      * @return long long unsigned integer requested.
      */
-    long long unsigned int waitResponseULLongInt(std::string const &expected_prefix, std::string const &command);
+  long long unsigned int waitResponseULLongInt(std::string const & expected_prefix, std::string const & command);
 
     /** Wait for string response.
      *
      * @param command sent to device.
      * @return string requested.
      */
-    std::string waitResponseString(std::string const &expected_prefix, std::string const &command);
+  std::string waitResponseString(std::string const & expected_prefix, std::string const & command);
 
     /** Get Underwater Connection Status.
      *
      * @return connection status
      */
-    AcousticConnection getConnectionStatus(void);
+  AcousticConnection getConnectionStatus(void);
 
     /** Get Current Setting parameters.
      *
      * @return current DeviceSettings
      */
-    DeviceSettings getCurrentSetting(void);
+  DeviceSettings getCurrentSetting(void);
 
     /** get Instant Message Delivery status.
      *
      * @return delivery status
      */
-    DeliveryStatus getIMDeliveryStatus(void);
+  DeliveryStatus getIMDeliveryStatus(void);
 
     /** Delivery report notification for Instant Message.
      *
@@ -190,58 +219,58 @@ public:
      * FAILED if IM was not acknowledged.
      *  (a failed means the local device did not receive a delivered acknowledgment. The IM may actually be delivered).
      */
-    DeliveryStatus getIMDeliveryReport(std::string const &buffer);
+  DeliveryStatus getIMDeliveryReport(std::string const & buffer);
 
     /** Switch to COMMAND mode.
      *
      * Guard Time Escape Sequence.
      * Wait 1 second before and after send command.
      */
-    void GTES(void);
+  void GTES(void);
 
     /** Switch to Command mode.
      *
      * No need for waiting time.
      */
-    void switchToCommandMode(void);
+  void switchToCommandMode(void);
 
     /** Switch to DATA mode.
      *
      * Doesn't require response.
      */
-    void switchToDataMode(void);
+  void switchToDataMode(void);
 
     /* Reset device, drop data and/or instant message
      *
      * @param type define what will be reset in device
      */
-    void resetDevice(ResetType const &type, bool ignore_unexpected_responses = false);
+  void resetDevice(ResetType const & type, bool ignore_unexpected_responses = false);
 
     /** Get interface type.
      *
      * @return interface type. SERIAL or ETHERNET.
      */
-    InterfaceType getInterface(void);
+  InterfaceType getInterface(void);
 
     /** Send Instant Message to remote device.
      *
      * @param im Instant Message to be sent.
      */
-    void sendInstantMessage(SendIM const &im);
+  void sendInstantMessage(SendIM const & im);
 
     /** Get Instant Message parsed as string
      *
      * @param im Instant Message to be sent.
      * @return string parsed of im.
      */
-    std::string getStringOfIM(SendIM const &im);
+  std::string getStringOfIM(SendIM const & im);
 
     /** Parse a received Instant Message.
      *
      * @param buffer that contains the IM
      * @return Received Instant Message
      */
-    ReceiveIM receiveInstantMessage(std::string const &buffer);
+  ReceiveIM receiveInstantMessage(std::string const & buffer);
 
     /** Get the RigidBodyState pose of remote device.
      *
@@ -249,7 +278,7 @@ public:
      * Convert the data from internal struct to RigidBodyState.
      * @return RigidBodyState pose.
      */
-    base::samples::RigidBodyState getPose(Position const &pose);
+  RigidBodyState getPose(Position const & pose);
 
     /** Get the Position pose of remote device.
      *
@@ -258,7 +287,7 @@ public:
      * It may have some data of interest.
      * @return Position pose.
      */
-    Position getPose(std::string const &buffer);
+  Position getPose(std::string const & buffer);
 
     /** Get the Direction of remote device.
      *
@@ -267,7 +296,7 @@ public:
      * It may have some data of interest.
      * @return Direction direc.
      */
-    Direction getDirection(std::string const &buffer);
+  Direction getDirection(std::string const & buffer);
 
     /** Converts from euler angles to quaternions.
      *
@@ -275,11 +304,11 @@ public:
      * @param eulerAngles - Euler angles vector
      * @return quaternion - Quaternion variable
      */
-    base::Quaterniond eulerToQuaternion(const base::Vector3d &eulerAngles);
+  Eigen::Quaterniond eulerToQuaternion(const Eigen::Vector3d & eulerAngles);
 
     /** Helper method to separate AT and raw packets in a data stream
      */
-    int extractRawFromATPackets(std::string const& buffer) const;
+  int extractRawFromATPackets(std::string const & buffer) const;
 
     /** Helper method to extract packets from raw data
      *
@@ -287,30 +316,30 @@ public:
      * has a packet-based protocol. The default implementation will
      * just interpret any amount of raw data as a packet
      */
-    virtual int extractRawDataPacket(std::string const& buffer) const;
+  virtual int extractRawDataPacket(std::string const & buffer) const;
 
     /** Given a buffer that starts with a TIE header (+++), return whether it
      * could be a AT command
      */
-    int extractATPacket(std::string const& buffer) const;
+  int extractATPacket(std::string const & buffer) const;
 
     /** Pop out RawData from queueRawData.
      *
      *  @return string of raw data
      */
-    std::vector<uint8_t> getRawData(void);
+  std::vector<uint8_t> getRawData(void);
 
     /** verify if queueRawData has raw data.
      *
      * @return TRUE if queue has raw data, FALSE otherwise.
      */
-    bool hasRawData(void);
+  bool hasRawData(void);
 
     /** Pop out Notification from queueNotification.
      *
      *  @return NotificationInfo
      */
-   NotificationInfo getNotification(void);
+  NotificationInfo getNotification(void);
 
    /** verify if queueNotification has any notification.
     *
@@ -323,7 +352,7 @@ public:
     * DATA or COMMAND
     * @return Operation mode.
     */
-   OperationMode getMode(void);
+  OperationMode getMode(void);
 
    /** Set the specific carrier Waveform ID
     *
@@ -332,7 +361,7 @@ public:
     * It's recommended to use 0-1 for a two devices connection and 2-2 for networking.
     *  @param value of carrier waveform
     */
-   void setCarrierWaveformID(int value);
+  void setCarrierWaveformID(int value);
 
    /** Set number of packets in one train.
     *
@@ -340,59 +369,59 @@ public:
     * For stationary you can use a cluster size up to 32.
     * @param value
     */
-   void setClusterSize(int value);
+  void setClusterSize(int value);
 
    /** Set limits of devices in the network.
     *
     * @param value: 2, 6, 14, 30, 62, 126, 254
     */
-   void setHighestAddress(int value);
+  void setHighestAddress(int value);
 
    /** Set timeout before closing an idle acoustic connection
     *
     * @param value in seconds (0-3600 s)
     */
-   void setIdleTimeout(int value);
+  void setIdleTimeout(int value);
 
    /** Set Instant Message retry count
     *
     * Range 0-255. 255 = retry indefinitely
     * @param value
     */
-   void setIMRetry(int value);
+  void setIMRetry(int value);
 
    /** Set address of local device
     *
     * 1-highest_address
     * @param value
     */
-   void setLocalAddress(int value);
+  void setLocalAddress(int value);
 
    /** Set address of remote device
     *
     * 0-highest_address
     * @param value
     */
-   void setRemoteAddress(int value);
+  void setRemoteAddress(int value);
 
    /** Get address of remote device
     *
     * 0-highest_address
     * @return address
     */
-   int getRemoteAddress(void);
+  int getRemoteAddress(void);
 
    /** Get highest address
     *
     * @return highest address
     */
-   int getHighestAddress(void);
+  int getHighestAddress(void);
 
    /** Automatic positioning output
     *
     * @return 0 fro disable, 1 for enable
     */
-   int getPositioningDataOutput(void);
+  int getPositioningDataOutput(void);
 
    /** Enable or disable automatic positioning output
     *
@@ -400,7 +429,7 @@ public:
     * FALSE: Disable
     * @param pose_on
     */
-   void setPositioningDataOutput(bool pose_on);
+  void setPositioningDataOutput(bool pose_on);
 
    /** Set input amplifier gain
     *
@@ -409,7 +438,7 @@ public:
     * FALSE normal gain applied.
     * @param low_gain
     */
-   void setLowGain(bool low_gain);
+  void setLowGain(bool low_gain);
 
    /** Set maximum duration of a data packet.
     *
@@ -418,7 +447,7 @@ public:
     * Short values are recommend for challenging hydroacoustic channels.
     * @param value maximum duration of a data packet.
     */
-   void setPacketTime(int value);
+  void setPacketTime(int value);
 
    /** Set if device will receive instant message addressed to others devices.
     *
@@ -426,13 +455,13 @@ public:
     *  TRUE: Receive message addressed to any device on network. 1
     *  @param promiscuos_mode
     */
-   void setPromiscuosMode(bool promiscuos_mode);
+  void setPromiscuosMode(bool promiscuos_mode);
 
    /** Set number of connection establishment retries.
     *
     * @param value number of connection retries
     */
-   void setRetryCount(int value);
+  void setRetryCount(int value);
 
    /** Set time of wait for establish an acoustic connection
     *
@@ -441,14 +470,14 @@ public:
     * Range 500..12000 (in ms)
     * @param value in ms
     */
-   void setRetryTimeout(int value);
+  void setRetryTimeout(int value);
 
    /** Set Source Level
     *
     * Defines Sound Pressure Level (SPL)
     * @param source_level
     */
-   void setSourceLevel(SourceLevel source_level);
+  void setSourceLevel(SourceLevel source_level);
 
    /** Set if source level of local device can be changed remotely over a acoustic connection.
     *
@@ -457,13 +486,13 @@ public:
     * FALSE: local sourceLevel cannot be changed by remote device. 0
     * @param source_level_control
     */
-   void setSourceLevelControl(bool source_level_control);
+  void setSourceLevelControl(bool source_level_control);
 
    /** Get source level of device
     *
     * @return source level
     */
-   SourceLevel getSourceLevel(void);
+  SourceLevel getSourceLevel(void);
 
    /** Get source level control of device
     *
@@ -472,14 +501,14 @@ public:
     * False: local sourceLevel cannot be changed by remote device. 0
     * @return source level control
     */
-   bool getSourceLevelControl(void);
+  bool getSourceLevelControl(void);
 
    /** Set speed of sound on water
     *
     * Range 1300..1700 m/s
     * @param value in m/s
     */
-   void setSpeedSound(int value);
+  void setSpeedSound(int value);
 
    /** Set active interval of acoustic channel monitoring.
     *
@@ -488,7 +517,7 @@ public:
     * NOTE: MUST be less than the total duration of the Wake Up cycle.
     * @param value in s
     */
-   void setWakeUpActiveTime(int value);
+  void setWakeUpActiveTime(int value);
 
    /** Set hold timeout after completed data transmission.
     *
@@ -496,7 +525,7 @@ public:
     * Range: 0..3600 (in s)
     * @param value in s
     */
-   void setWakeUpHoldTimeout(int value);
+  void setWakeUpHoldTimeout(int value);
 
    /** Set period of the acoustic channel monitoring cycle.
     *
@@ -505,7 +534,7 @@ public:
     * Range: 0..3600 (in s)
     * @param value in s
     */
-   void setWakeUpPeriod(int value);
+  void setWakeUpPeriod(int value);
 
    /** Set transmission buffer size of actual data channel.
     *
@@ -513,37 +542,37 @@ public:
     *  Range: 8096..2097152
     *  @param value bufer size in bytes
     */
-   void setPoolSize(int value);
+  void setPoolSize(int value);
 
    /** Reset Drop Counter.
     *
     */
-   void resetDropCounter(void);
+  void resetDropCounter(void);
 
    /** Reset Overflow Counter.
     *
     */
-   void resetOverflowCounter(void);
+  void resetOverflowCounter(void);
 
    /** Get firmware information of device.
     *
     * @return VersionNumbers
     */
-   VersionNumbers getFirmwareInformation(void);
+  VersionNumbers getFirmwareInformation(void);
 
    /** Get last transmission's raw bitrate value of local-to-remote direction.
     *
     * Include both useful data (raw data) and the protocol overhead.
     * @return bitrate in bits per second.
     */
-   int getLocalToRemoteBitrate(void);
+  int getLocalToRemoteBitrate(void);
 
    /** Get last transmission's raw bitrate value of remote-to-local direction.
     *
     * Include both useful data (raw data) and the protocol overhead.
     * @return bitrate in bits per second.
     */
-   int getRemoteToLocalBitrate(void);
+  int getRemoteToLocalBitrate(void);
 
    /** Get Received Signal Strength Indicator.
     *
@@ -553,7 +582,7 @@ public:
     * In NOISE state, return RMS of the noise. RSSI of communication should exceeds the noise by 6dB.
     * @return rssi in dB.
     */
-   double getRSSI(void);
+  double getRSSI(void);
 
    /** Get Signal Integrity.
     *
@@ -562,57 +591,57 @@ public:
     * An acoustic link is weak if value is less than 100.
     * @return signal integrity level.
     */
-   int getSignalIntegrity(void);
+  int getSignalIntegrity(void);
 
    /** Get acoustic signal's propagation time between communicating devices.
     *
     * @return propagation time in ms
     */
-   int getPropagationTime(void);
+  int getPropagationTime(void);
 
    /** Get relative velocity between communicating devices.
     *
     * @return relative velocity in m/s
     */
-   double getRelativeVelocity(void);
+  double getRelativeVelocity(void);
 
    /** Get Multipath propagation structure.
     *
     * @return Multipath components
     */
-   std::vector<MultiPath> getMultipath(void);
+  std::vector<MultiPath> getMultipath(void);
 
    /** Get dropCounter of actual channel
     *
     * @return value in bytes
     */
-   int getDropCounter(void);
+  int getDropCounter(void);
 
    /** Get overflowCounter of actual channel
     *
     * @return value in bytes
     */
-   int getOverflowCounter(void);
+  int getOverflowCounter(void);
 
    /** Get channel number of current interface.
     *
     * @return value in bytes
     */
-   int getChannelNumber(void);
+  int getChannelNumber(void);
 
    /** Get overall delivered raw data
     *
     * Usbl documentation doesn't say the max size neither a way to reset it, so a ullong_int was chosen.
     * @return counter of raw data bytes delivered to remote device.
     */
-   long long unsigned int getRawDataDeliveryCounter(void);
+  long long unsigned int getRawDataDeliveryCounter(void);
 
    /** Set System Time for current time
     *
     * Default System Time value is the number of seconds elapsed since the device has been powered on.
     * Is possible to syncronize the System Time with a Network Time Protocol (NTP) server. Not implemented.
     */
-   void setSystemTimeNow(void);
+  void setSystemTimeNow(void);
 
    /** Set operation mode of device
     *
@@ -621,23 +650,23 @@ public:
     * COMMAND, all data is interpreted as command. Raw_data is NOT transmitted.
     * @param mode, DATA or COMMAND mode
     */
-   void setOperationMode(OperationMode const &new_mode);
+  void setOperationMode(OperationMode const & new_mode);
 
    /** Store current setting profile
     *
     */
-   void storeCurrentSettings(void);
+  void storeCurrentSettings(void);
 
    /** Restore factory settings and reset device.
     *
     */
-   void RestoreFactorySettings(void);
+  void RestoreFactorySettings(void);
 
    /** Get communication parameters
     *
     *  @return AcousticChannel with performance.
     */
-   AcousticChannel getAcousticChannelparameters(void);
+  AcousticChannel getAcousticChannelparameters(void);
 
    /** Update parameters on device.
     *
@@ -646,42 +675,41 @@ public:
     * @param desired_setting, parameters that should be applied on device.
     * @param actual_setting, parameters present in device that will be used for compare.
     */
-   void updateDeviceParameters(DeviceSettings const &desired_setting, DeviceSettings const &actual_setting);
-
+  void updateDeviceParameters(DeviceSettings const & desired_setting, DeviceSettings const & actual_setting);
 
 private:
-    UsblParser	usblParser;
+  UsblParser  usblParser;
 
     /** Mode of operation
      *
      * DATA or COMMAND
      */
-    OperationMode	mode;
+  OperationMode       mode;
 
     /** Interface type
      *
      * ETHERNET or SERIAL
      */
-    InterfaceType	interface;
+  InterfaceType       interface;
 
     /**
      * Queue of received Raw Data
      */
-    std::queue<std::string> queueRawData;
+  std::queue<std::string> queueRawData;
 
     /**
      * Queue of received Notification
      */
-    std::queue<NotificationInfo> queueNotification;
+  std::queue<NotificationInfo> queueNotification;
 
 
-    static const int max_packet_size = 20000;
+  static const int max_packet_size = 20000;
 
     /** Read packets
      *
      * @return string with data (response, notification or raw data).
      */
-    std::string readInternal(void);
+  std::string readInternal(void);
 
     /** Check a valid notification.
      *
@@ -691,7 +719,7 @@ private:
      * @param buffer to be analyzed.
      * @param notification kind present in buffer.
      */
-    void notificationValidation(std::string const &buffer, Notification const &notification);
+  void notificationValidation(std::string const & buffer, Notification const & notification);
 
     /** Filled command string to be sent to device.
      *
@@ -699,7 +727,7 @@ private:
      *  @param command to be sent.
      *  @return string filled.
      */
-    std::string fillCommand(std::string const &command);
+  std::string fillCommand(std::string const & command);
 
     /** Add a end line, according interface type.
      *
@@ -709,28 +737,24 @@ private:
      * @param command to be sent.
      * @return string command with end line.
      */
-    std::string addEndLine (std::string const &command);
+  std::string addEndLine(std::string const & command);
 
     /** Manage mode operation according command sent.
      *
      * Act before get a response.
      * @param command sent to device.
      */
-    void modeManager(std::string const &command);
+  void modeManager(std::string const & command);
 
     /** Manage mode operation according command sent and response obtained.
      *
      * Act after get a response.
      * @param command sent to device.
      */
-    void modeMsgManager(std::string const &command);
-
+  void modeMsgManager(std::string const & command);
 
 protected:
-
     //Pure virtual function from Driver
-    virtual int extractPacket(uint8_t const* buffer, size_t buffer_size) const;
+  virtual int extractPacket(uint8_t const * buffer, size_t buffer_size) const;
 };
-
-}
-#endif 
+}  // namespace evologics_usbl_driver

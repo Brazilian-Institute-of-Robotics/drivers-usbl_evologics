@@ -31,6 +31,8 @@
   <depend>rclcpp_lifecycle</depend>
   <depend>ros_driver_base</depend>
   <depend>std_msgs</depend>
+  <depend>eigen</depend>
+  <depend>boost</depend>
 
   <doc_depend>ament_cmake_doxygen</doc_depend>
 

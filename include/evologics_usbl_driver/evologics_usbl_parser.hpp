@@ -1,12 +1,27 @@
-#ifndef _USBLDRIVER_USBLPARSER_HPP_
-#define _USBLDRIVER_USBLPARSER_HPP_
+// Copyright (c) 2026, SENAI Cimatec
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//              http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <iodrivers_base/Driver.hpp>
-#include "DriverTypes.hpp"
+#pragma once
+
 #include <string.h>
 #include <iostream>
 
-namespace usbl_evologics
+#include <ros_driver_base/driver.hpp>
+
+#include "evologics_usbl_driver/evologics_usbl_types.hpp"
+
+namespace evologics_usbl_driver
 {
 class UsblParser
 {
@@ -18,12 +33,19 @@ private:
      * @param parts of splitted buffer.
      * @return vector of string with parts size.
      */
-    std::vector<std::string> splitValidate(std::string const &buffer,  const char* symbol, size_t const parts);
+  std::vector<std::string> splitValidate(std::string const & buffer, const char * symbol, size_t const parts);
 
+    /** Convert a Unix epoch timestamp, in fractional seconds, as reported by the device,
+     * into a system_clock time_point.
+     *
+     * @param seconds since Unix epoch, with sub-second precision.
+     * @return equivalent system_clock::time_point.
+     */
+  std::chrono::system_clock::time_point timePointFromSeconds(double const seconds);
 
 public:
-    UsblParser();
-    ~UsblParser();
+  UsblParser();
+  ~UsblParser();
 
     /** Print a buffer string that may contain hex that is not a character.
      *
@@ -31,7 +53,7 @@ public:
      * @param buffer to be printed
      * @return string without command escape sequence.
      */
-    static std::string printBuffer(const std::string& buffer);
+  static std::string printBuffer(const std::string & buffer);
 
     /** Print a buffer vector<uint8_t> that may contain hex that is not a character.
      *
@@ -39,7 +61,7 @@ public:
      * @param buffer to be printed
      * @return string without command escape sequence.
      */
-    static std::string printBuffer(const std::vector<uint8_t>& buffer);
+  static std::string printBuffer(const std::vector<uint8_t> & buffer);
 
 
     /** Check if buffer can be splitted at least in a establish amount.
@@ -51,14 +73,14 @@ public:
      * @param parts. minimal amount buffer can be spllited.
      * @return vector of string with parts size.
      */
-    std::vector<std::string> splitMinimalValidate(std::string const &buffer,  const char* symbol, size_t const parts);
+  std::vector<std::string> splitMinimalValidate(std::string const & buffer, const char * symbol, size_t const parts);
 
     /** Find a Notification in a buffer.
      *
      *  @param buffer to be analyzed.
      *  @return Kind of notification. If buffer is not a Notification, returns NO_NOTIFICATION.
      */
-    Notification findNotification(std::string const &buffer) const;
+  Notification findNotification(std::string const & buffer) const;
 
     /** Validate the number of field of a Notification.
      *
@@ -69,7 +91,7 @@ public:
      * @param buffer Notification in DATA or COMMAND mode.
      * @param notification Kind of Notification in buffer.
      */
-    void splitValidateNotification(std::string const &buffer, Notification const &notification);
+  void splitValidateNotification(std::string const & buffer, Notification const & notification);
 
     /** Check for a Response in buffer.
      *
@@ -77,7 +99,7 @@ public:
      * @param buffer to be analyzed.
      * @return Kind of response.
      */
-    CommandResponse findResponse(std::string const &buffer);
+  CommandResponse findResponse(std::string const & buffer);
 
     /** Get response or notification content in DATA mode.
      *
@@ -89,7 +111,7 @@ public:
      *  @param buffer Notification or Response in DATA mode.
      *  @return <content><end-line> like in COMMAND mode.
      */
-    std::string getAnswerContent(std::string const &buffer);
+  std::string getAnswerContent(std::string const & buffer);
 
     /** Get notification content in DATA mode and validate with command.
      *
@@ -101,21 +123,21 @@ public:
      *  @param command to be validate.
      *  @return <content><end-line> like in COMMAND mode.
      */
-    std::string getAnswerContent(std::string const &buffer, std::string const &command);
+  std::string getAnswerContent(std::string const & buffer, std::string const & command);
 
     /** Remove <end-of-line> "\r\n" from buffer
      *
      * @param buffer to be analyzezd.
      * @return string without <end-of-line> if it's present in buffer.
      */
-    std::string removeEndLine(std::string const &buffer);
+  std::string removeEndLine(std::string const & buffer);
 
     /** Parse a Instant Message into string to be sent to device.
      *
      * @param im Instant Message.
      * @return string to be sent to device.
      */
-    std::string parseSendIM(SendIM const &im);
+  std::string parseSendIM(SendIM const & im);
 
     /** Parse a received Instant Message from buffer to ReceiveIM.
      *
@@ -123,7 +145,7 @@ public:
      * @param buffer with Instant Message.
      * @return Received Instant Message.
      */
-    ReceiveIM parseReceivedIM(std::string const &buffer);
+  ReceiveIM parseReceivedIM(std::string const & buffer);
 
     /** Parse a received pose from buffer to Position.
      *
@@ -131,7 +153,7 @@ public:
      * @param buffer with Pose.
      * @return Position.
      */
-    Position parsePosition(std::string const &buffer);
+  Position parsePosition(std::string const & buffer);
 
     /** Parse a received direction from buffer to Direction.
      *
@@ -139,7 +161,7 @@ public:
      * @param buffer with direction.
      * @return Direction.
      */
-    Direction parseDirection(std::string const &buffer);
+  Direction parseDirection(std::string const & buffer);
 
     /** Check if Instant Message was delivered.
      *
@@ -149,7 +171,7 @@ public:
      *  FAILED if remote device doesn't confirm receipt.
      *  CANCELED if ack is no longer waited.
      */
-    DeliveryStatus parseIMReport(std::string const &buffer);
+  DeliveryStatus parseIMReport(std::string const & buffer);
 
     /** Get the number of fields in a Notification.
      *
@@ -159,7 +181,7 @@ public:
      * @param notification.
      * @return number of fields.
      */
-    int getNumberFields(Notification const &notification) const;
+  int getNumberFields(Notification const & notification) const;
 
     /** Get the integer from a response buffer in COMMAND mode.
      *
@@ -167,7 +189,7 @@ public:
      * @param buffer with integer as response.
      * @return integer number.
      */
-    int getNumber(std::string const &buffer);
+  int getNumber(std::string const & buffer);
 
     /** Get the double from a response buffer in COMMAND mode.
      *
@@ -175,7 +197,7 @@ public:
      * @param buffer with floating point number as response.
      * @return double number.
      */
-    double getDouble(std::string const &buffer);
+  double getDouble(std::string const & buffer);
 
     /** Get a long long unsigned int from a response buffer in COMMAND mode.
      *
@@ -183,7 +205,7 @@ public:
      * @param buffer with a counter number as response.
      * @return long long unsigned int number.
      */
-    long long unsigned int getULLongInt(std::string const &buffer);
+  long long unsigned int getULLongInt(std::string const & buffer);
 
     /** Parse AcousticConnection Status of underwater link.
      *
@@ -191,7 +213,7 @@ public:
      * @param buffer with Connection Status
      * @return AcousticConnection of underwater link
      */
-    AcousticConnection parseConnectionStatus (std::string const &buffer);
+  AcousticConnection parseConnectionStatus(std::string const & buffer);
 
     /** Parse Delivery Status of a Message.
      *
@@ -199,7 +221,7 @@ public:
      * @param buffer with Delivery Status.
      * @return DeleviryStatus.
      */
-    DeliveryStatus parseDeliveryStatus (std::string const &buffer);
+  DeliveryStatus parseDeliveryStatus(std::string const & buffer);
 
     /** Parse current settings.
      *
@@ -207,16 +229,13 @@ public:
      * @param buffer with list of current device settings.
      * @return
      */
-    DeviceSettings parseCurrentSettings (std::string const &buffer);
+  DeviceSettings parseCurrentSettings(std::string const & buffer);
 
     /** Parse Multipath structure
      *
      * @param buffer with list of last received acoustic signal's propagation.
      * @return vector of Multipath.
      */
-    std::vector<MultiPath> parseMultipath (std::string const &buffer);
-
-
+  std::vector<MultiPath> parseMultipath(std::string const & buffer);
 };
-}
-#endif
+}  // namespace evologics_usbl_driver
