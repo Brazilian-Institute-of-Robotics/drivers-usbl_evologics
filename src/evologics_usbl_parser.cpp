@@ -44,9 +44,9 @@ std::string UsblParser::printBuffer(const std::string & buffer)
   std::stringstream ss;
   bool hex_init = true;
   for (size_t i = 0; i < buffer.size(); i++) {
-    if((int)buffer[i] < 32 || (int)buffer[i] > 126 || !hex_init) {
+    if(static_cast<int>(buffer[i]) < 32 || static_cast<int>(buffer[i]) > 126 || !hex_init) {
       char byte[4];
-      sprintf(byte, "%02X", (unsigned char)buffer[i]);
+      snprintf(byte, sizeof(byte), "%02X", (unsigned char)buffer[i]);
       if(hex_init) {
         ss << " 0X";
         hex_init = false;
@@ -134,7 +134,8 @@ std::string UsblParser::getAnswerContent(std::string const & buffer)
   std::string msg = buffer;
   if(msg.find("+++AT") == std::string::npos) {
     throw ModeError(
-      "USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""
+      "USBL UsblParser.cpp getAnswerContent: Function only can be called "
+      "in DATA mode, not in COMMAND mode. Problem with answer: \""
             +
               printBuffer(buffer) + "\"");
   }
@@ -146,7 +147,8 @@ std::string UsblParser::getAnswerContent(std::string const & buffer, std::string
 {
   if(buffer.find("+++AT") == std::string::npos) {
     throw ModeError(
-      "USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with command: \""
+      "USBL UsblParser.cpp getAnswerContent: Function only can be "
+      "called in DATA mode, not in COMMAND mode. Problem with command: \""
             +
               command + "\" and  answer: \"" + printBuffer(buffer) + "\"");
   }
@@ -300,7 +302,6 @@ std::vector<std::string> UsblParser::splitValidate(std::string const & buffer, c
         " parts");
   }
   return splitted;
-
 }
 
 // Check if buffer can be splitted at least in a establish amount.
@@ -397,15 +398,15 @@ double UsblParser::getDouble(std::string const & buffer)
   return stod(buffer_tmp);
 }
 
-// Get a long long unsigned int from a response buffer in COMMAND mode.
-long long unsigned int UsblParser::getULLongInt(std::string const & buffer)
+// Get a uint64_t from a response buffer in COMMAND mode.
+uint64_t UsblParser::getULLongInt(std::string const & buffer)
 {
-  long long unsigned int value;
+  uint64_t value;
   std::string buffer_tmp = buffer;
   boost::algorithm::trim_if(buffer_tmp, boost::is_any_of("[*]"));
   std::stringstream ss(buffer_tmp);
   if (!(ss >> value)) {
-    throw ParseError("UsblParser.cpp getULLongInt. Expected an long long unsigned integer response, but read \"" +
+    throw ParseError("UsblParser.cpp getULLongInt. Expected an uint64_teger response, but read \"" +
       printBuffer(buffer) + "\"");
   }
   return value;
@@ -523,9 +524,7 @@ DeviceSettings UsblParser::parseCurrentSettings(std::string const & buffer)
       }
     } else if(splitted2.at(0) == "Sound Speed") {
       settings.sound_speed = atoi(splitted2.at(1).c_str());
-    }
-        // "Rerty" in firmware v1.7. "Retry" in firmware v.1.9.
-    else if(splitted2.at(0) == "IM Rerty Count" || splitted2.at(0) == "IM Retry Count") {
+    } else if(splitted2.at(0) == "IM Rerty Count" || splitted2.at(0) == "IM Retry Count") {
       settings.im_retry = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Retry Count") {
       settings.retry_count = atoi(splitted2.at(1).c_str());
@@ -578,4 +577,4 @@ std::vector<MultiPath> UsblParser::parseMultipath(std::string const & buffer)
   }
   return vec_multipath;
 }
-}
+}  // namespace evologics_usbl_driver

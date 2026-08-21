@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <queue>
 #include <string>
@@ -46,7 +47,7 @@ public:
    *
    * @param init_mode Initial operation mode
    */
-  EvologicsUsblDriver(const OperationMode & init_mode);
+  explicit EvologicsUsblDriver(const OperationMode & init_mode);
 
   /**
    * @brief Destroy the Driver object
@@ -205,9 +206,9 @@ public:
    *
    * @param expected_prefix command prefix
    * @param command sent to device.
-   * @return long long unsigned integer requested.
+   * @return uint64_teger requested.
    */
-  long long unsigned int waitResponseULLongInt(const std::string & expected_prefix, const std::string & command);
+  uint64_t waitResponseULLongInt(const std::string & expected_prefix, const std::string & command);
 
   /**
    * @brief Wait for string response.
@@ -721,7 +722,7 @@ public:
    * Usbl documentation doesn't say the max size neither a way to reset it, so a ullong_int was chosen.
    * @return counter of raw data bytes delivered to remote device.
    */
-  long long unsigned int getRawDataDeliveryCounter();
+  uint64_t getRawDataDeliveryCounter();
 
   /**
    * @brief Set System Time for current time

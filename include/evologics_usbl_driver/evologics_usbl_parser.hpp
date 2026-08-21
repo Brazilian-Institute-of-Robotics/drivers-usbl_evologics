@@ -14,8 +14,10 @@
 
 #pragma once
 
-#include <string.h>
+#include <cstdint>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include <ros_driver_base/driver.hpp>
 
@@ -218,13 +220,13 @@ public:
   double getDouble(const std::string & buffer);
 
   /**
-   * @brief Get a long long unsigned int from a response buffer in COMMAND mode.
+   * @brief Get a uint64_t from a response buffer in COMMAND mode.
    *
    * Throw ou_of_range in case of failure.
    * @param buffer with a counter number as response.
-   * @return long long unsigned int number.
+   * @return uint64_t number.
    */
-  long long unsigned int getULLongInt(const std::string & buffer);
+  uint64_t getULLongInt(const std::string & buffer);
 
   /**
    * @brief Parse AcousticConnection Status of underwater link.

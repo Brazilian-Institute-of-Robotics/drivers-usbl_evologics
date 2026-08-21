@@ -15,6 +15,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <string>
 
 namespace evologics_usbl_driver
 {

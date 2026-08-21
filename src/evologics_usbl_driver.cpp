@@ -1,7 +1,20 @@
+// Copyright (c) 2026, SENAI Cimatec
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//              http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <chrono>
 #include <iostream>
 #include <sstream>
-#include <unistd.h>
 
 #include "evologics_usbl_driver/evologics_usbl_driver.hpp"
 
@@ -66,7 +79,7 @@ std::string EvologicsUsblDriver::addEndLine(const std::string & command)
   std::stringstream ss;
   if (interface_ == SERIAL) {
     ss << command << "\r" << std::flush;
-  } else { // (interface == ETHERNET)
+  } else {
     ss << command << "\n" << std::flush;
   }
   return ss.str();
@@ -86,9 +99,7 @@ int EvologicsUsblDriver::checkParticularResponse(const std::string & buffer) con
   if(eol != std::string::npos) {
         // Add \r\n\r\n to buffer.
     return eol + 4;
-  }
-    // Max observed Particular Response: AT&V (get parameters) with 345 in length
-  else if(buffer.size() > 400) {
+  } else if(buffer.size() > 400) {
     throw std::runtime_error("CheckParticularResponse: Received a too big buffer of size \"" +
         std::to_string(buffer.size()) +
         "\". Check buffer \"" + usbl_parser_.printBuffer(buffer) + "\"");
@@ -104,9 +115,7 @@ int EvologicsUsblDriver::checkRegularResponse(const std::string & buffer) const
   if(eol != std::string::npos) {
         // Add \r\n to buffer.
     return eol + 2;
-  }
-    // Max observed Response: USBLLONG (pose) with 118 in length
-  else if(buffer.size() > 150) {
+  } else if(buffer.size() > 150) {
     throw std::runtime_error("CheckRegularResponse: Received a too big buffer of size \"" +
         std::to_string(buffer.size()) +
         "\". Check buffer \"" + usbl_parser_.printBuffer(buffer) + "\"");
@@ -159,9 +168,7 @@ int EvologicsUsblDriver::extractATPacket(const std::string & buffer) const
           usbl_parser_.printBuffer(buffer) + "\"");
     }
     return 0;
-  }
-    // Check max command size. +++AT?CLOCK:
-  else if (buffer.size() > 12) {
+  } else if (buffer.size() > 12) {
     throw std::runtime_error("extractATPacket: Could not find any \":\" before 12 bytes in buffer \"" +
         usbl_parser_.printBuffer(buffer) + "\"");
   }
@@ -188,9 +195,7 @@ int EvologicsUsblDriver::extractRawFromATPackets(const std::string & buffer) con
       if (buffer.substr(ties_start, TIES_HEADER_SIZE) == TIES_HEADER) {
         if (ties_start == 0) {
           return extractATPacket(buffer);
-        }
-                // extract raw data present before the start of +++AT packet
-        else {
+        } else {
           return extractRawDataPacket(buffer.substr(0, ties_start));
         }
       }
@@ -213,9 +218,7 @@ int EvologicsUsblDriver::extractPacket(const uint8_t * buffer, size_t buffer_siz
     // Both COMMAND and DATA mode, answer finish by \r\n.
   if(mode_ == DATA) {
     return extractRawFromATPackets(buffer_as_string);
-  }
-    // Check in COMMAND mode
-  else { // Check for a single number as response.
+  } else {  // Check for a single number as response.
     if(buffer_as_string.size() < 4) {
       return checkRegularResponse(buffer_as_string);
     }
@@ -251,9 +254,7 @@ ResponseInfo EvologicsUsblDriver::readResponse()
     notification_info.buffer = buffer_as_string;
     queue_notification_.push(notification_info);
     return response_info;
-  }
-    // Check for response and output it.
-  else if((response = isResponse(buffer_as_string)) != NO_RESPONSE) {
+  } else if((response = isResponse(buffer_as_string)) != NO_RESPONSE) {
     ResponseInfo response_info;
     response_info.response = response;
     response_info.buffer = buffer_as_string;
@@ -347,7 +348,7 @@ double EvologicsUsblDriver::waitResponseDouble(const std::string & expected_pref
 }
 
 // Wait for a integer (that may be very long) response.
-long long unsigned int EvologicsUsblDriver::waitResponseULLongInt(
+uint64_t EvologicsUsblDriver::waitResponseULLongInt(
   const std::string & expected_prefix,
   const std::string & command)
 {
@@ -385,9 +386,7 @@ int EvologicsUsblDriver::checkNotificationCommandMode(const std::string & buffer
             // It is a extra notification that starts with RECV (RECVSTART, RECVEND, ...)
       return checkRegularResponse(buffer);
     }
-  }
-    // All other notifications.
-  else if(buffer.find("DELI") != std::string::npos ||
+  } else if(buffer.find("DELI") != std::string::npos ||
     buffer.find("FAIL") != std::string::npos ||
     buffer.find("CANC") != std::string::npos ||
     buffer.find("EXPI") != std::string::npos ||
@@ -521,15 +520,11 @@ void EvologicsUsblDriver::modeManager(const std::string & command)
   if(command.find("ATO") != std::string::npos && mode_ == COMMAND) {
         // Proceed just after send the command
     mode_ = DATA;
-  }
-    // Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
-  else if(command.find("+++") != std::string::npos && mode_ == DATA) {
+  } else if(command.find("+++") != std::string::npos && mode_ == DATA) {
     sleep(1);
         // Receive answer in COMMAND mode.
     mode_ = COMMAND;
-  }
-    // Switch to COMMAND mode. Require OK response.
-  else if(command.find("ATC") != std::string::npos && mode_ == DATA) {
+  } else if(command.find("ATC") != std::string::npos && mode_ == DATA) {
         // Receive answer in COMMAND mode.
     mode_ = COMMAND;
   }
@@ -541,16 +536,12 @@ void EvologicsUsblDriver::modeMsgManager(const std::string & command)
     // Command ATO. Switch from DATA to COMMAND mode doesn't require answer
   if(command.find("ATO") != std::string::npos && mode_ == COMMAND) {
         // Proceed just after send the command
-        //queueCommand.pop();
-        //mode = DATA;
-  }
-    // Switch to COMMAND mode. (1s)<+++>(1s). Require OK response.
-  else if(command.find("+++") != std::string::npos && mode_ != COMMAND) {
+        // queueCommand.pop();
+        // mode = DATA;
+  } else if(command.find("+++") != std::string::npos && mode_ != COMMAND) {
         // If there was a error, keep in DATA mode.
     mode_ = DATA;
-  }
-    // Switch to COMMAND mode. Require OK response.
-  else if(command.find("ATC") != std::string::npos && mode_ != COMMAND) {
+  } else if(command.find("ATC") != std::string::npos && mode_ != COMMAND) {
         // If there was a error, keep in DATA mode.
     mode_ = DATA;
   }
@@ -626,7 +617,6 @@ AcousticConnection EvologicsUsblDriver::getConnectionStatus()
   return usbl_parser_.parseConnectionStatus(waitResponseString(command, command));
 }
 
-// TODO parse input.
 // Get Current Setting parameters.
 DeviceSettings EvologicsUsblDriver::getCurrentSetting()
 {
@@ -735,7 +725,6 @@ OperationMode EvologicsUsblDriver::getMode()
 }
 
 // Converts from euler angles to quaternions.
-// TODO need validation and test.
 Eigen::Quaterniond EvologicsUsblDriver::eulerToQuaternion(const Eigen::Vector3d & eulerAngles)
 {
   Eigen::Quaterniond quaternion =
@@ -1026,7 +1015,7 @@ int EvologicsUsblDriver::getChannelNumber()
 }
 
 // Get overall delivered raw data
-long long unsigned int EvologicsUsblDriver::getRawDataDeliveryCounter()
+uint64_t EvologicsUsblDriver::getRawDataDeliveryCounter()
 {
   std::string command = "AT?ZE";
   sendCommand(command);

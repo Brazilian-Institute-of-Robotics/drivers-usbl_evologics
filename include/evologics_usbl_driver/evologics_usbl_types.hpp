@@ -14,12 +14,12 @@
 
 #pragma once
 
-#include <cstdint>
+#include <Eigen/Geometry>
+
 #include <chrono>
 #include <string>
+#include <cstdint>
 #include <vector>
-
-#include <Eigen/Geometry>
 
 namespace evologics_usbl_driver
 {
@@ -97,7 +97,7 @@ enum CommandResponse
   ERROR,
     // Busy message
   BUSY,
-    //No response.
+    // No response.
   NO_RESPONSE
 };
 
@@ -273,7 +273,6 @@ struct StatusRequest
 
     // Built-in battery voltage (in Volts). Can be external battery. Need validation
   double battery_voltage;
-
 };
 
 /**
@@ -400,7 +399,7 @@ struct AcousticChannel
     // Current Overflow count of channelNumber, in bytes.
   int overflow_counter;
 
-    //Local-2-Remote bitrate (bit/s)
+    // Local-2-Remote bitrate (bit/s)
   int local_bitrate;
 
     // Remote-2-Local bitrate (bit/s)
@@ -424,12 +423,12 @@ struct AcousticChannel
   std::vector<MultiPath> multi_path;
 
     // Data sent to remote device.
-  long long unsigned int sent_raw_data;
+  uint64_t sent_raw_data;
     // Data sent with receipt acknowledgment from remote side
     // Got from usbl. How to reset it is unknown.
-  long long unsigned int delivered_raw_data;
+  uint64_t delivered_raw_data;
     // Data received from remote device.
-  long long unsigned int received_raw_data;
+  uint64_t received_raw_data;
 };
 
 /**
@@ -553,14 +552,14 @@ struct MessageStatus
     // The statement below should happen
     // messageSent = messageDelivered + messageFailed
     // Total of messages sent to remote device
-  unsigned long long int message_sent;
+  uint64_t message_sent;
     // Total of message successfully delivered
-  unsigned long long int message_delivered;
+  uint64_t message_delivered;
     // Total of messages failed.
-  unsigned long long int message_failed;
+  uint64_t message_failed;
     // Total of messages received.
-  unsigned long long int message_received;
+  uint64_t message_received;
     // Total of messages canceled.
-  unsigned long long int message_canceled;
+  uint64_t message_canceled;
 };
 }  // namespace evologics_usbl_driver
