@@ -77,7 +77,7 @@ char peer1_8[] = {
   0x74, 0x3a, 0x20, 0x30, 0x0d, 0x0a, 0x49, 0x64,
   0x6c, 0x65, 0x20, 0x54, 0x69, 0x6d, 0x65, 0x6f,
   0x75, 0x74, 0x3a, 0x20, 0x31, 0x32, 0x30, 0x0d,
-  0x0a, 0x0d, 0x0a };
+  0x0a, 0x0d, 0x0a};
 
 char peer1_5[] = {
   0x31, 0x30, 0x20, 0x20, 0x20,
@@ -92,7 +92,7 @@ char peer1_5[] = {
   0x20, 0x20, 0x0a, 0x31, 0x37, 0x20, 0x20, 0x20,
   0x20, 0x32, 0x32, 0x20, 0x20, 0x20, 0x0a, 0x31,
   0x30, 0x30, 0x20, 0x20, 0x20, 0x32, 0x34, 0x30,
-  0x20, 0x20, 0x0a, 0x0d, 0x0a };
+  0x20, 0x20, 0x0a, 0x0d, 0x0a};
 
 char peer1_6[] = {
   0x2b, 0x2b, 0x2b, 0x41, 0x54, 0x3f, 0x50, 0x3a,
@@ -109,23 +109,23 @@ char peer1_6[] = {
   0x20, 0x20, 0x0a, 0x31, 0x37, 0x20, 0x20, 0x20,
   0x20, 0x32, 0x32, 0x20, 0x20, 0x20, 0x0a, 0x31,
   0x30, 0x30, 0x20, 0x20, 0x20, 0x32, 0x34, 0x30,
-  0x20, 0x20, 0x0a, 0x0d, 0x0a };
+  0x20, 0x20, 0x0a, 0x0d, 0x0a};
 }  // namespace
 
 struct UsblParserTest : public ::testing::Test
 {
-  UsblParser usblParser;
+  UsblParser usbl_parser;
 };
 
 TEST_F(UsblParserTest, GetCurrentSetting) {
   string buffer(peer1_8);
-  ASSERT_EQ(1, usblParser.parseCurrentSettings(buffer).imRetry);
+  ASSERT_EQ(1, usbl_parser.parseCurrentSettings(buffer).im_retry);
 }
 
 TEST_F(UsblParserTest, GetCurrentSettingWithPendingSets) {
   string buffer = "[*]";
   buffer += string(peer1_8);
-  ASSERT_EQ(1, usblParser.parseCurrentSettings(buffer).imRetry);
+  ASSERT_EQ(1, usbl_parser.parseCurrentSettings(buffer).im_retry);
 }
 
 TEST_F(UsblParserTest, GetCurrentSettingWithPendingSetsCase2) {
@@ -147,21 +147,21 @@ TEST_F(UsblParserTest, GetCurrentSettingWithPendingSetsCase2) {
   settings += "[*]Pool Size: 16384\r\n";
   settings += "[*]Hold Timeout: 0\r\n";
   settings += "[*]Idle Timeout: 0\r\n\r\n";
-  ASSERT_EQ(1, usblParser.parseCurrentSettings(settings).imRetry);
+  ASSERT_EQ(1, usbl_parser.parseCurrentSettings(settings).im_retry);
 }
 
 TEST_F(UsblParserTest, GetPosition) {
   string position =
     "USBLLONG,1464207778.381274,1464207778.075953,2,13.6015,3.1369,1.7311,13.6015,3.1369,1.7311,"
     "0.0000,-0.0000,0.0000,9377,-54,106,0.1698\r\n";
-  Position pose = usblParser.parsePosition(position);
+  Position pose = usbl_parser.parsePosition(position);
   ASSERT_EQ(pose.rssi, -54);
   ASSERT_EQ(pose.integrity, 106);
   ASSERT_DOUBLE_EQ(pose.accuracy, 0.1698);
-  ASSERT_EQ(pose.propagationTime.count(), 9377);
+  ASSERT_EQ(pose.propagation_time.count(), 9377);
   ASSERT_NEAR(toSeconds(pose.time), 1464207778.381274, 1e-6);
-  ASSERT_NEAR(toSeconds(pose.measurementTime), 1464207778.075953, 1e-6);
-  ASSERT_EQ(pose.remoteAddress, 2);
+  ASSERT_NEAR(toSeconds(pose.measurement_time), 1464207778.075953, 1e-6);
+  ASSERT_EQ(pose.remote_address, 2);
   ASSERT_DOUBLE_EQ(pose.x, 13.6015);
   ASSERT_DOUBLE_EQ(pose.y, 3.1369);
   ASSERT_DOUBLE_EQ(pose.z, 1.7311);
@@ -169,94 +169,94 @@ TEST_F(UsblParserTest, GetPosition) {
 
 TEST_F(UsblParserTest, GetMultipath) {
   string buffer(peer1_5);
-  ASSERT_EQ(10, usblParser.parseMultipath(buffer).at(0).signalIntegrity);
+  ASSERT_EQ(10, usbl_parser.parseMultipath(buffer).at(0).signal_integrity);
 }
 
 TEST_F(UsblParserTest, GetNumber) {
   string buffer = "65";
-  ASSERT_EQ(65, usblParser.getNumber(buffer));
+  ASSERT_EQ(65, usbl_parser.getNumber(buffer));
 }
 
 TEST_F(UsblParserTest, GetNumberWithText) {
   string buffer = "65ABC";
-  ASSERT_EQ(65, usblParser.getNumber(buffer));
+  ASSERT_EQ(65, usbl_parser.getNumber(buffer));
 }
 
 TEST_F(UsblParserTest, GetNumberThrowsOnText) {
   string buffer = "ABC";
-  ASSERT_THROW(usblParser.getNumber(buffer), runtime_error);
+  ASSERT_THROW(usbl_parser.getNumber(buffer), runtime_error);
 }
 
 TEST_F(UsblParserTest, GetNumberWithPendingSet) {
   string buffer = "[*]765";
-  ASSERT_EQ(765, usblParser.getNumber(buffer));
+  ASSERT_EQ(765, usbl_parser.getNumber(buffer));
 }
 
 TEST_F(UsblParserTest, GetDouble) {
   string buffer = "65.76";
-  ASSERT_DOUBLE_EQ(65.76, usblParser.getDouble(buffer));
+  ASSERT_DOUBLE_EQ(65.76, usbl_parser.getDouble(buffer));
 }
 
 TEST_F(UsblParserTest, GetDoubleWithText) {
   string buffer = "65.51ABC";
-  ASSERT_DOUBLE_EQ(65.51, usblParser.getDouble(buffer));
+  ASSERT_DOUBLE_EQ(65.51, usbl_parser.getDouble(buffer));
 }
 
 TEST_F(UsblParserTest, GetDoubleThrowsOnText) {
   string buffer = "ABC";
-  ASSERT_THROW(usblParser.getDouble(buffer), invalid_argument);
+  ASSERT_THROW(usbl_parser.getDouble(buffer), invalid_argument);
 }
 
 TEST_F(UsblParserTest, GetDoubleWithPendingSet) {
   string buffer = "[*]7.65";
-  ASSERT_DOUBLE_EQ(7.65, usblParser.getDouble(buffer));
+  ASSERT_DOUBLE_EQ(7.65, usbl_parser.getDouble(buffer));
 }
 
 TEST_F(UsblParserTest, GetULLongInt) {
   string buffer = "65876786";
-  ASSERT_EQ(65876786u, usblParser.getULLongInt(buffer));
+  ASSERT_EQ(65876786u, usbl_parser.getULLongInt(buffer));
 }
 
 TEST_F(UsblParserTest, GetULLongIntWithText) {
   string buffer = "65876786ABC";
-  ASSERT_EQ(65876786u, usblParser.getULLongInt(buffer));
+  ASSERT_EQ(65876786u, usbl_parser.getULLongInt(buffer));
 }
 
 TEST_F(UsblParserTest, GetULLongIntThrowsOnText) {
   string buffer = "ABC";
-  ASSERT_THROW(usblParser.getULLongInt(buffer), runtime_error);
+  ASSERT_THROW(usbl_parser.getULLongInt(buffer), runtime_error);
 }
 
 TEST_F(UsblParserTest, GetULLongIntWithPendingSet) {
   string buffer = "[*]65876786";
-  ASSERT_EQ(65876786u, usblParser.getULLongInt(buffer));
+  ASSERT_EQ(65876786u, usbl_parser.getULLongInt(buffer));
 }
 
 TEST_F(UsblParserTest, GetAnswerContent) {
   string buffer(peer1_6);
   string buffer1(peer1_5);
-  ASSERT_EQ(buffer1, usblParser.getAnswerContent(buffer));
+  ASSERT_EQ(buffer1, usbl_parser.getAnswerContent(buffer));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCorrectDataMode) {
   stringstream ss;
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,36");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageColonDataMode) {
   stringstream ss;
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,:6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCommaDataMode) {
   stringstream ss;
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,,6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageEndlineDataMode) {
@@ -265,28 +265,28 @@ TEST_F(UsblParserTest, FuzzyMessageEndlineDataMode) {
   char end_line[] = {0x0d, 0x0a};
   char msg[] = {0x20, 0x35};
   ss << buffer << msg << end_line;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(ss.str(), RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(ss.str(), RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCorrectCommandMode) {
   stringstream ss;
   string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,36");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageColonCommandMode) {
   stringstream ss;
   string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,:6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCommaCommandMode) {
   stringstream ss;
   string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,,6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageEndlineCommandMode) {
@@ -295,7 +295,7 @@ TEST_F(UsblParserTest, FuzzyMessageEndlineCommandMode) {
   char end_line[] = {0x0d, 0x0a};
   char msg[] = {0x20, 0x35};
   ss << buffer << msg << end_line;
-  ASSERT_NO_THROW(usblParser.splitValidateNotification(ss.str(), RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(ss.str(), RECVIM));
 }
 
 TEST_F(UsblParserTest, GetAnswerContentCorrect) {
@@ -303,7 +303,7 @@ TEST_F(UsblParserTest, GetAnswerContentCorrect) {
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,36");
   string content("RECVIM,2,1,2,ack,312,14,11,0.03,36");
   ss << buffer << 0x0D0A;
-  ASSERT_EQ(content, usblParser.getAnswerContent(buffer));
+  ASSERT_EQ(content, usbl_parser.getAnswerContent(buffer));
 }
 
 TEST_F(UsblParserTest, GetAnswerContentColon) {
@@ -311,7 +311,7 @@ TEST_F(UsblParserTest, GetAnswerContentColon) {
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,:6");
   string content("RECVIM,2,1,2,ack,312,14,11,0.03,:6");
   ss << buffer << 0x0D0A;
-  ASSERT_EQ(content, usblParser.getAnswerContent(buffer));
+  ASSERT_EQ(content, usbl_parser.getAnswerContent(buffer));
 }
 
 TEST_F(UsblParserTest, GetAnswerContentEndlineCommand) {
@@ -323,7 +323,7 @@ TEST_F(UsblParserTest, GetAnswerContentEndlineCommand) {
   char msg[] = {0x20, 0x35};
   ss << buffer << msg << end_line;
   ss2 << content << msg << end_line;
-  ASSERT_EQ(ss2.str(), usblParser.getAnswerContent(ss.str()));
+  ASSERT_EQ(ss2.str(), usbl_parser.getAnswerContent(ss.str()));
 }
 
 TEST_F(UsblParserTest, GetAnswerContentWithCommandValidation) {
@@ -335,16 +335,16 @@ TEST_F(UsblParserTest, GetAnswerContentWithCommandValidation) {
   char end_line[] = {0x0d, 0x0a};
   ss << buffer << end_line;
   ss2 << content << end_line;
-  ASSERT_EQ(ss2.str(), usblParser.getAnswerContent(ss.str(), command));
+  ASSERT_EQ(ss2.str(), usbl_parser.getAnswerContent(ss.str(), command));
 }
 
 TEST_F(UsblParserTest, ParseReceivedIM) {
-  char msg[] = { 0x31, 0x32, 0x00, 0x30, 0x35};
-  char end_line[] = { 0x0d, 0x0a};
+  char msg[] = {0x31, 0x32, 0x00, 0x30, 0x35};
+  char end_line[] = {0x0d, 0x0a};
 
   ReceiveIM im;
   im.buffer = vector<uint8_t>(msg, msg + 5);
-  im.deliveryReport = true;
+  im.delivery_report = true;
   im.destination = 2;
   im.duration = std::chrono::microseconds(312);
   im.integrity = 11;
@@ -360,7 +360,7 @@ TEST_F(UsblParserTest, ParseReceivedIM) {
   vec_buffer.insert(vec_buffer.end(), end_line, end_line + 2);
   string sbuffer(vec_buffer.begin(), vec_buffer.end());
 
-  vector<uint8_t> got_im = usblParser.parseReceivedIM(sbuffer).buffer;
+  vector<uint8_t> got_im = usbl_parser.parseReceivedIM(sbuffer).buffer;
   ASSERT_EQ(im.buffer.size(), got_im.size());
   for (size_t i = 0; i < im.buffer.size(); i++) {
     ASSERT_EQ(im.buffer[i], got_im[i]);
@@ -371,7 +371,7 @@ TEST_F(UsblParserTest, ParseReceivedIMWithZeroByte) {
   stringstream ss;
   ReceiveIM im;
 
-  im.deliveryReport = true;
+  im.delivery_report = true;
   im.destination = 2;
   im.duration = std::chrono::microseconds(312);
   im.integrity = 11;
@@ -381,12 +381,12 @@ TEST_F(UsblParserTest, ParseReceivedIMWithZeroByte) {
   im.velocity = 0.03;
 
   string buffer("+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,");
-  char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35};
+  char msg[] = {0x31, 0x32, 0x01, 0x00, 0x35};
   string end_line("\r\n");
   im.buffer = vector<uint8_t>(msg, msg + 5);
   ss << buffer << string(msg, msg + 5) << end_line;
 
-  vector<uint8_t> got_im = usblParser.parseReceivedIM(ss.str()).buffer;
+  vector<uint8_t> got_im = usbl_parser.parseReceivedIM(ss.str()).buffer;
   ASSERT_EQ(im.buffer.size(), got_im.size());
   for (size_t i = 0; i < im.buffer.size(); i++) {
     ASSERT_EQ(im.buffer[i], got_im[i]);
@@ -396,63 +396,63 @@ TEST_F(UsblParserTest, ParseReceivedIMWithZeroByte) {
 TEST_F(UsblParserTest, ParseSendIM) {
   stringstream ss;
   SendIM im;
-  im.deliveryReport = true;
+  im.delivery_report = true;
   im.destination = 1;
-  char msg[] = { 0x31, 0x32, 0x33, 0x34, 0x35 };
+  char msg[] = {0x31, 0x32, 0x33, 0x34, 0x35};
 
   im.buffer = vector<uint8_t>(msg, msg + 5);
   string buffer = "AT*SENDIM,5,1,ack,";
 
   ss << buffer << string(msg, msg + 5);
 
-  ASSERT_EQ(ss.str(), usblParser.parseSendIM(im));
+  ASSERT_EQ(ss.str(), usbl_parser.parseSendIM(im));
 }
 
 TEST_F(UsblParserTest, ParseSendIMWithZeroByte) {
   stringstream ss;
   SendIM im;
-  im.deliveryReport = true;
+  im.delivery_report = true;
   im.destination = 1;
-  char msg[] = { 0x31, 0x00, 0x33, 0x00, 0x35 };
+  char msg[] = {0x31, 0x00, 0x33, 0x00, 0x35};
 
   im.buffer = vector<uint8_t>(msg, msg + 5);
   string buffer = "AT*SENDIM,5,1,ack,";
 
   ss << buffer << string(msg, msg + 5);
-  string result = usblParser.parseSendIM(im);
+  string result = usbl_parser.parseSendIM(im);
 
   ASSERT_EQ(msg[4], result.at(result.size() - 1));
-  ASSERT_EQ(ss.str(), usblParser.parseSendIM(im));
+  ASSERT_EQ(ss.str(), usbl_parser.parseSendIM(im));
 }
 
 TEST_F(UsblParserTest, SplitMinimalValidate) {
   stringstream ss;
 
   string buffer("+++AT:37:RECVIM,5,1,2,ack,312,14,11,0.03,");
-  char msg[] = { 0x31, 0x32, 0x01, 0x00, 0x35};
+  char msg[] = {0x31, 0x32, 0x01, 0x00, 0x35};
   string end_line("\r\n");
   ss << buffer << string(msg, msg + 5) << end_line;
 
-  vector<string> test1 = usblParser.splitMinimalValidate(ss.str(), ":", 3);
+  vector<string> test1 = usbl_parser.splitMinimalValidate(ss.str(), ":", 3);
   ASSERT_EQ(test1.size(), 3u);
   ASSERT_EQ(test1[0], "+++AT");
   ASSERT_EQ(test1[1], "37");
   ASSERT_EQ(test1[2], "RECVIM,5,1,2,ack,312,14,11,0.03," + string(msg, msg + 5) + end_line);
 
-  vector<string> test2 = usblParser.splitMinimalValidate(ss.str(), ":", 2);
+  vector<string> test2 = usbl_parser.splitMinimalValidate(ss.str(), ":", 2);
   ASSERT_EQ(test2.size(), 2u);
   ASSERT_EQ(test2[0], "+++AT");
   ASSERT_EQ(test2[1], "37:RECVIM,5,1,2,ack,312,14,11,0.03," + string(msg, msg + 5) + end_line);
 
-  vector<string> test3 = usblParser.splitMinimalValidate(ss.str(), ",", 3);
+  vector<string> test3 = usbl_parser.splitMinimalValidate(ss.str(), ",", 3);
   ASSERT_EQ(test3.size(), 3u);
   ASSERT_EQ(test3[0], "+++AT:37:RECVIM");
   ASSERT_EQ(test3[1], "5");
   ASSERT_EQ(test3[2], "1,2,ack,312,14,11,0.03," + string(msg, msg + 5) + end_line);
 
-  vector<string> test4 = usblParser.splitMinimalValidate(ss.str(), ",", 1);
+  vector<string> test4 = usbl_parser.splitMinimalValidate(ss.str(), ",", 1);
   ASSERT_EQ(test4.size(), 1u);
   ASSERT_EQ(test4[0], ss.str());
 
-  ASSERT_THROW(usblParser.splitMinimalValidate(ss.str(), "&", 2), runtime_error);
+  ASSERT_THROW(usbl_parser.splitMinimalValidate(ss.str(), "&", 2), runtime_error);
 }

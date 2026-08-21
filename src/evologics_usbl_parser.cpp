@@ -132,7 +132,6 @@ void UsblParser::splitValidateNotification(std::string const & buffer, Notificat
 std::string UsblParser::getAnswerContent(std::string const & buffer)
 {
   std::string msg = buffer;
-  std::string::size_type npos = std::string::npos;
   if(msg.find("+++AT") == std::string::npos) {
     throw ModeError(
       "USBL UsblParser.cpp getAnswerContent: Function only can be called in DATA mode, not in COMMAND mode. Problem with answer: \""
@@ -165,7 +164,7 @@ std::string UsblParser::parseSendIM(SendIM const & im)
 {
   std::stringstream ss;
   ss << "AT*SENDIM," << std::to_string(im.buffer.size()) << "," << std::to_string(im.destination) << ",";
-  if(im.deliveryReport) {
+  if(im.delivery_report) {
     ss << "ack,";
   } else {
     ss << "noack,";
@@ -190,9 +189,9 @@ ReceiveIM UsblParser::parseReceivedIM(std::string const & buffer)
   im.source = stoi(splitted[2]);
   im.destination = stoi(splitted[3]);
   if(splitted[4] == "ack") {
-    im.deliveryReport = true;
+    im.delivery_report = true;
   } else {
-    im.deliveryReport = false;
+    im.delivery_report = false;
   }
   im.duration = std::chrono::microseconds(stoi(splitted[5]));
   im.rssi = stoi(splitted[6]);
@@ -224,8 +223,8 @@ Position UsblParser::parsePosition(std::string const & buffer)
   }
 
   pose.time = timePointFromSeconds(stod(splitted[1]));
-  pose.measurementTime = timePointFromSeconds(stod(splitted[2]));
-  pose.remoteAddress = stoi(splitted[3]);
+  pose.measurement_time = timePointFromSeconds(stod(splitted[2]));
+  pose.remote_address = stoi(splitted[3]);
   pose.x = stod(splitted[4]);
   pose.y = stod(splitted[5]);
   pose.z = stod(splitted[6]);
@@ -235,7 +234,7 @@ Position UsblParser::parsePosition(std::string const & buffer)
   pose.roll = stod(splitted[10]);
   pose.pitch = stod(splitted[11]);
   pose.yaw = stod(splitted[12]);
-  pose.propagationTime = std::chrono::microseconds(stoi(splitted[13]));
+  pose.propagation_time = std::chrono::microseconds(stoi(splitted[13]));
   pose.rssi = stoi(splitted[14]);
   pose.integrity = stoi(splitted[15]);
   pose.accuracy = stod(splitted[16]);
@@ -255,10 +254,10 @@ Direction UsblParser::parseDirection(std::string const & buffer)
   }
 
   direc.time = timePointFromSeconds(stod(splitted[1]));
-  direc.measurementTime = timePointFromSeconds(stod(splitted[2]));
-  direc.remoteAddress = stoi(splitted[3]);
-  direc.lBearing = stod(splitted[4]);
-  direc.lElevation = stod(splitted[5]);
+  direc.measurement_time = timePointFromSeconds(stod(splitted[2]));
+  direc.remote_address = stoi(splitted[3]);
+  direc.local_bearing = stod(splitted[4]);
+  direc.local_elevation = stod(splitted[5]);
   direc.bearing = stod(splitted[6]);
   direc.elevation = stod(splitted[7]);
   direc.roll = stod(splitted[8]);
@@ -450,10 +449,10 @@ AcousticConnection UsblParser::parseConnectionStatus(std::string const & buffer)
     // Get amount of free buffer of channels
   std::vector<std::string> splitted;
   boost::split(splitted, buffer, boost::algorithm::is_any_of(" ") );
-  connection.freeBuffer.clear();
+  connection.free_buffer.clear();
   for(size_t i = 0; i < splitted.size(); i++) {
     if(isdigit(splitted.at(i)[0])) {
-      connection.freeBuffer.push_back(atoi(splitted.at(i).c_str()));
+      connection.free_buffer.push_back(atoi(splitted.at(i).c_str()));
     }
   }
   return connection;
@@ -496,52 +495,52 @@ DeviceSettings UsblParser::parseCurrentSettings(std::string const & buffer)
       continue;
     } else if(splitted2.at(0) == "Gain") {
       if(atoi(splitted2.at(1).c_str()) == 0) {
-        settings.lowGain = false;
+        settings.low_gain = false;
       } else {
-        settings.lowGain = true;
+        settings.low_gain = true;
       }
     } else if(splitted2.at(0) == "Carrier Waveform ID") {
-      settings.carrierWaveformId = atoi(splitted2.at(1).c_str());
+      settings.carrier_waveform_id = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Local Address") {
-      settings.localAddress = atoi(splitted2.at(1).c_str());
+      settings.local_address = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Highest Address") {
-      settings.highestAddress = atoi(splitted2.at(1).c_str());
+      settings.highest_address = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Cluster Size") {
-      settings.clusterSize = atoi(splitted2.at(1).c_str());
+      settings.cluster_size = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Packet Time") {
-      settings.packetTime = atoi(splitted2.at(1).c_str());
+      settings.packet_time = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Retry Timeout") {
-      settings.retryTimeout = atoi(splitted2.at(1).c_str());
+      settings.retry_timeout = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Wake Up Active Time") {
-      settings.wuActiveTime = atoi(splitted2.at(1).c_str());
+      settings.wu_active_time = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Wake Up Period") {
-      settings.wuPeriod = atoi(splitted2.at(1).c_str());
+      settings.wu_period = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Promiscuous Mode") {
       if(atoi(splitted2.at(1).c_str()) == 0) {
-        settings.promiscuosMode = false;
+        settings.promiscuos_mode = false;
       } else {
-        settings.promiscuosMode = true;
+        settings.promiscuos_mode = true;
       }
     } else if(splitted2.at(0) == "Sound Speed") {
-      settings.speedSound = atoi(splitted2.at(1).c_str());
+      settings.sound_speed = atoi(splitted2.at(1).c_str());
     }
         // "Rerty" in firmware v1.7. "Retry" in firmware v.1.9.
     else if(splitted2.at(0) == "IM Rerty Count" || splitted2.at(0) == "IM Retry Count") {
-      settings.imRetry = atoi(splitted2.at(1).c_str());
+      settings.im_retry = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Retry Count") {
-      settings.retryCount = atoi(splitted2.at(1).c_str());
+      settings.retry_count = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Idle Timeout") {
-      settings.idleTimeout = atoi(splitted2.at(1).c_str());
+      settings.idle_timeout = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Hold Timeout") {
-      settings.wuHoldTimeout = atoi(splitted2.at(1).c_str());
+      settings.wu_hold_timeout = atoi(splitted2.at(1).c_str());
     } else if(splitted2.at(0) == "Pool Size") {
             // Get values for each channels available
       std::vector<std::string> splitted3;
       boost::split(splitted3, splitted2.at(1), boost::algorithm::is_any_of(" ") );
-      settings.poolSize.clear();
+      settings.pool_size.clear();
       for(size_t i = 0; i < splitted3.size(); i++) {
         if(isdigit(splitted3.at(i)[0])) {
-          settings.poolSize.push_back(atoi(splitted3.at(i).c_str()));
+          settings.pool_size.push_back(atoi(splitted3.at(i).c_str()));
         }
       }
     } else {
@@ -572,7 +571,7 @@ std::vector<MultiPath> UsblParser::parseMultipath(std::string const & buffer)
       }
             // Look for second value
       if ((npos = msg.find_first_of("0123456789")) != std::string::npos) {
-        multipath.signalIntegrity = atoi(msg.c_str());
+        multipath.signal_integrity = atoi(msg.c_str());
       }
       vec_multipath.push_back(multipath);
     }

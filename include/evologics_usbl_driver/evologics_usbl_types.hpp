@@ -25,7 +25,8 @@ namespace evologics_usbl_driver
 {
 const int BROADCAST = 255;
 
-/** Type of interface with local device.
+/**
+ * @brief Type of interface with local device.
  *
  */
 enum InterfaceType
@@ -36,8 +37,8 @@ enum InterfaceType
   ETHERNET
 };
 
-///The type of operation.
-/** Type of operation.
+/**
+ * @brief Type of operation.
  *
  * In DATA mode, device can exchange raw data with remote device and receive commands/notifications in AT format.
  * In COMMAND mode, device can NOT exchange raw data, only directs commands/notifications.
@@ -50,7 +51,8 @@ enum OperationMode
   COMMAND
 };
 
-/** Connection status of the acoustic connection to the remote device.
+/**
+ * @brief Connection status of the acoustic connection to the remote device.
  *
  */
 enum ConnectionStatus
@@ -80,8 +82,8 @@ enum ConnectionStatus
   DEAF
 };
 
-// Response to a command by local device. Every command generates a response
-/** Kind of response to a command by local device.
+/**
+ * @brief Kind of response to a command by local device.
  *
  * Command generates a response. Command AT0 (switch to data mode) does'nt generate response.
  */
@@ -99,7 +101,8 @@ enum CommandResponse
   NO_RESPONSE
 };
 
-/** Notification that can be received.
+/**
+ * @brief Notification that can be received.
  *
  * Notification are asynchronous. They doesn't require a command to be received.
  * They can arrive at any time, and each one has a defined structure.
@@ -126,7 +129,8 @@ enum Notification
   NO_NOTIFICATION
 };
 
-/** Delivery status of an instant message.
+/**
+ * @brief Delivery status of an instant message.
  *
  * Only if required by a specific command.
  */
@@ -146,7 +150,8 @@ enum DeliveryStatus
   CANCELED
 };
 
-/** Reset device or clear buffer.
+/**
+ * @brief Reset device or clear buffer.
  *
  * Parameter of command ATZn
  * Reset device, drop data and/or instant messages.
@@ -165,10 +170,11 @@ enum ResetType
   SEND_BUFFER = 4
 };
 
-/** Firmware information
+/**
+ * @brief Firmware information
  *
- *  Parameter for command ATIn
- *  View firmware information
+ * Parameter for command ATIn
+ * View firmware information
  */
 enum FirmwareInformation
 {
@@ -180,10 +186,11 @@ enum FirmwareInformation
   MANUFACTURER = 7
 };
 
-/** Sound Pressure Level (SPL) in transmission mode
+/**
+ * @brief Sound Pressure Level (SPL) in transmission mode
  *
- *  Default value is 3 (MINIMAL).
- *  For test in air, use ONLY value MINIMAL.
+ * Default value is 3 (MINIMAL).
+ * For test in air, use ONLY value MINIMAL.
  */
 enum SourceLevel
 {
@@ -206,7 +213,8 @@ enum SourceLevel
   IN_AIR = 3
 };
 
-/** Notification information
+/**
+ * @brief Notification information
  *
  * Kind of notification and its content.
  */
@@ -216,7 +224,8 @@ struct NotificationInfo
   std::string buffer;
 };
 
-/** Response information
+/**
+ * @brief Response information
  *
  * Kind of response and its content.
  */
@@ -226,20 +235,22 @@ struct ResponseInfo
   std::string buffer;
 };
 
-/** Firmware information
+/**
+ * @brief Firmware information
  *
  */
 struct VersionNumbers
 {
     // Firmware version number
-  std::string firmwareVersion;
+  std::string firmware_version;
     // Physical and data-layer protocol versions
-  std::string accousticVersion;
+  std::string accoustic_version;
     // Device manufacturer
   std::string manufacturer;
 };
 
-/**  Configuration for acoustic connection
+/**
+ * @brief Configuration for acoustic connection
  *
  */
 struct StatusRequest
@@ -249,23 +260,24 @@ struct StatusRequest
     // Interpreter type. True: AT interpreter. False: NET interpreter
     // At: Standard, for DATA mode and COMMAND mode
     // NET: Not tested, for Networking command and COMMAND mode.
-  bool atInterpreter;
+  bool at_interpreter;
 
     // Parameter of command interpreter
     // protocolID = 0, global device settings can be edited.
     // protocolID = 1...7, global device settings cannot be edit. Identifier for Instant Message communication
-  int protocolID;
+  int protocol_id;
 
     // Physical layer of local device
     // True: On. False: off
   bool physical;
 
     // Built-in battery voltage (in Volts). Can be external battery. Need validation
-  double batteryVoltage;
+  double battery_voltage;
 
 };
 
-/** Connection status of acoustic link
+/**
+ * @brief Connection status of acoustic link
  *
  */
 struct AcousticConnection
@@ -276,83 +288,85 @@ struct AcousticConnection
   ConnectionStatus status;
 
     // Free transmission buffer space (in bytes)
-  std::vector<int> freeBuffer;
+  std::vector<int> free_buffer;
 };
 
-/** Major device settings
+/**
+ * @brief Major device settings
  *
  */
 struct DeviceSettings
 {
     // True: low gain, reduced sensitivity. For short distance and test. 1
     // False: Normal gain, high sensitivity. 0
-  bool lowGain;
+  bool low_gain;
 
     // Devices can just establish a connection with specific carrier Waveform ID combinations
     // The combinations are 0-1 and 2-2.
     // It's recommended to use 0-1 for a two devices connection and 2-2 for networking.
-  int carrierWaveformId;
+  int carrier_waveform_id;
 
     // Address of local device
-  int localAddress;
+  int local_address;
 
     // The Address of the remote device to transmit BurstData or Instant Messages.
     // If the Remote Address is 0 the device accepts every connection request, but can not initiate a connection.
     // remoteAddress of local device must match localAddress of remote device.
-  int remoteAddress;
+  int remote_address;
 
     // Define limits of devices in the network
     // Values: 2, 6, 14, 30, 62, 126, 254
-  int highestAddress;
+  int highest_address;
 
     // The number of packets in one train. It's recommended to use a cluster size less then
     // 10 for moving objects. For stationary you can use a cluster size up to 32.
-  int clusterSize;
+  int cluster_size;
 
     // Maximum duration of a data packet. From 50..1000 (in ms).
     // packetTime must be equal for all devices.
     // Short values are recommend for challenging hydroacoustic channels.
-  int packetTime;
+  int packet_time;
 
     // How many times the device will retry to connect
     // Retry count 0-255
-  int retryCount;
+  int retry_count;
 
     // Retry timeout 500-12000 ms
-  int retryTimeout;
+  int retry_timeout;
 
     // The timeout before closing an idle acoustic connection
     // 0-3600 s
-  int idleTimeout;
+  int idle_timeout;
 
     // Speed of sound 1300-1700 m/s
-  int speedSound;
+  int sound_speed;
 
     // Instant Message retry 0-255. 255 = retry indefinitely
-  int imRetry;
+  int im_retry;
 
     // False: Local device will only accept message addressed to it. 0
     // True: Receive message addressed to any device on network. 1
-  bool promiscuosMode;
+  bool promiscuos_mode;
 
     // Wake Up active time.
     // 0..3600 (s)
-  int wuActiveTime;
+  int wu_active_time;
 
     // Wake Up period
     // 0..3600 (s)
-  int wuPeriod;
+  int wu_period;
 
     // Wake Up hold timeout
     // 0..3600 (s)
-  int wuHoldTimeout;
+  int wu_hold_timeout;
 
     // Transmission buffer size (bytes) per channel.
     // 8096.. 2097152
-  std::vector<int> poolSize;
+  std::vector<int> pool_size;
 };
 
-/** Multipath propagation of acoustic signal, from transmitter to receiver.
+/**
+ * @brief Multipath propagation of acoustic signal, from transmitter to receiver.
  *
  * Geometry and reflection properties of underwater channel determine the number of
  * significant propagation path, the strengths and delays.
@@ -363,10 +377,11 @@ struct MultiPath
   int timeline;
 
     // Strengths of signal
-  int signalIntegrity;
+  int signal_integrity;
 };
 
-/** Acoustic channel performance
+/**
+ * @brief Acoustic channel performance
  *
  */
 struct AcousticChannel
@@ -376,20 +391,20 @@ struct AcousticChannel
     // Channel of current input-output interface
     // Data transferring among different channel is impossible.
     // 0..7
-  int channelNumber;
+  int channel_number;
 
     // Dropped data from transmission buffer (bytes) of channelNumber, in bytes.
     // Cases: 1)ResetType; 2)idleTimeout; 3)transmission to remoteAddress 0
-  int dropCount;
+  int drop_count;
 
     // Current Overflow count of channelNumber, in bytes.
-  int overflowCounter;
+  int overflow_counter;
 
     //Local-2-Remote bitrate (bit/s)
-  int localBitrate;
+  int local_bitrate;
 
     // Remote-2-Local bitrate (bit/s)
-  int remoteBitrate;
+  int remote_bitrate;
 
     // RSSI (Received Signal Strength Indicator). Signal level in dB. Higher values correspond stronger signals.
     // Signal acceptable for rssi between -20dB and -85dB.
@@ -398,15 +413,15 @@ struct AcousticChannel
 
     // Signal integrity represent distortions of signal.
     // Weak connection of integrityLevel < 100.
-  int signalIntegrity;
+  int signal_integrity;
 
     // Propagation time between devices. Delay (im ms)
-  int propagationTime;
+  int propagation_time;
 
     // Relative velocity between devices (in m/s)
-  double relativeVelocity;
+  double relative_velocity;
 
-  std::vector<MultiPath> multiPath;
+  std::vector<MultiPath> multi_path;
 
     // Data sent to remote device.
   long long unsigned int sent_raw_data;
@@ -417,27 +432,29 @@ struct AcousticChannel
   long long unsigned int received_raw_data;
 };
 
-/** IN NOISE state
+/**
+ * @brief IN NOISE state
  *
  */
 struct NoiseSample
 {
   double noise;
   int size;
-  double sampleRate;
-  bool lowGain;
+  double sample_rate;
+  bool low_gain;
   double rssi;
 };
 
-/** Device specific position structure.
+/**
+ * @brief Device specific position structure.
  *
- *  To be independent.
+ * To be independent.
  */
 struct Position
 {
   std::chrono::system_clock::time_point time;
-  std::chrono::system_clock::time_point measurementTime;
-  int remoteAddress;
+  std::chrono::system_clock::time_point measurement_time;
+  int remote_address;
     // Coordinates in local device's reference frame (in m)
   double x;
   double y;
@@ -451,14 +468,15 @@ struct Position
   double pitch;
   double yaw;
     // in us
-  std::chrono::microseconds propagationTime;
+  std::chrono::microseconds propagation_time;
   int rssi;
   int integrity;
     // Accuracy of the position fix, (in rad)
   double accuracy;
 };
 
-/** Pose of remote device, in local device's reference frame.
+/**
+ * @brief Pose of remote device, in local device's reference frame.
  *
  */
 struct RigidBodyState
@@ -468,18 +486,19 @@ struct RigidBodyState
   Eigen::Quaterniond orientation;
 };
 
-/** Device specific direction structure.
+/**
+ * @brief Device specific direction structure.
  *
  * In case device is not able to provide position, it provides Direction
  */
 struct Direction
 {
   std::chrono::system_clock::time_point time;
-  std::chrono::system_clock::time_point measurementTime;
-  int remoteAddress;
+  std::chrono::system_clock::time_point measurement_time;
+  int remote_address;
     // Coordinates in local device's reference frame. (in rad)
-  double lBearing;
-  double lElevation;
+  double local_bearing;
+  double local_elevation;
     // Coordinates, motion-compensated  (in rad)
   double bearing;
   double elevation;
@@ -493,18 +512,20 @@ struct Direction
   double accuracy;
 };
 
-/** Instant message to be sent
+/**
+ * @brief Instant message to be sent
  *
  */
 struct SendIM
 {
   std::chrono::system_clock::time_point time;
   int destination;
-  bool deliveryReport;
+  bool delivery_report;
   std::vector<uint8_t> buffer;
 };
 
-/** Received instant message
+/**
+ * @brief Received instant message
  *
  */
 struct ReceiveIM
@@ -512,7 +533,7 @@ struct ReceiveIM
   std::chrono::system_clock::time_point time;
   int destination;
   int source;
-  bool deliveryReport;
+  bool delivery_report;
   std::chrono::microseconds duration;
   int rssi;
   int integrity;
@@ -520,25 +541,26 @@ struct ReceiveIM
   std::vector<uint8_t> buffer;
 };
 
-/** Message Delivery status
+/**
+ * @brief Message Delivery status
  *
  */
 struct MessageStatus
 {
   std::chrono::system_clock::time_point time;
-  SendIM sendIm;
+  SendIM send_im;
   DeliveryStatus status;
     // The statement below should happen
     // messageSent = messageDelivered + messageFailed
     // Total of messages sent to remote device
-  unsigned long long int   messageSent;
+  unsigned long long int message_sent;
     // Total of message successfully delivered
-  unsigned long long int   messageDelivered;
+  unsigned long long int message_delivered;
     // Total of messages failed.
-  unsigned long long int   messageFailed;
+  unsigned long long int message_failed;
     // Total of messages received.
-  unsigned long long int   messageReceived;
+  unsigned long long int message_received;
     // Total of messages canceled.
-  unsigned long long int   messageCanceled;
+  unsigned long long int message_canceled;
 };
 }  // namespace evologics_usbl_driver
