@@ -22,6 +22,7 @@
 
 #include <ros_driver_base/driver.hpp>
 
+#include "evologics_usbl_driver/evologics_usbl_driver_interface.hpp"
 #include "evologics_usbl_driver/evologics_usbl_parser.hpp"
 #include "evologics_usbl_driver/evologics_usbl_types.hpp"
 #include "evologics_usbl_driver/evologics_usbl_exceptions.hpp"
@@ -33,7 +34,7 @@ namespace evologics_usbl_driver
  * receive responses, and handle notifications and raw data.
  *
  */
-class EvologicsUsblDriver : public ros_driver_base::Driver
+class EvologicsUsblDriver : public ros_driver_base::Driver, public EvologicsUsblDriverInterface
 {
 public:
   /**
@@ -54,6 +55,31 @@ public:
    *
    */
   ~EvologicsUsblDriver();
+
+  /**
+   * @brief Open the connection with the device and set the timeouts used by readPacket/writePacket.
+   *
+   * @param uri Uniform Resource Identifier. See ros_driver_base::Driver::openURI for the supported formats.
+   * @param interface_type SERIAL (RS-232) or ETHERNET (TCP), used to select the command end-line character.
+   * @param read_timeout Read timeout in milliseconds
+   * @param write_timeout Write timeout in milliseconds
+   */
+  void openConnection(
+    const std::string & uri, InterfaceType interface_type,
+    const std::chrono::milliseconds & read_timeout,
+    const std::chrono::milliseconds & write_timeout) override;
+
+  /**
+   * @brief Run the device initialization sequence and leave the device in Data Mode.
+   *
+   * Enters Command Mode via TIES, applies the local/remote address and sound speed, enables automatic
+   * positioning output, stores the settings and switches back to Data Mode.
+   *
+   * @param local_address Address of the local device (AT!AL)
+   * @param remote_address Address of the remote device (AT!AR)
+   * @param sound_speed Speed of sound in water, in m/s (AT!CA)
+   */
+  void configurePositioning(int local_address, int remote_address, int sound_speed) override;
 
   /**
    * @brief Define the interface with device. ETHERNET or SERIAL.
@@ -97,6 +123,19 @@ public:
    * ResponseInfo.response is the kind of response and ResponseInfo.buffer is the response.
    */
   ResponseInfo readResponse();
+
+  /**
+   * @brief Read response from device, using the given read timeout instead of the default one.
+   *
+   * Same as readResponse(), but lets the caller use a timeout other than the one set by
+   * openConnection()/setReadTimeout(). Used to poll for already-received packets without blocking
+   * (timeout of 0), so a backlog of pending packets can be drained without waiting the default
+   * read timeout for each one.
+   * @param timeout Read timeout in milliseconds.
+   * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+   * ResponseInfo.response is the kind of response and ResponseInfo.buffer is the response.
+   */
+  ResponseInfo readResponse(const std::chrono::milliseconds & timeout) override;
 
   /**
    * @brief Check if a Notification string is present in buffer.
@@ -311,7 +350,7 @@ public:
    * Convert the data from internal struct to RigidBodyState.
    * @return RigidBodyState pose.
    */
-  RigidBodyState getPose(const Position & pose);
+  RigidBodyState getPose(const Position & pose) override;
 
   /**
    * @brief Get the Position pose of remote device.
@@ -321,7 +360,7 @@ public:
    * It may have some data of interest.
    * @return Position pose.
    */
-  Position getPose(const std::string & buffer);
+  Position getPose(const std::string & buffer) override;
 
   /**
    * @brief Get the Direction of remote device.
@@ -386,14 +425,14 @@ public:
    *
    * @return NotificationInfo
    */
-  NotificationInfo getNotification();
+  NotificationInfo getNotification() override;
 
   /**
    * @brief Verify if queueNotification has any notification.
    *
    * @return TRUE if queue has notification, FALSE otherwise.
    */
-  bool hasNotification();
+  bool hasNotification() override;
 
   /**
    * @brief Get mode of operation.
@@ -800,6 +839,23 @@ private:
    * @return string with data (response, notification or raw data).
    */
   std::string readInternal();
+
+  /**
+   * @brief Read packets, using the given read timeout instead of the default one.
+   *
+   * @param timeout Read timeout in milliseconds.
+   * @return string with data (response, notification or raw data).
+   */
+  std::string readInternal(const std::chrono::milliseconds & timeout);
+
+  /**
+   * @brief Classify a buffer read from the device and enqueue it as a notification or raw data.
+   *
+   * Shared by both readResponse() overloads.
+   * @param buffer_as_string buffer read from the device.
+   * @return ResponseInfo. If the incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+   */
+  ResponseInfo dispatchReadBuffer(const std::string & buffer_as_string);
 
   /**
    * @brief Check a valid notification.

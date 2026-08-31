@@ -35,6 +35,30 @@ EvologicsUsblDriver::~EvologicsUsblDriver()
 {
 }
 
+// Open the connection with the device and set the timeouts used by readPacket/writePacket.
+void EvologicsUsblDriver::openConnection(
+  const std::string & uri, InterfaceType interface_type,
+  const std::chrono::milliseconds & read_timeout,
+  const std::chrono::milliseconds & write_timeout)
+{
+  setInterface(interface_type);
+  openURI(uri);
+  setReadTimeout(read_timeout);
+  setWriteTimeout(write_timeout);
+}
+
+// Run the device initialization sequence and leave the device in Data Mode.
+void EvologicsUsblDriver::configurePositioning(int local_address, int remote_address, int sound_speed)
+{
+  switchToCommandMode();
+  sendCommandAndACK("AT!AL", std::to_string(local_address));
+  sendCommandAndACK("AT!AR", std::to_string(remote_address));
+  sendCommandAndACK("AT!CA", std::to_string(sound_speed));
+  sendCommandAndACK("AT@ZU", "1");
+  storeCurrentSettings();
+  switchToDataMode();
+}
+
 // Send a command to device.
 void EvologicsUsblDriver::sendCommand(const std::string & command)
 {
@@ -239,13 +263,23 @@ int EvologicsUsblDriver::extractPacket(const uint8_t * buffer, size_t buffer_siz
 // Read response from device.
 ResponseInfo EvologicsUsblDriver::readResponse()
 {
+  return dispatchReadBuffer(readInternal());
+}
+
+// Read response from device, using the given read timeout instead of the default one.
+ResponseInfo EvologicsUsblDriver::readResponse(const std::chrono::milliseconds & timeout)
+{
+  return dispatchReadBuffer(readInternal(timeout));
+}
+
+// Classify a buffer read from the device and enqueue it as a notification or raw data.
+ResponseInfo EvologicsUsblDriver::dispatchReadBuffer(const std::string & buffer_as_string)
+{
   Notification notification;
   CommandResponse response;
   ResponseInfo response_info;
   response_info.response = NO_RESPONSE;
 
-    // Get string from device.
-  std::string buffer_as_string = readInternal();
     // Check for Notification and enqueue data.
   if((notification = isNotification(buffer_as_string)) != NO_NOTIFICATION) {
         // interpretNotification(buffer_as_string, notification);
@@ -265,13 +299,22 @@ ResponseInfo EvologicsUsblDriver::readResponse()
   return response_info;
 }
 
-
 // Read packets.
 std::string EvologicsUsblDriver::readInternal()
 {
   std::vector<uint8_t> read_buffer;
   read_buffer.resize(kMaxPacketSize);
   int readpacket = readPacket(&read_buffer[0], kMaxPacketSize);
+
+  return std::string(reinterpret_cast<char const *>(&read_buffer[0]), readpacket);
+}
+
+// Read packets, using the given read timeout instead of the default one.
+std::string EvologicsUsblDriver::readInternal(const std::chrono::milliseconds & timeout)
+{
+  std::vector<uint8_t> read_buffer;
+  read_buffer.resize(kMaxPacketSize);
+  int readpacket = readPacket(&read_buffer[0], kMaxPacketSize, timeout);
 
   return std::string(reinterpret_cast<char const *>(&read_buffer[0]), readpacket);
 }
