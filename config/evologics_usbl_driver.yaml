@@ -1,0 +1,46 @@
+# Copyright (c) 2026, SENAI Cimatec
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+evologics_usbl_driver:
+  ros__parameters:
+    # The uri to connect to. See ros_driver_base documentation.
+    # Use "tcp://<host>:9200" for the Ethernet interface or "serial://<device>:19200" for RS-232.
+    uri: tcp://127.0.0.1:9005
+
+    # The read timeout in milliseconds
+    read_timeout: 2000
+
+    # The write timeout in milliseconds
+    write_timeout: 2000
+
+    # Time in milliseconds between reads of the device output, while active
+    acquisition_timeout: 100
+
+    # ROS topic name for publishing pose data
+    pose_topic_name: "evologics/pose"
+
+    # Frame ID to use for the pose data
+    sensor_frame: "usbl_link"
+
+    # Address of the local device (AT!AL)
+    local_address: 1
+
+    # Address of the remote device (AT!AR)
+    remote_address: 2
+
+    # Speed of sound in water, in m/s (AT!CA)
+    sound_speed: 1500
+
+    # Diagonal orientation covariance applied to every published pose (rad^2)
+    orientation_covariance: 0.1
