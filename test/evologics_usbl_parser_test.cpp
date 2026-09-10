@@ -177,19 +177,19 @@ TEST_F(UsblParserTest, ParseMultipathThrowsOnShortBuffer) {
 }
 
 TEST_F(UsblParserTest, FindNotificationClassifiesTokens) {
-  ASSERT_EQ(USBLLONG, usbl_parser.findNotification("USBLLONG,1,2,3\r\n"));
-  ASSERT_EQ(USBLANGLE, usbl_parser.findNotification("USBLANGLES,1,2,3\r\n"));
-  ASSERT_EQ(DELIVERY_REPORT, usbl_parser.findNotification("DELIVEREDIM,1\r\n"));
-  ASSERT_EQ(RECVIM, usbl_parser.findNotification("RECVIM"));
-  ASSERT_EQ(RECVPBM, usbl_parser.findNotification("RECVPBM"));
-  ASSERT_EQ(NO_NOTIFICATION, usbl_parser.findNotification("OK\r\n"));
+  ASSERT_EQ(kUsbllong, usbl_parser.findNotification("USBLLONG,1,2,3\r\n"));
+  ASSERT_EQ(kUsblangle, usbl_parser.findNotification("USBLANGLES,1,2,3\r\n"));
+  ASSERT_EQ(kDeliveryReport, usbl_parser.findNotification("DELIVEREDIM,1\r\n"));
+  ASSERT_EQ(kRecvim, usbl_parser.findNotification("RECVIM"));
+  ASSERT_EQ(kRecvpbm, usbl_parser.findNotification("RECVPBM"));
+  ASSERT_EQ(kNoNotification, usbl_parser.findNotification("OK\r\n"));
 }
 
 TEST_F(UsblParserTest, FindNotificationDistinguishesRecvimsFromRecvim) {
   // "RECVIM" is a prefix of "RECVIMS": a substring match must not misclassify the synchronous
   // instant message notification as a plain one.
-  ASSERT_EQ(RECVIMS, usbl_parser.findNotification("RECVIMS,2,1,2,ack,312,14,11,0.03,ab\r\n"));
-  ASSERT_EQ(RECVIM, usbl_parser.findNotification("RECVIM,2,1,2,ack,312,14,11,0.03,ab\r\n"));
+  ASSERT_EQ(kRecvims, usbl_parser.findNotification("RECVIMS,2,1,2,ack,312,14,11,0.03,ab\r\n"));
+  ASSERT_EQ(kRecvim, usbl_parser.findNotification("RECVIM,2,1,2,ack,312,14,11,0.03,ab\r\n"));
 }
 
 TEST_F(UsblParserTest, RemoveEndLineThrowsOnShortBuffer) {
@@ -267,21 +267,21 @@ TEST_F(UsblParserTest, FuzzyMessageCorrectDataMode) {
   stringstream ss;
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,36");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageColonDataMode) {
   stringstream ss;
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,:6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCommaDataMode) {
   stringstream ss;
   string buffer("+++AT:34:RECVIM,2,1,2,ack,312,14,11,0.03,,6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageEndlineDataMode) {
@@ -290,28 +290,28 @@ TEST_F(UsblParserTest, FuzzyMessageEndlineDataMode) {
   char end_line[] = {0x0d, 0x0a};
   char msg[] = {0x20, 0x35};
   ss << buffer << msg << end_line;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(ss.str(), RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(ss.str(), kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCorrectCommandMode) {
   stringstream ss;
   string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,36");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageColonCommandMode) {
   stringstream ss;
   string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,:6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageCommaCommandMode) {
   stringstream ss;
   string buffer("RECVIM,2,1,2,ack,312,14,11,0.03,,6");
   ss << buffer << 0x0D0A;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(buffer, kRecvim));
 }
 
 TEST_F(UsblParserTest, FuzzyMessageEndlineCommandMode) {
@@ -320,7 +320,7 @@ TEST_F(UsblParserTest, FuzzyMessageEndlineCommandMode) {
   char end_line[] = {0x0d, 0x0a};
   char msg[] = {0x20, 0x35};
   ss << buffer << msg << end_line;
-  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(ss.str(), RECVIM));
+  ASSERT_NO_THROW(usbl_parser.splitValidateNotification(ss.str(), kRecvim));
 }
 
 TEST_F(UsblParserTest, GetAnswerContentCorrect) {

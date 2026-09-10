@@ -27,7 +27,7 @@ EvologicsUsblDriver::EvologicsUsblDriver(const OperationMode & init_mode)
 }
 
 EvologicsUsblDriver::EvologicsUsblDriver()
-: EvologicsUsblDriver(DATA)
+: EvologicsUsblDriver(kData)
 {
 }
 
@@ -84,11 +84,11 @@ std::string EvologicsUsblDriver::fillCommand(const std::string & command)
     // GTES: (1s)<+++>(1s)
   if(command == "+++") {
     ss << command << std::flush;
-    if(mode_ == DATA) {
+    if(mode_ == kData) {
       sleep(1);
     }
   } else {
-    if (mode_ == DATA) {
+    if (mode_ == kData) {
             // If in DATA, buffer = +++<AT command>
       ss << "+++" << std::flush;
     }
@@ -101,7 +101,7 @@ std::string EvologicsUsblDriver::fillCommand(const std::string & command)
 std::string EvologicsUsblDriver::addEndLine(const std::string & command)
 {
   std::stringstream ss;
-  if (interface_ == SERIAL) {
+  if (interface_ == kSerial) {
     ss << command << "\r" << std::flush;
   } else {
     ss << command << "\n" << std::flush;
@@ -240,7 +240,7 @@ int EvologicsUsblDriver::extractPacket(const uint8_t * buffer, size_t buffer_siz
   std::string buffer_as_string = std::string(reinterpret_cast<char const *>(buffer), buffer_size);
 
     // Both COMMAND and DATA mode, answer finish by \r\n.
-  if(mode_ == DATA) {
+  if(mode_ == kData) {
     return extractRawFromATPackets(buffer_as_string);
   } else {  // Check for a single number as response.
     if(buffer_as_string.size() < 4) {
@@ -278,17 +278,17 @@ ResponseInfo EvologicsUsblDriver::dispatchReadBuffer(const std::string & buffer_
   Notification notification;
   CommandResponse response;
   ResponseInfo response_info;
-  response_info.response = NO_RESPONSE;
+  response_info.response = kNoResponse;
 
     // Check for Notification and enqueue data.
-  if((notification = isNotification(buffer_as_string)) != NO_NOTIFICATION) {
+  if((notification = isNotification(buffer_as_string)) != kNoNotification) {
         // interpretNotification(buffer_as_string, notification);
     NotificationInfo notification_info;
     notification_info.notification = notification;
     notification_info.buffer = buffer_as_string;
     queue_notification_.push(notification_info);
     return response_info;
-  } else if((response = isResponse(buffer_as_string)) != NO_RESPONSE) {
+  } else if((response = isResponse(buffer_as_string)) != kNoResponse) {
     ResponseInfo response_info;
     response_info.response = response;
     response_info.buffer = buffer_as_string;
@@ -325,7 +325,7 @@ std::string EvologicsUsblDriver::waitResponse(
   bool ignore_unexpected_responses)
 {
   ResponseInfo response_info;
-  response_info.response = NO_RESPONSE;
+  response_info.response = kNoResponse;
   auto init_time = std::chrono::system_clock::now();
     // 1 second time-out. Arbitrary value.
   auto time_out = std::chrono::seconds(1);
@@ -336,9 +336,9 @@ std::string EvologicsUsblDriver::waitResponse(
     response_info = readResponse();
     time_now = std::chrono::system_clock::now();
 
-    if (response_info.response == NO_RESPONSE) {
+    if (response_info.response == kNoResponse) {
       continue;
-    } else if (mode_ == DATA && !expected_prefix.empty() && (response_info.buffer.substr(3,
+    } else if (mode_ == kData && !expected_prefix.empty() && (response_info.buffer.substr(3,
         expected_prefix.size()) != expected_prefix))
     {
       if (ignore_unexpected_responses) {
@@ -347,10 +347,10 @@ std::string EvologicsUsblDriver::waitResponse(
         throw DeviceError("USBL Driver.cpp waitResponse: Expected response " +
             usbl_parser_.printBuffer(response_info.buffer) + " to start with " + expected_prefix);
       }
-    } else if(response_info.response == ERROR) {
+    } else if(response_info.response == kError) {
       throw DeviceError("USBL Driver.cpp waitResponse: For the command: \"" + usbl_parser_.printBuffer(command) +
           "\", device return the follow ERROR msg: \"" + usbl_parser_.printBuffer(response_info.buffer) + "\"");
-    } else if(response_info.response == BUSY) {
+    } else if(response_info.response == kBusy) {
       throw BusyError("USBL Driver.cpp waitResponse: For the command: \"" + usbl_parser_.printBuffer(command) +
           "\", device return the follow BUSY msg: \"" + usbl_parser_.printBuffer(response_info.buffer) +
           "\". Try it latter.");
@@ -363,10 +363,10 @@ std::string EvologicsUsblDriver::waitResponse(
         std::to_string(std::chrono::duration_cast<std::chrono::seconds>(time_out).count()) + " seconds time-out");
   }
 
-    // In DATA mode, validate response and return content without header.
-  if(mode_ == DATA) { // Buffer validation of indicated length was displaced for extract packet.
-                      // No need to do it here again.
-                      // Check if response and command match.
+    // In DATA mode, validate response and return content without header. Buffer validation of the
+    // indicated length was displaced to extractPacket, so there is no need to repeat it here; only
+    // check that the response and the command match.
+  if(mode_ == kData) {
     return usbl_parser_.getAnswerContent(response_info.buffer, command);
   }
   return response_info.buffer;
@@ -375,7 +375,7 @@ std::string EvologicsUsblDriver::waitResponse(
 // Wait for a OK response.
 void EvologicsUsblDriver::waitResponseOK(const std::string & expected_prefix, const std::string & command)
 {
-  waitResponse(expected_prefix, command, COMMAND_RECEIVED);
+  waitResponse(expected_prefix, command, kCommandReceived);
 }
 
 // Wait for a integer response.
@@ -401,7 +401,7 @@ uint64_t EvologicsUsblDriver::waitResponseULLongInt(
 // Wait for string response.
 std::string EvologicsUsblDriver::waitResponseString(const std::string & expected_prefix, const std::string & command)
 {
-  return waitResponse(expected_prefix, command, VALUE_REQUESTED);
+  return waitResponse(expected_prefix, command, kValueRequested);
 }
 
 // Check if a Notification string is present in buffer.
@@ -420,9 +420,9 @@ int EvologicsUsblDriver::checkNotificationCommandMode(const std::string & buffer
       return 0;
     }
     Notification notification = usbl_parser_.findNotification(buffer);
-    if(notification == RECVIM ||
-      notification == RECVIMS ||
-      notification == RECVPBM)
+    if(notification == kRecvim ||
+      notification == kRecvims ||
+      notification == kRecvpbm)
     {
       return checkIMNotification(buffer);
     } else {
@@ -454,7 +454,7 @@ int EvologicsUsblDriver::checkIMNotification(const std::string & buffer) const
     return 0;
   }
   Notification notification = usbl_parser_.findNotification(buffer);
-  if(notification != RECVIM && notification != RECVIMS && notification != RECVPBM) {
+  if(notification != kRecvim && notification != kRecvims && notification != kRecvpbm) {
     throw std::runtime_error("usbl Driver.cpp checkIMNotification: Notification should be a message, instead got \"" +
         usbl_parser_.printBuffer(buffer) + "\"");
   }
@@ -508,13 +508,13 @@ int EvologicsUsblDriver::checkIMNotification(const std::string & buffer) const
 Notification EvologicsUsblDriver::isNotification(const std::string & buffer)
 {
   if(buffer.size() < 4) {
-    return NO_NOTIFICATION;
+    return kNoNotification;
   }
   std::string content;
-  if(mode_ == DATA) {
+  if(mode_ == kData) {
         // in DATA mode +++AT:<length>:notification\r\n
     if(buffer.substr(0, 6) != "+++AT:") {
-      return NO_NOTIFICATION;
+      return kNoNotification;
     }
 
         // Get content of Notification.
@@ -531,7 +531,7 @@ Notification EvologicsUsblDriver::isNotification(const std::string & buffer)
 
   Notification notification = usbl_parser_.findNotification(content);
 
-  if(notification != NO_NOTIFICATION) {
+  if(notification != kNoNotification) {
         // Buffer validation of indicated length was displaced for extract packet.
         // No need to do it here again.
         // Check if notification has the predicted quantity of commas.
@@ -544,8 +544,8 @@ Notification EvologicsUsblDriver::isNotification(const std::string & buffer)
 CommandResponse EvologicsUsblDriver::isResponse(const std::string & buffer)
 {
     // In DATA mode, all response starts by "+++AT". If there is no initial string, it isn't a response.
-  if(mode_ == DATA && buffer.find("+++AT") == std::string::npos) {
-    return NO_RESPONSE;
+  if(mode_ == kData && buffer.find("+++AT") == std::string::npos) {
+    return kNoResponse;
   }
   return usbl_parser_.findResponse(buffer);
 }
@@ -560,16 +560,16 @@ void EvologicsUsblDriver::notificationValidation(const std::string & buffer, con
 void EvologicsUsblDriver::modeManager(const std::string & command)
 {
     // Command ATO. Switch to DATA mode doesn't require answer
-  if(command.find("ATO") != std::string::npos && mode_ == COMMAND) {
+  if(command.find("ATO") != std::string::npos && mode_ == kCommand) {
         // Proceed just after send the command
-    mode_ = DATA;
-  } else if(command.find("+++") != std::string::npos && mode_ == DATA) {
+    mode_ = kData;
+  } else if(command.find("+++") != std::string::npos && mode_ == kData) {
     sleep(1);
         // Receive answer in COMMAND mode.
-    mode_ = COMMAND;
-  } else if(command.find("ATC") != std::string::npos && mode_ == DATA) {
+    mode_ = kCommand;
+  } else if(command.find("ATC") != std::string::npos && mode_ == kData) {
         // Receive answer in COMMAND mode.
-    mode_ = COMMAND;
+    mode_ = kCommand;
   }
 }
 
@@ -577,16 +577,16 @@ void EvologicsUsblDriver::modeManager(const std::string & command)
 void EvologicsUsblDriver::modeMsgManager(const std::string & command)
 {
     // Command ATO. Switch from DATA to COMMAND mode doesn't require answer
-  if(command.find("ATO") != std::string::npos && mode_ == COMMAND) {
+  if(command.find("ATO") != std::string::npos && mode_ == kCommand) {
         // Proceed just after send the command
         // queueCommand.pop();
         // mode = DATA;
-  } else if(command.find("+++") != std::string::npos && mode_ != COMMAND) {
+  } else if(command.find("+++") != std::string::npos && mode_ != kCommand) {
         // If there was a error, keep in DATA mode.
-    mode_ = DATA;
-  } else if(command.find("ATC") != std::string::npos && mode_ != COMMAND) {
+    mode_ = kData;
+  } else if(command.find("ATC") != std::string::npos && mode_ != kCommand) {
         // If there was a error, keep in DATA mode.
-    mode_ = DATA;
+    mode_ = kData;
   }
 }
 
@@ -715,14 +715,14 @@ void EvologicsUsblDriver::resetDevice(ResetType const & type, bool ignore_unexpe
   sendCommand(command);
 
     // No command response
-  if(type != DEVICE) {
-    waitResponse("ATZ", command, COMMAND_RECEIVED, ignore_unexpected_responses);
+  if(type != kDevice) {
+    waitResponse("ATZ", command, kCommandReceived, ignore_unexpected_responses);
   }
 
-  if (type != INSTANT_MESSAGES) {
+  if (type != kInstantMessages) {
     queue_raw_data_ = std::queue<std::string>();
   }
-  if (type != ACOUSTIC_CONNECTION) {
+  if (type != kAcousticConnection) {
     queue_notification_ = std::queue<NotificationInfo>();
   }
 }
@@ -941,7 +941,7 @@ void EvologicsUsblDriver::setWakeUpPeriod(int value)
 // Set transmission buffer size of actual data channel.
 void EvologicsUsblDriver::setPoolSize(int value)
 {
-  resetDevice(SEND_BUFFER);
+  resetDevice(kSendBuffer);
   sendCommandAndACK("AT@ZL", std::to_string(value));
 }
 
@@ -962,15 +962,15 @@ VersionNumbers EvologicsUsblDriver::getFirmwareInformation()
 {
   VersionNumbers info;
 
-  std::string command = "ATI" + std::to_string(VERSION_NUMBER);
+  std::string command = "ATI" + std::to_string(kVersionNumber);
   sendCommand(command);
   info.firmware_version = waitResponseString("ATI", command);
 
-  command = "ATI" + std::to_string(PHY_MAC);
+  command = "ATI" + std::to_string(kPhyMac);
   sendCommand(command);
   info.accoustic_version = waitResponseString("ATI", command);
 
-  command = "ATI" + std::to_string(MANUFACTURER);
+  command = "ATI" + std::to_string(kManufacturer);
   sendCommand(command);
   info.manufacturer = waitResponseString("ATI", command);
 
@@ -1077,9 +1077,9 @@ void EvologicsUsblDriver::setSystemTimeNow()
 void EvologicsUsblDriver::setOperationMode(const OperationMode & new_mode)
 {
   if(mode_ != new_mode) {
-    if(new_mode == DATA) {
+    if(new_mode == kData) {
       switchToDataMode();
-    } else if(new_mode == COMMAND) {
+    } else if(new_mode == kCommand) {
       switchToCommandMode();
     } else {
       std::stringstream ss;
@@ -1100,7 +1100,7 @@ void EvologicsUsblDriver::RestoreFactorySettings()
 {
   std::string command = "AT&F";
   sendCommand(command);
-  if(mode_ == COMMAND) {
+  if(mode_ == kCommand) {
     switchToDataMode();
   }
   return;

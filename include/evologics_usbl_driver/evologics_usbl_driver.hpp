@@ -119,7 +119,7 @@ public:
    * @brief Read response from device.
    *
    * Read from device. Push Notification and Raw data in respective queue.
-   * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+   * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = kNoResponse.
    * ResponseInfo.response is the kind of response and ResponseInfo.buffer is the response.
    */
   ResponseInfo readResponse();
@@ -132,7 +132,7 @@ public:
    * (timeout of 0), so a backlog of pending packets can be drained without waiting the default
    * read timeout for each one.
    * @param timeout Read timeout in milliseconds.
-   * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+   * @result ReponseInfo. If incoming buffer is not a response, ResponseInfo.response = kNoResponse.
    * ResponseInfo.response is the kind of response and ResponseInfo.buffer is the response.
    */
   ResponseInfo readResponse(const std::chrono::milliseconds & timeout) override;
@@ -185,7 +185,7 @@ public:
    * IN COMMAND mode: <response><end-of-line>
    * Throw ValidationError or ModeError in case of failure.
    * @param buffer to be analyzed
-   * @return CommandResponse kind of response. If is not a response, returns NO_RESPONSE.
+   * @return CommandResponse kind of response. If is not a response, returns kNoResponse.
    */
   CommandResponse isResponse(const std::string & buffer);
 
@@ -196,7 +196,7 @@ public:
    * IN COMMAND mode: <notification><end-of-line>
    * Throw ValidationError or ModeError in case of failure.
    * @param buffer to be analyzed.
-   * @return Notification kind. If is not a notification, returns NO_NOTIFICATION.
+   * @return Notification kind. If is not a notification, returns kNoNotification.
    */
   Notification isNotification(const std::string & buffer);
 
@@ -853,7 +853,7 @@ private:
    *
    * Shared by both readResponse() overloads.
    * @param buffer_as_string buffer read from the device.
-   * @return ResponseInfo. If the incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+   * @return ResponseInfo. If the incoming buffer is not a response, ResponseInfo.response = kNoResponse.
    */
   ResponseInfo dispatchReadBuffer(const std::string & buffer_as_string);
 

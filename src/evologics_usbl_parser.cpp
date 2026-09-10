@@ -74,28 +74,28 @@ Notification UsblParser::findNotification(std::string const & buffer) const
     // Tokens are matched in order, longest / most specific first, so a token that is a prefix of
     // another (e.g. "RECVIM" of "RECVIMS", "CANCELEDIM" of "CANCELEDIMS") never shadows it.
   static const std::vector<std::pair<std::string, Notification>> notification_tokens{
-    {"USBLLONG", USBLLONG},
-    {"USBLANGLES", USBLANGLE},
-    {"DELIVEREDIM", DELIVERY_REPORT},
-    {"FAILEDIM", DELIVERY_REPORT},
-    {"CANCELEDIMS", DELIVERY_REPORT},
-    {"CANCELEDIM", DELIVERY_REPORT},
-    {"CANCELEDPBM", DELIVERY_REPORT},
-    {"RECVIMS", RECVIMS},
-    {"RECVIM", RECVIM},
-    {"RECVPBM", RECVPBM},
-    {"DROPCNT", DROPCNT},
-    {"BITRATE", EXTRA_NOTIFICATION},
-    {"SRCLEVEL", EXTRA_NOTIFICATION},
-    {"PHYON", EXTRA_NOTIFICATION},
-    {"PHYOFF", EXTRA_NOTIFICATION},
-    {"RECVSTART", EXTRA_NOTIFICATION},
-    {"RECVFAILED", EXTRA_NOTIFICATION},
-    {"RECVEND", EXTRA_NOTIFICATION},
-    {"SENDSTART", EXTRA_NOTIFICATION},
-    {"SENDEND", EXTRA_NOTIFICATION},
-    {"RADDR", EXTRA_NOTIFICATION},
-    {"USBLPHYD", EXTRA_NOTIFICATION},
+    {"USBLLONG", kUsbllong},
+    {"USBLANGLES", kUsblangle},
+    {"DELIVEREDIM", kDeliveryReport},
+    {"FAILEDIM", kDeliveryReport},
+    {"CANCELEDIMS", kDeliveryReport},
+    {"CANCELEDIM", kDeliveryReport},
+    {"CANCELEDPBM", kDeliveryReport},
+    {"RECVIMS", kRecvims},
+    {"RECVIM", kRecvim},
+    {"RECVPBM", kRecvpbm},
+    {"DROPCNT", kDropcnt},
+    {"BITRATE", kExtraNotification},
+    {"SRCLEVEL", kExtraNotification},
+    {"PHYON", kExtraNotification},
+    {"PHYOFF", kExtraNotification},
+    {"RECVSTART", kExtraNotification},
+    {"RECVFAILED", kExtraNotification},
+    {"RECVEND", kExtraNotification},
+    {"SENDSTART", kExtraNotification},
+    {"SENDEND", kExtraNotification},
+    {"RADDR", kExtraNotification},
+    {"USBLPHYD", kExtraNotification},
   };
 
   for (auto const & [token, notification] : notification_tokens) {
@@ -103,20 +103,20 @@ Notification UsblParser::findNotification(std::string const & buffer) const
       return notification;
     }
   }
-  return NO_NOTIFICATION;
+  return kNoNotification;
 }
 
 // Check for a Response in buffer.
 CommandResponse UsblParser::findResponse(std::string const & buffer)
 {
   if (buffer.find("OK") != std::string::npos) {
-    return COMMAND_RECEIVED;
+    return kCommandReceived;
   } else if (buffer.find("ERROR") != std::string::npos) {
-    return ERROR;
+    return kError;
   } else if (buffer.find("BUSY") != std::string::npos) {
-    return BUSY;
+    return kBusy;
   } else {
-    return VALUE_REQUESTED;
+    return kValueRequested;
   }
 }
 
@@ -126,7 +126,7 @@ void UsblParser::splitValidateNotification(std::string const & buffer, Notificat
     // No need to separate from DATA to COMMAND mode
     // Analysis of number of fields in <notification>
     // In case the notification is a message, don't let malicious string mess up the validation
-  if(notification == RECVIM || notification == RECVIMS || notification == RECVPBM) {
+  if(notification == kRecvim || notification == kRecvims || notification == kRecvpbm) {
     splitMinimalValidate(buffer, ",", getNumberFields(notification));
   } else {
     splitValidate(buffer, ",", getNumberFields(notification));
@@ -185,7 +185,7 @@ std::string UsblParser::parseSendIM(SendIM const & im)
 ReceiveIM UsblParser::parseReceivedIM(std::string const & buffer)
 {
   ReceiveIM im;
-  std::vector<std::string> splitted = splitMinimalValidate(buffer, ",", getNumberFields(RECVIM));
+  std::vector<std::string> splitted = splitMinimalValidate(buffer, ",", getNumberFields(kRecvim));
 
   if(splitted[0].find("RECVIM") == std::string::npos) {
     throw ParseError("UsblParser.cpp parseReceivedIM: Received buffer \"" + printBuffer(buffer) +
@@ -222,7 +222,7 @@ ReceiveIM UsblParser::parseReceivedIM(std::string const & buffer)
 Position UsblParser::parsePosition(std::string const & buffer)
 {
   Position pose;
-  std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(USBLLONG));
+  std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(kUsbllong));
 
   if(splitted[0].find("USBLLONG") == std::string::npos) {
     throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + printBuffer(buffer) +
@@ -253,7 +253,7 @@ Position UsblParser::parsePosition(std::string const & buffer)
 Direction UsblParser::parseDirection(std::string const & buffer)
 {
   Direction direc;
-  std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(USBLANGLE));
+  std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(kUsblangle));
 
   if(splitted[0].find("USBLANGLE") == std::string::npos) {
     throw ParseError("UsblParser.cpp parsePosition: Received buffer \"" + printBuffer(buffer) +
@@ -281,13 +281,13 @@ Direction UsblParser::parseDirection(std::string const & buffer)
 DeliveryStatus UsblParser::parseIMReport(std::string const & buffer)
 {
   std::string ret;
-  std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(DELIVERY_REPORT));
+  std::vector<std::string> splitted = splitValidate(buffer, ",", getNumberFields(kDeliveryReport));
   if (splitted[0].find("DELIVEREDIM") != std::string::npos) {
-    return DELIVERED;
+    return kDelivered;
   } else if (splitted[0].find("FAILEDIM") != std::string::npos) {
-    return FAILED;
+    return kFailed;
   } else if (splitted[0].find("CANCELEDIM") != std::string::npos) {
-    return CANCELED;
+    return kCanceled;
   } else {
     throw ParseError("UsblParser.cpp parseIMReport: DELIVERY_REPORT not as expected: \"" + printBuffer(splitted[0]) +
       "\"");
@@ -349,29 +349,29 @@ std::string UsblParser::removeEndLine(std::string const & buffer)
 int UsblParser::getNumberFields(Notification const & notification) const
 {
   switch (notification) {
-    case RECVIM:
-    case RECVIMS:
+    case kRecvim:
+    case kRecvims:
       return 10;
       break;
-    case RECVPBM:
+    case kRecvpbm:
       return 9;
       break;
-    case DELIVERY_REPORT:
+    case kDeliveryReport:
       return 2;
       break;
-    case USBLLONG:
+    case kUsbllong:
       return 17;
       break;
-    case USBLANGLE:
+    case kUsblangle:
       return 14;
       break;
-    case DROPCNT:
+    case kDropcnt:
       return 2;
       break;
-    case EXTRA_NOTIFICATION:
+    case kExtraNotification:
       return 1;
       break;
-    case NO_NOTIFICATION:
+    case kNoNotification:
       std::stringstream error_string;
       error_string << "UsblParser.cpp getNumberFields: Received  \"" << notification << "\"" << std::flush;
       throw ValidationError(error_string.str());
@@ -425,30 +425,30 @@ AcousticConnection UsblParser::parseConnectionStatus(std::string const & buffer)
   connection.time = std::chrono::system_clock::now();
   if (buffer.find("OFFLINE") != std::string::npos) {
     if (buffer.find("OFFLINE CONNECTION FAILED") != std::string::npos) {
-      connection.status = OFFLINE_CONNECTION_FAILED;
+      connection.status = kOfflineConnectionFailed;
     } else if (buffer.find("OFFLINE TERMINATED") != std::string::npos) {
-      connection.status = OFFLINE_TERMINATED;
+      connection.status = kOfflineTerminated;
     } else if (buffer.find("OFFLINE ALARM") != std::string::npos) {
-      connection.status = OFFLINE_ALARM;
+      connection.status = kOfflineAlarm;
     } else if (buffer.find("OFFLINE READY") != std::string::npos) {
-      connection.status = OFFLINE_READY;
+      connection.status = kOfflineReady;
     }
   } else if (buffer.find("INITIATION") != std::string::npos) {
     if (buffer.find("INITIATION LISTEN") != std::string::npos) {
-      connection.status = INITIATION_LISTEN;
+      connection.status = kInitiationListen;
     } else if (buffer.find("INITIATION ESTABLISH") != std::string::npos) {
-      connection.status = INITIATION_ESTABLISH;
+      connection.status = kInitiationEstablish;
     } else if (buffer.find("INITIATION DISCONNECT") != std::string::npos) {
-      connection.status = INITIATION_DISCONNECT;
+      connection.status = kInitiationDisconnect;
     }
   } else if (buffer.find("ONLINE") != std::string::npos) {
-    connection.status = ONLINE;
+    connection.status = kOnline;
   } else if (buffer.find("BACKOFF") != std::string::npos) {
-    connection.status = BACKOFF;
+    connection.status = kBackoff;
   } else if (buffer.find("NOISE") != std::string::npos) {
-    connection.status = NOISE;
+    connection.status = kNoise;
   } else if (buffer.find("DEAF") != std::string::npos) {
-    connection.status = DEAF;
+    connection.status = kDeaf;
   } else {
     throw ParseError("UsblParser.cpp parseConnectionStatus. Waiting for Connection Status but read \"" +
       printBuffer(buffer) + "\"");
@@ -469,13 +469,13 @@ AcousticConnection UsblParser::parseConnectionStatus(std::string const & buffer)
 DeliveryStatus UsblParser::parseDeliveryStatus(std::string const & buffer)
 {
   if (buffer.find("DELIVERING") != std::string::npos) {
-    return PENDING;
+    return kPending;
   } else if (buffer.find("EMPTY") != std::string::npos) {
-    return EMPTY;
+    return kEmpty;
   } else if (buffer.find("FAILED") != std::string::npos) {
-    return FAILED;
+    return kFailed;
   } else if (buffer.find("EXPIRED") != std::string::npos) {
-    return EXPIRED;
+    return kExpired;
   }
 
   throw ParseError("UsblParser.cpp parseDeliveryStatus. Waiting for Delivery Status but read \"" + printBuffer(buffer) +

@@ -67,7 +67,7 @@ public:
    *
    * @param timeout Read timeout in milliseconds. Use 0 to poll without blocking, to drain packets that
    * have already been received without waiting for a new one to arrive.
-   * @return ResponseInfo. If the incoming buffer is not a response, ResponseInfo.response = NO_RESPONSE.
+   * @return ResponseInfo. If the incoming buffer is not a response, ResponseInfo.response = kNoResponse.
    */
   virtual ResponseInfo readResponse(const std::chrono::milliseconds & timeout) = 0;
 

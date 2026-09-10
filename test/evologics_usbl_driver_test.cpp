@@ -118,7 +118,7 @@ TEST_F(EvologicsUsblDriverTest, ExtractATPacketNestedNotificationString) {
   stringstream ss;
   ss << buffer << splitter << to_string(inception.str().size()) << splitter << inception.str() << end_line;
   ASSERT_EQ(ss.str().size(), static_cast<size_t>(driver.extractATPacket(ss.str())));
-  ASSERT_EQ(RECVIM, driver.isNotification(ss.str()));
+  ASSERT_EQ(kRecvim, driver.isNotification(ss.str()));
 }
 
 TEST_F(EvologicsUsblDriverTest, CheckNotificationCommandModeRecvim) {

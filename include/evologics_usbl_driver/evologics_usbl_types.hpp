@@ -32,9 +32,9 @@ const int BROADCAST = 255;
 enum InterfaceType
 {
     // Interface with modem/vehicle.
-  SERIAL,
+  kSerial,
     // Interface with USBL/Dock/Boat
-  ETHERNET
+  kEthernet
 };
 
 /**
@@ -46,9 +46,9 @@ enum InterfaceType
 enum OperationMode
 {
     // For raw sensors data. Can send command/notification with Time Independent Escape Sequence (TIES)
-  DATA,
+  kData,
     // For command/notification exclusively
-  COMMAND
+  kCommand
 };
 
 /**
@@ -58,28 +58,28 @@ enum OperationMode
 enum ConnectionStatus
 {
     // Initial state after switching on/reset
-  OFFLINE_READY,
+  kOfflineReady,
     // Acoustic connection failed
-  OFFLINE_CONNECTION_FAILED,
+  kOfflineConnectionFailed,
     // Acoustic connection failed or has been terminated
-  OFFLINE_TERMINATED,
+  kOfflineTerminated,
     // Internal error has occurred, reset the device
-  OFFLINE_ALARM,
+  kOfflineAlarm,
     // The device is ready for immediate connection initiated by the remote side
-  INITIATION_LISTEN,
+  kInitiationListen,
     // The device attempts to establish an acoustic connection with the remote side
-  INITIATION_ESTABLISH,
+  kInitiationEstablish,
     // Acoustic connection is being closed
-  INITIATION_DISCONNECT,
+  kInitiationDisconnect,
     // Acoustic connection established and active
-  ONLINE,
+  kOnline,
     // An acoustic connection between other network nodes is detected.
     // Local device will stay in Backoff state for a random Backoff Timeout interval.
-  BACKOFF,
+  kBackoff,
     // The device is in Noise State. Acoustic connection is impossible
-  NOISE,
+  kNoise,
     // The device is in Deaf State, receiving incoming transmissions is impossible.
-  DEAF
+  kDeaf
 };
 
 /**
@@ -90,15 +90,15 @@ enum ConnectionStatus
 enum CommandResponse
 {
     // Command accepted and will be applied as soon as possible. OK
-  COMMAND_RECEIVED,
+  kCommandReceived,
     // Response to a request. Current setting value.
-  VALUE_REQUESTED,
+  kValueRequested,
     // Error message
-  ERROR,
+  kError,
     // Busy message
-  BUSY,
+  kBusy,
     // No response.
-  NO_RESPONSE
+  kNoResponse
 };
 
 /**
@@ -110,23 +110,23 @@ enum CommandResponse
 enum Notification
 {
     // Instant Message received.
-  RECVIM,
+  kRecvim,
     // Synchronous Instant Message received.
-  RECVIMS,
+  kRecvims,
     // PiggyBack Message received.
-  RECVPBM,
+  kRecvpbm,
     // Report of sending a Instant Message. Delivered or Failed.
-  DELIVERY_REPORT,
+  kDeliveryReport,
     // Pose of remote device.
-  USBLLONG,
+  kUsbllong,
     // Orientation of remote device, in case the pose wasn't computed.
-  USBLANGLE,
+  kUsblangle,
     // Drop count notification.
-  DROPCNT,
+  kDropcnt,
     // Extra notifications. See about Extended notification. Not implemented.
-  EXTRA_NOTIFICATION,
+  kExtraNotification,
     // No notification
-  NO_NOTIFICATION
+  kNoNotification
 };
 
 /**
@@ -137,17 +137,17 @@ enum Notification
 enum DeliveryStatus
 {
     // Instant Message has been delivered.
-  DELIVERED,
+  kDelivered,
     // No messages are been delivered.
-  EMPTY,
+  kEmpty,
     // Message is been delivered.
-  PENDING,
+  kPending,
     // Delivered of an Instant Message was not acknowledged.
-  FAILED,
+  kFailed,
     // A synchronous Instant Message has expired.
-  EXPIRED,
+  kExpired,
     // An Instant Message was canceled.
-  CANCELED
+  kCanceled
 };
 
 /**
@@ -161,13 +161,13 @@ enum ResetType
     // Reset device to stored settings and restart it.
     // TCP connection will be closed. Restart in DATA mode.
     // No command response.
-  DEVICE = 0,
+  kDevice = 0,
     // Drop raw data and terminate acoustic connection.
-  ACOUSTIC_CONNECTION = 1,
+  kAcousticConnection = 1,
     // Drop Instant Messages
-  INSTANT_MESSAGES = 3,
+  kInstantMessages = 3,
     // Clear the transmission buffer - drop raw data and instant messages.
-  SEND_BUFFER = 4
+  kSendBuffer = 4
 };
 
 /**
@@ -179,11 +179,11 @@ enum ResetType
 enum FirmwareInformation
 {
     // Firmware version number.
-  VERSION_NUMBER = 0,
+  kVersionNumber = 0,
     // Physical layer protocol and data-link layer protocol
-  PHY_MAC = 1,
+  kPhyMac = 1,
     // Device Manufacturer.
-  MANUFACTURER = 7
+  kManufacturer = 7
 };
 
 /**
@@ -198,19 +198,19 @@ enum SourceLevel
     // See The Factory Certificate value for further information.
     // For S2CR 48/78, Max SPL = 184 dB re 1uPa
     // SPL = 184
-  MAXIMUM = 0,
+  kMaximum = 0,
     // Maximum-6dB.
     // SPL = 178
-  HIGH = 1,
+  kHigh = 1,
     // Maximum-12bB.
     // SPL = 172
-  LOW = 2,
+  kLow = 2,
     // MINIMAL. In air test.
     // Maximum-20dB.
     // SPL = 164
-  MINIMAL = 3,
+  kMinimal = 3,
     // Alias of above. For in air test.
-  IN_AIR = 3
+  kInAir = 3
 };
 
 /**

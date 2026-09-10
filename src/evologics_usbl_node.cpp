@@ -116,7 +116,7 @@ void EvologicsUsblNode::readAndPublish()
 
   while (usbl_driver_->hasNotification()) {
     NotificationInfo notification_info = usbl_driver_->getNotification();
-    if (notification_info.notification != USBLLONG) {
+    if (notification_info.notification != kUsbllong) {
       continue;
     }
 
@@ -165,9 +165,9 @@ InterfaceType EvologicsUsblNode::interfaceTypeFromUri(const std::string & uri) c
 {
   const std::string serial_scheme = "serial://";
   if (uri.compare(0, serial_scheme.size(), serial_scheme) == 0) {
-    return SERIAL;
+    return kSerial;
   }
-  return ETHERNET;
+  return kEthernet;
 }
 
 void EvologicsUsblNode::declareParameters()

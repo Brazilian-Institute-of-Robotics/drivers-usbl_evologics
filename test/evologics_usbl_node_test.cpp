@@ -111,7 +111,7 @@ TEST_F(EvologicsUsblNodeTest, ConfigureValidParametersSucceeds) {
   EXPECT_CALL(
     *mock_usbl_driver,
     openConnection(
-      "tcp://127.0.0.1:9200", ETHERNET, std::chrono::milliseconds(200),
+      "tcp://127.0.0.1:9200", kEthernet, std::chrono::milliseconds(200),
       std::chrono::milliseconds(200))).Times(1);
 
   EXPECT_CALL(*mock_usbl_driver, configurePositioning(1, 2, 1500)).Times(1);
@@ -193,7 +193,7 @@ TEST_F(EvologicsUsblNodeTest, UsblLongNotificationPublishesPose) {
   rigid_body_state.orientation = Eigen::Quaterniond::Identity();
 
   EXPECT_CALL(*mock_usbl_driver, readResponse(_))
-  .WillOnce(Return(ResponseInfo{NO_RESPONSE, ""}))
+  .WillOnce(Return(ResponseInfo{kNoResponse, ""}))
   .WillRepeatedly(Throw(std::runtime_error("timeout")));
 
   EXPECT_CALL(*mock_usbl_driver, hasNotification())
@@ -201,7 +201,7 @@ TEST_F(EvologicsUsblNodeTest, UsblLongNotificationPublishesPose) {
   .WillRepeatedly(Return(false));
 
   EXPECT_CALL(*mock_usbl_driver, getNotification())
-  .WillOnce(Return(NotificationInfo{USBLLONG, usbllong_buffer}));
+  .WillOnce(Return(NotificationInfo{kUsbllong, usbllong_buffer}));
 
   EXPECT_CALL(*mock_usbl_driver, getPose(usbllong_buffer)).WillOnce(Return(position));
   EXPECT_CALL(*mock_usbl_driver, getPose(::testing::A<const Position &>())).WillOnce(Return(rigid_body_state));

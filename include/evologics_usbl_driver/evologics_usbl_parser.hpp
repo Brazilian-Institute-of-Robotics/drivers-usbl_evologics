@@ -85,7 +85,7 @@ public:
    * @brief Find a Notification in a buffer.
    *
    * @param buffer to be analyzed.
-   * @return Kind of notification. If buffer is not a Notification, returns NO_NOTIFICATION.
+   * @return Kind of notification. If buffer is not a Notification, returns kNoNotification.
    */
   Notification findNotification(const std::string & buffer) const;
 
@@ -184,9 +184,9 @@ public:
    *
    * Throw ParseError in case of failure.
    * @param buffer from device.
-   * @return DELIVERED if delivery was successful,
-   * FAILED if remote device doesn't confirm receipt.
-   * CANCELED if ack is no longer waited.
+   * @return kDelivered if delivery was successful,
+   * kFailed if remote device doesn't confirm receipt.
+   * kCanceled if ack is no longer waited.
    */
   DeliveryStatus parseIMReport(const std::string & buffer);
 
