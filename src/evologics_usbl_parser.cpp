@@ -16,6 +16,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 #include <boost/algorithm/string.hpp>
 
 #include "evologics_usbl_driver/evologics_usbl_parser.hpp"
@@ -69,36 +71,39 @@ std::string UsblParser::printBuffer(const std::vector<uint8_t> & buffer)
 // Find a Notification in a buffer.
 Notification UsblParser::findNotification(std::string const & buffer) const
 {
-  if (buffer.find("USBLLONG") != std::string::npos) {
-    return USBLLONG;
-  } else if (buffer.find("USBLANGLES") != std::string::npos) {
-    return USBLANGLE;
-  } else if (buffer.find("DELIVEREDIM") != std::string::npos ||
-    buffer.find("FAILEDIM") != std::string::npos ||
-    buffer.find("CANCELEDIM") != std::string::npos ||
-    buffer.find("CANCELEDIMS") != std::string::npos ||
-    buffer.find("CANCELEDPBM") != std::string::npos)
-  {
-    return DELIVERY_REPORT;
-  } else if (buffer.find("RECVIM") != std::string::npos) {
-    return RECVIM;
-  } else if (buffer.find("RECVIMS") != std::string::npos) {
-    return RECVIMS;
-  } else if (buffer.find("RECVPBM") != std::string::npos) {
-    return RECVPBM;
-  } else if (buffer.find("DROPCNT") != std::string::npos) {
-    return DROPCNT;
-  } else if (buffer.find("BITRATE") != std::string::npos || buffer.find("SRCLEVEL") != std::string::npos ||
-    buffer.find("PHYON") != std::string::npos || buffer.find("PHYOFF") != std::string::npos ||
-    buffer.find("RECVSTART") != std::string::npos || buffer.find("RECVFAILED") != std::string::npos ||
-    buffer.find("RECVEND") != std::string::npos || buffer.find("SENDSTART") != std::string::npos ||
-    buffer.find("SENDEND") != std::string::npos || buffer.find("RADDR") != std::string::npos ||
-    buffer.find("USBLPHYD") != std::string::npos)
-  {
-    return EXTRA_NOTIFICATION;
-  } else {
-    return NO_NOTIFICATION;
+    // Tokens are matched in order, longest / most specific first, so a token that is a prefix of
+    // another (e.g. "RECVIM" of "RECVIMS", "CANCELEDIM" of "CANCELEDIMS") never shadows it.
+  static const std::vector<std::pair<std::string, Notification>> notification_tokens{
+    {"USBLLONG", USBLLONG},
+    {"USBLANGLES", USBLANGLE},
+    {"DELIVEREDIM", DELIVERY_REPORT},
+    {"FAILEDIM", DELIVERY_REPORT},
+    {"CANCELEDIMS", DELIVERY_REPORT},
+    {"CANCELEDIM", DELIVERY_REPORT},
+    {"CANCELEDPBM", DELIVERY_REPORT},
+    {"RECVIMS", RECVIMS},
+    {"RECVIM", RECVIM},
+    {"RECVPBM", RECVPBM},
+    {"DROPCNT", DROPCNT},
+    {"BITRATE", EXTRA_NOTIFICATION},
+    {"SRCLEVEL", EXTRA_NOTIFICATION},
+    {"PHYON", EXTRA_NOTIFICATION},
+    {"PHYOFF", EXTRA_NOTIFICATION},
+    {"RECVSTART", EXTRA_NOTIFICATION},
+    {"RECVFAILED", EXTRA_NOTIFICATION},
+    {"RECVEND", EXTRA_NOTIFICATION},
+    {"SENDSTART", EXTRA_NOTIFICATION},
+    {"SENDEND", EXTRA_NOTIFICATION},
+    {"RADDR", EXTRA_NOTIFICATION},
+    {"USBLPHYD", EXTRA_NOTIFICATION},
+  };
+
+  for (auto const & [token, notification] : notification_tokens) {
+    if (buffer.find(token) != std::string::npos) {
+      return notification;
+    }
   }
+  return NO_NOTIFICATION;
 }
 
 // Check for a Response in buffer.
@@ -331,12 +336,13 @@ std::vector<std::string> UsblParser::splitMinimalValidate(
 // Remove <end-of-line> "\r\n" from buffer
 std::string UsblParser::removeEndLine(std::string const & buffer)
 {
-  if(buffer.substr(buffer.size() - 2, 2) == "\r\n") {
+    // Guard the length before slicing: a truncated device response (< 2 bytes) would underflow
+    // size_t and make substr throw std::out_of_range instead of the package's ValidationError.
+  if(buffer.size() >= 2 && buffer.compare(buffer.size() - 2, 2, "\r\n") == 0) {
     return buffer.substr(0, buffer.size() - 2);
-  } else {
-    throw ValidationError("UsblParser.cpp removeEndLine: There is no <end-line> \"\r\n\" in string \": " +
-      printBuffer(buffer) + "\"");
   }
+  throw ValidationError("UsblParser.cpp removeEndLine: There is no <end-line> \"\r\n\" in string \": " +
+    printBuffer(buffer) + "\"");
 }
 
 // Get the number of fields in a Notification.
@@ -554,7 +560,12 @@ DeviceSettings UsblParser::parseCurrentSettings(std::string const & buffer)
 std::vector<MultiPath> UsblParser::parseMultipath(std::string const & buffer)
 {
   std::vector<MultiPath> vec_multipath;
-    // Ignore last "\n\r\n" from buffer.
+    // Ignore last "\n\r\n" from buffer. Guard the length first so a buffer shorter than the
+    // trailing separator does not underflow size_t and throw std::out_of_range from substr.
+  if(buffer.size() < 3) {
+    throw ParseError("UsblParser.cpp parseMultipath: buffer \"" + printBuffer(buffer) +
+      "\" is too short to contain a multipath list.");
+  }
   std::vector<std::string> splitted = splitValidate(buffer.substr(0, buffer.size() - 3), "\n", 8);
 
   for(size_t i = 0; i < splitted.size(); i++ ) {

@@ -177,7 +177,7 @@ void EvologicsUsblNode::declareParameters()
   this->declare_parameter("write_timeout", 0);
   this->declare_parameter("read_timeout", 0);
   this->declare_parameter("pose_topic_name", "");
-  this->declare_parameter("sensor_frame", "evologics_usbl_link");
+  this->declare_parameter("sensor_frame", "usbl_link");
   this->declare_parameter("local_address", 1);
   this->declare_parameter("remote_address", 2);
   this->declare_parameter("sound_speed", 1500);

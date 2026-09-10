@@ -298,66 +298,66 @@ struct DeviceSettings
 {
     // True: low gain, reduced sensitivity. For short distance and test. 1
     // False: Normal gain, high sensitivity. 0
-  bool low_gain;
+  bool low_gain{false};
 
     // Devices can just establish a connection with specific carrier Waveform ID combinations
     // The combinations are 0-1 and 2-2.
     // It's recommended to use 0-1 for a two devices connection and 2-2 for networking.
-  int carrier_waveform_id;
+  int carrier_waveform_id{0};
 
     // Address of local device
-  int local_address;
+  int local_address{0};
 
     // The Address of the remote device to transmit BurstData or Instant Messages.
     // If the Remote Address is 0 the device accepts every connection request, but can not initiate a connection.
     // remoteAddress of local device must match localAddress of remote device.
-  int remote_address;
+  int remote_address{0};
 
     // Define limits of devices in the network
     // Values: 2, 6, 14, 30, 62, 126, 254
-  int highest_address;
+  int highest_address{0};
 
     // The number of packets in one train. It's recommended to use a cluster size less then
     // 10 for moving objects. For stationary you can use a cluster size up to 32.
-  int cluster_size;
+  int cluster_size{0};
 
     // Maximum duration of a data packet. From 50..1000 (in ms).
     // packetTime must be equal for all devices.
     // Short values are recommend for challenging hydroacoustic channels.
-  int packet_time;
+  int packet_time{0};
 
     // How many times the device will retry to connect
     // Retry count 0-255
-  int retry_count;
+  int retry_count{0};
 
     // Retry timeout 500-12000 ms
-  int retry_timeout;
+  int retry_timeout{0};
 
     // The timeout before closing an idle acoustic connection
     // 0-3600 s
-  int idle_timeout;
+  int idle_timeout{0};
 
     // Speed of sound 1300-1700 m/s
-  int sound_speed;
+  int sound_speed{0};
 
     // Instant Message retry 0-255. 255 = retry indefinitely
-  int im_retry;
+  int im_retry{0};
 
     // False: Local device will only accept message addressed to it. 0
     // True: Receive message addressed to any device on network. 1
-  bool promiscuos_mode;
+  bool promiscuos_mode{false};
 
     // Wake Up active time.
     // 0..3600 (s)
-  int wu_active_time;
+  int wu_active_time{0};
 
     // Wake Up period
     // 0..3600 (s)
-  int wu_period;
+  int wu_period{0};
 
     // Wake Up hold timeout
     // 0..3600 (s)
-  int wu_hold_timeout;
+  int wu_hold_timeout{0};
 
     // Transmission buffer size (bytes) per channel.
     // 8096.. 2097152

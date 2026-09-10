@@ -172,6 +172,31 @@ TEST_F(UsblParserTest, GetMultipath) {
   ASSERT_EQ(10, usbl_parser.parseMultipath(buffer).at(0).signal_integrity);
 }
 
+TEST_F(UsblParserTest, ParseMultipathThrowsOnShortBuffer) {
+  ASSERT_THROW(usbl_parser.parseMultipath("\r\n"), ParseError);
+}
+
+TEST_F(UsblParserTest, FindNotificationClassifiesTokens) {
+  ASSERT_EQ(USBLLONG, usbl_parser.findNotification("USBLLONG,1,2,3\r\n"));
+  ASSERT_EQ(USBLANGLE, usbl_parser.findNotification("USBLANGLES,1,2,3\r\n"));
+  ASSERT_EQ(DELIVERY_REPORT, usbl_parser.findNotification("DELIVEREDIM,1\r\n"));
+  ASSERT_EQ(RECVIM, usbl_parser.findNotification("RECVIM"));
+  ASSERT_EQ(RECVPBM, usbl_parser.findNotification("RECVPBM"));
+  ASSERT_EQ(NO_NOTIFICATION, usbl_parser.findNotification("OK\r\n"));
+}
+
+TEST_F(UsblParserTest, FindNotificationDistinguishesRecvimsFromRecvim) {
+  // "RECVIM" is a prefix of "RECVIMS": a substring match must not misclassify the synchronous
+  // instant message notification as a plain one.
+  ASSERT_EQ(RECVIMS, usbl_parser.findNotification("RECVIMS,2,1,2,ack,312,14,11,0.03,ab\r\n"));
+  ASSERT_EQ(RECVIM, usbl_parser.findNotification("RECVIM,2,1,2,ack,312,14,11,0.03,ab\r\n"));
+}
+
+TEST_F(UsblParserTest, RemoveEndLineThrowsOnShortBuffer) {
+  ASSERT_THROW(usbl_parser.removeEndLine("x"), ValidationError);
+  ASSERT_THROW(usbl_parser.removeEndLine(""), ValidationError);
+}
+
 TEST_F(UsblParserTest, GetNumber) {
   string buffer = "65";
   ASSERT_EQ(65, usbl_parser.getNumber(buffer));

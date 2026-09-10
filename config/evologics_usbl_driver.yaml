@@ -31,7 +31,7 @@ evologics_usbl_driver:
     pose_topic_name: "evologics/pose"
 
     # Frame ID to use for the pose data
-    sensor_frame: "flatfish/USBL"
+    sensor_frame: "usbl_link"
 
     # Address of the local device (AT!AL)
     local_address: 1

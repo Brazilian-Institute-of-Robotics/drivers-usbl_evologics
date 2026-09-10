@@ -58,45 +58,45 @@ private:
   /**
    * @brief Callback to handle configuration Lifecycle transition.
    * Detailed information, see <a href="https://design.ros2.org/articles/node_lifecycle.html">Lifecycle Article</a>.
-   * @param Lifecycle State
-   * @return Lifecycle Callback Return
-  */
+   * @param state Previous Lifecycle state.
+   * @return Lifecycle callback return code.
+   */
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_configure(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback to handle activation Lifecycle transition.
    * Detailed information, see <a href="https://design.ros2.org/articles/node_lifecycle.html">Lifecycle Article</a>.
-   * @param Lifecycle State
-   * @return Lifecycle Callback Return
-  */
+   * @param state Previous Lifecycle state.
+   * @return Lifecycle callback return code.
+   */
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_activate(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback to handle deactivation Lifecycle transition.
    * Detailed information, see <a href="https://design.ros2.org/articles/node_lifecycle.html">Lifecycle Article</a>.
-   * @param Lifecycle State
-   * @return Lifecycle Callback Return
-  */
+   * @param state Previous Lifecycle state.
+   * @return Lifecycle callback return code.
+   */
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_deactivate(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback to handle shutdown Lifecycle transition.
    * Detailed information, see <a href="https://design.ros2.org/articles/node_lifecycle.html">Lifecycle Article</a>.
-   * @param Lifecycle State
-   * @return Lifecycle Callback Return
-  */
+   * @param state Previous Lifecycle state.
+   * @return Lifecycle callback return code.
+   */
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_shutdown(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback to handle cleanup Lifecycle transition.
    * Detailed information, see <a href="https://design.ros2.org/articles/node_lifecycle.html">Lifecycle Article</a>.
-   * @param Lifecycle State
-   * @return Lifecycle Callback Return
-  */
+   * @param state Previous Lifecycle state.
+   * @return Lifecycle callback return code.
+   */
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_cleanup(const rclcpp_lifecycle::State & state) override;
 
@@ -133,43 +133,69 @@ private:
    */
   void loadParameters();
 
-  /**< Shared pointer to the ROS 2 timer object.*/
+  /**
+   * @brief Shared pointer to the ROS 2 timer object.
+   */
   rclcpp::TimerBase::SharedPtr timer_;
 
-  /**< Time in milliseconds between reads of the device output.*/
+  /**
+   * @brief Time in milliseconds between reads of the device output.
+   */
   int acquisition_timeout_;
 
-  /**< Timeout in milliseconds. Used in writePacket calls inside ros_driver_base.*/
+  /**
+   * @brief Timeout in milliseconds. Used in writePacket calls inside ros_driver_base.
+   */
   int write_timeout_;
 
-  /**< Timeout in milliseconds. Used in readPacket calls inside ros_driver_base.*/
+  /**
+   * @brief Timeout in milliseconds. Used in readPacket calls inside ros_driver_base.
+   */
   int read_timeout_;
 
-  /**< URI to connect to the device.*/
+  /**
+   * @brief URI to connect to the device.
+   */
   std::string uri_;
 
-  /**< Topic name to publish the pose data.*/
+  /**
+   * @brief Topic name to publish the pose data.
+   */
   std::string pose_topic_name_;
 
-  /**< USBL sensor frame */
+  /**
+   * @brief USBL sensor frame.
+   */
   std::string sensor_frame_;
 
-  /**< Address of the local device (AT!AL) */
+  /**
+   * @brief Address of the local device (AT!AL).
+   */
   int local_address_;
 
-  /**< Address of the remote device (AT!AR) */
+  /**
+   * @brief Address of the remote device (AT!AR).
+   */
   int remote_address_;
 
-  /**< Speed of sound in water, in m/s (AT!CA) */
+  /**
+   * @brief Speed of sound in water, in m/s (AT!CA).
+   */
   int sound_speed_;
 
-  /**< Diagonal orientation covariance applied to every published pose */
+  /**
+   * @brief Diagonal orientation covariance applied to every published pose.
+   */
   double orientation_covariance_;
 
-  /**< Publisher for the pose data.*/
+  /**
+   * @brief Publisher for the pose data.
+   */
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_publisher_;
 
-  /**< EvologicsUsblDriver instance for reading position fixes from the device.*/
+  /**
+   * @brief EvologicsUsblDriver instance for reading position fixes from the device.
+   */
   std::shared_ptr<EvologicsUsblDriverInterface> usbl_driver_;
 };
 }  // namespace evologics_usbl_driver
